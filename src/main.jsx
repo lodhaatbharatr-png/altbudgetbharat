@@ -1,4 +1,4 @@
-// --- START OF src/main.jsx ---
+// --- START OF src/main.jsx (PART 1) ---
 
 import React, { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
 import ReactDOM from 'react-dom/client';
@@ -243,25 +243,6 @@ const downloadCsv = async (csv, filename) => {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-};
-
-const exportToImage = async (ref, filename) => {
-  const target = ref && ref.current ? ref.current : (typeof ref === 'string' ? document.getElementById(ref) : ref);
-  if (!target) return;
-  try {
-    const canvas = await html2canvas(target, { 
-      backgroundColor: '#ffffff', 
-      scale: 2.5, 
-      logging: false, 
-      useCORS: true 
-    });
-    const link = document.createElement('a');
-    link.download = `${filename}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  } catch (e) { 
-    console.error("Export failed", e); 
-  }
 };
 
 const shareReceiptToWhatsApp = async (ref, filename, captionText) => {
@@ -780,7 +761,7 @@ const AppProvider = ({ children }) => {
       )}
     </AppContext.Provider>
   );
-};
+};// --- START OF src/main.jsx (PART 2) ---
 
 const AppDatePicker = ({ value, onChange, required = false, className = '', style = {} }) => {
   const inputRef = useRef(null);
@@ -1184,6 +1165,22 @@ const SideMenuBranding = () => (
     <p className="text-[9px] font-bold text-[#8A8596]">Developed by - Bharat Rasve © 2026</p>
   </div>
 );
+
+const LoadingScreen = () => (
+  <div className="flex-1 min-h-screen bg-[#07d9d6] flex flex-col items-center justify-center p-6 select-none animate-fade-in">
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <img
+        src={APP_LOGO_COLORED}
+        alt="Budget Bharat"
+        className="w-56 max-w-xs object-contain drop-shadow-2xl animate-pulse"
+      />
+      <div className="flex items-center gap-2 text-[#1E104B]/80 text-xs font-black tracking-widest uppercase mt-4">
+        <i className="fa-solid fa-circle-notch animate-spin text-sm text-[#1E104B]"></i>
+        <span>Loading Records...</span>
+      </div>
+    </div>
+  </div>
+);// --- START OF src/main.jsx (PART 3) ---
 
 const SideMenu = () => {
   const {
@@ -2711,7 +2708,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
       </div>
     </React.Fragment>
   );
-};
+};// --- START OF src/main.jsx (PART 4) ---
 
 const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLoanId = null, onClearLoanFocus, viewModeState, isCreatingLoanState }) => {
   const { loans, persons, admin, saveLoanAction, deleteLoanAction, addTransaction, showFeedback, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
@@ -4273,119 +4270,780 @@ return (
 };
 
 const RecordsView = ({ onSelectTransaction }) => {
-const { filteredTransactions } = useContext(AppContext);
+  const { filteredTransactions } = useContext(AppContext);
 
-const expenses = useMemo(() => filteredTransactions.filter(t => t.type === 'EXPENSE'), [filteredTransactions]);
-const incomes = useMemo(() => filteredTransactions.filter(t => t.type === 'INCOME'), [filteredTransactions]);
-const lents = useMemo(() => filteredTransactions.filter(t => t.type === 'LENT'), [filteredTransactions]);
-const borrows = useMemo(() => filteredTransactions.filter(t => t.type === 'BORROW'), [filteredTransactions]);
+  const expenses = useMemo(() => filteredTransactions.filter(t => t.type === 'EXPENSE'), [filteredTransactions]);
+  const incomes = useMemo(() => filteredTransactions.filter(t => t.type === 'INCOME'), [filteredTransactions]);
+  const lents = useMemo(() => filteredTransactions.filter(t => t.type === 'LENT'), [filteredTransactions]);
+  const borrows = useMemo(() => filteredTransactions.filter(t => t.type === 'BORROW'), [filteredTransactions]);
 
-const Section = ({ title, txs, showType = false }) => {
-  const [visibleCount, setVisibleCount] = useState(6);
-  const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0), [txs]);
-  const displayTxs = txs.slice(0, visibleCount);
+  const Section = ({ title, txs, showType = false }) => {
+    const [visibleCount, setVisibleCount] = useState(6);
+    const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0), [txs]);
+    const displayTxs = txs.slice(0, visibleCount);
+
+    return (
+      <div className="mb-3.5 bg-white rounded-2xl border border-[#E4E1EA] overflow-hidden shadow-xs">
+        <div className="bg-[#1E104B] px-3.5 py-2.5 flex justify-between items-center text-white">
+          <span className="text-[10px] font-black uppercase tracking-wider">{title} ({txs.length})</span>
+          <span className="text-[10px] font-semibold tracking-wide text-white/80">
+            Total: <span className="font-black text-white">{formatMoney(totalAmount)}</span>
+          </span>
+        </div>
+
+        {txs.length === 0 ? (
+          <p className="text-xs text-[#625E70] font-semibold px-3 py-3">No records found.</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto hide-scrollbar">
+              <table className="w-full text-left text-[10px] whitespace-nowrap">
+                <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
+                  <tr>
+                    <th className="px-3 py-1.5">Date</th>
+                    <th className="px-3 py-1.5">Description</th>
+                    {showType && <th className="px-3 py-1.5">Type</th>}
+                    <th className="px-3 py-1.5 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
+                  {displayTxs.map(t => {
+                    const txColor = t.type === 'INCOME' ? '#078A87' : t.type === 'EXPENSE' ? '#D6455D' : t.type === 'LENT' ? '#7B2B8C' : '#B7791F';
+                    const isPos = ['INCOME', 'BORROW'].includes(t.type);
+                    return (
+                      <tr
+                        key={t.id || t.entryId}
+                        data-entry-id={t.id || t.entryId}
+                        onClick={() => onSelectTransaction && onSelectTransaction(t)}
+                        className="hover:bg-[#E0E7FF]/30 transition-colors cursor-pointer active:bg-gray-100"
+                      >
+                        <td className="px-3 py-2.5 font-semibold text-[#625E70]">{formatDisplayDate(t.date)}</td>
+                        <td className="px-3 py-2.5 font-bold max-w-[150px] truncate text-[#1E104B]">
+                          {t.note || t.category}
+                          {(t.person || t.ref) && (
+                            <span className="block text-[8px] font-semibold text-[#8A8596] mt-0.5">
+                              {t.person} {t.person && t.ref ? '•' : ''} {t.ref}
+                            </span>
+                          )}
+                        </td>
+                        {showType && (
+                          <td className="px-3 py-2.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
+                            {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
+                          </td>
+                        )}
+                        <td className="px-3 py-2.5 text-right font-black text-xs" style={{ color: txColor }}>
+                          {isPos ? '+' : '-'}{formatTableNum(t.amount)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {txs.length > 6 && (
+              <div className="border-t border-theme-dark/5 bg-theme-gray/60 py-1.5 px-3 flex justify-between items-center text-[9px]">
+                <span className="font-bold opacity-60">Showing {Math.min(visibleCount, txs.length)} of {txs.length}</span>
+                <div className="space-x-2">
+                  {visibleCount < txs.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount(v => v + 6)}
+                      className="font-black text-theme-dark hover:opacity-75 uppercase tracking-wider py-1 px-2.5 bg-white border border-theme-dark/10 rounded shadow-xs"
+                    >
+                      Load More (+6)
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount(6)}
+                      className="font-black text-theme-dark hover:opacity-75 uppercase tracking-wider py-1 px-2.5 bg-white border border-theme-dark/10 rounded shadow-xs"
+                    >
+                      Show Less
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="mb-3.5 bg-white rounded-2xl border border-[#E4E1EA] overflow-hidden shadow-xs">
-      <div className="bg-[#1E104B] px-3.5 py-2.5 flex justify-between items-center text-white">
-        <span className="text-[10px] font-black uppercase tracking-wider">{title} ({txs.length})</span>
-        <span className="text-[10px] font-semibold tracking-wide text-white/80">
-          Total: <span className="font-black text-white">{formatMoney(totalAmount)}</span>
-        </span>
+    <div className="px-4 mt-2 pb-32">
+      <div className="flex justify-end mb-2.5">
+        <PeriodSelector />
       </div>
-
-      {txs.length === 0 ? (
-        <p className="text-xs text-[#625E70] font-semibold px-3 py-3">No records found.</p>
-      ) : (
-        <>
-          <div className="overflow-x-auto hide-scrollbar">
-            <table className="w-full text-left text-[10px] whitespace-nowrap">
-              <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
-                <tr>
-                  <th className="px-3 py-1.5">Date</th>
-                  <th className="px-3 py-1.5">Description</th>
-                  {showType && <th className="px-3 py-1.5">Type</th>}
-                  <th className="px-3 py-1.5 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
-                {displayTxs.map(t => {
-                  const txColor = t.type === 'INCOME' ? '#078A87' : t.type === 'EXPENSE' ? '#D6455D' : t.type === 'LENT' ? '#7B2B8C' : '#B7791F';
-                  const isPos = ['INCOME', 'BORROW'].includes(t.type);
-                  return (
-                    <tr
-                      key={t.id || t.entryId}
-                      data-entry-id={t.id || t.entryId}
-                      onClick={() => onSelectTransaction && onSelectTransaction(t)}
-                      className="hover:bg-[#E0E7FF]/30 transition-colors cursor-pointer active:bg-gray-100"
-                    >
-                      <td className="px-3 py-2.5 font-semibold text-[#625E70]">{formatDisplayDate(t.date)}</td>
-                      <td className="px-3 py-2.5 font-bold max-w-[150px] truncate text-[#1E104B]">
-                        {t.note || t.category}
-                        {(t.person || t.ref) && (
-                          <span className="block text-[8px] font-semibold text-[#8A8596] mt-0.5">
-                            {t.person} {t.person && t.ref ? '•' : ''} {t.ref}
-                          </span>
-                        )}
-                      </td>
-                      {showType && (
-                        <td className="px-3 py-2.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                          {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
-                        </td>
-                      )}
-                      <td className="px-3 py-2.5 text-right font-black text-xs" style={{ color: txColor }}>
-                        {isPos ? '+' : '-'}{formatTableNum(t.amount)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {txs.length > 6 && (
-            <div className="border-t border-theme-dark/5 bg-theme-gray/60 py-1.5 px-3 flex justify-between items-center text-[9px]">
-              <span className="font-bold opacity-60">Showing {Math.min(visibleCount, txs.length)} of {txs.length}</span>
-              <div className="space-x-2">
-                {visibleCount < txs.length ? (
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount(v => v + 6)}
-                    className="font-black text-theme-dark hover:opacity-75 uppercase tracking-wider py-1 px-2.5 bg-white border border-theme-dark/10 rounded shadow-xs"
-                  >
-                    Load More (+6)
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount(6)}
-                    className="font-black text-theme-dark hover:opacity-75 uppercase tracking-wider py-1 px-2.5 bg-white border border-theme-dark/10 rounded shadow-xs"
-                  >
-                    Show Less
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      <Section title="Expense" txs={expenses} showType={false} />
+      <Section title="Income" txs={incomes} showType={false} />
+      <Section title="Given (Dr)" txs={lents} showType={false} />
+      <Section title="Received (Cr)" txs={borrows} showType={false} />
+      <Section title="Overall Records" txs={filteredTransactions} showType={true} />
+      <AppBottomBranding />
     </div>
   );
 };
 
-return (
-  <div className="px-4 mt-2 pb-32">
-    <div className="flex justify-end mb-2.5">
-      <PeriodSelector />
+const TransactionDetailModal = ({ tx, onClose }) => {
+  const { updateTransaction, deleteTransaction, persons, categories } = useContext(AppContext);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const [type, setType] = useState(tx.type);
+  const [amt, setAmt] = useState(String(tx.amount || ''));
+  
+  const isoDate = useMemo(() => toInputDate_(tx.date), [tx.date]);
+  const isoPromiseDate = useMemo(() => toInputDate_(tx.promiseDate), [tx.promiseDate]);
+
+  const [date, setDate] = useState(isoDate);
+  const [promiseDate, setPromiseDate] = useState(isoPromiseDate);
+  const [personName, setPersonName] = useState(tx.person || '');
+  const [category, setCategory] = useState(tx.category || '');
+  const [note, setNote] = useState(tx.note || '');
+  const [refAc, setRefAc] = useState(tx.ref || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!amt || isNaN(amt)) return alert('Please enter a valid amount');
+    setIsSubmitting(true);
+    const formattedDate = date.split('-').reverse().join('/');
+    const formattedPromise = promiseDate ? promiseDate.split('-').reverse().join('/') : '';
+    try {
+      await updateTransaction({
+        entryId: tx.entryId || tx.id,
+        id: tx.entryId || tx.id,
+        type,
+        amount: parseFloat(amt),
+        category: (type === 'EXPENSE' || type === 'INCOME') ? category : '',
+        person: personName || '',
+        date: formattedDate,
+        promiseDate: formattedPromise,
+        note,
+        ref: refAc
+      });
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const executeDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      const targetId = String(tx.entryId || tx.id || '').trim();
+      await deleteTransaction(targetId);
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const personOptions = useMemo(() => persons.map(p => p.name), [persons]);
+  const categoryOptions = useMemo(() => (type === 'INCOME' ? categories.income : categories.expense), [categories, type]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-theme-dark/60 backdrop-blur-sm flex items-end justify-center p-0"
+      onClick={(e) => { if (e.target === e.currentTarget && !isSubmitting) onClose(); }}
+    >
+      <div className="bg-white w-full max-w-md rounded-t-3xl p-5 max-h-[90%] overflow-y-auto relative shadow-2xl animate-slide-up hide-scrollbar" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#1E104B] uppercase tracking-wider">Edit Transaction</h2>
+            <p className="text-[9px] font-mono text-[#8A8596]">ID: {String(tx.entryId || tx.id).slice(0, 8)}...</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isSubmitting}
+              title="Delete Transaction"
+              className="w-8 h-8 rounded-full bg-[#D6455D]/10 text-[#D6455D] hover:bg-[#D6455D] hover:text-white transition-all flex items-center justify-center text-xs"
+            >
+              <i className="fa-solid fa-trash-can"></i>
+            </button>
+            <button
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="w-8 h-8 bg-[#F4F3F8] rounded-full text-[#625E70] hover:bg-[#1E104B] hover:text-white transition-all flex items-center justify-center text-xs"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-1 p-1 bg-[#F4F3F8] rounded-xl mb-4 text-[10px] font-bold uppercase border border-[#E4E1EA]">
+          {[
+            { key: 'EXPENSE', label: 'EXPENSE' },
+            { key: 'INCOME', label: 'INCOME' },
+            { key: 'LENT', label: 'GIVEN' },
+            { key: 'BORROW', label: 'RECEIVED' }
+          ].map(item => {
+            const getActiveTabClass = () => {
+              if (type !== item.key) return 'text-[#625E70] hover:bg-white';
+              if (item.key === 'EXPENSE') return 'bg-[#D6455D] text-white shadow-xs';
+              if (item.key === 'INCOME') return 'bg-[#078A87] text-white shadow-xs';
+              if (item.key === 'LENT') return 'bg-[#7B2B8C] text-white shadow-xs';
+              return 'bg-[#B7791F] text-white shadow-xs';
+            };
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setType(item.key)}
+                className={`py-2 rounded-lg transition-all ${getActiveTabClass()}`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <form onSubmit={handleUpdate} className="space-y-3.5">
+          <div className="space-y-1">
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">AMOUNT (₹) *</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-theme-dark/40 font-extrabold text-xl pointer-events-none select-none">₹</span>
+              <input
+                type="number"
+                step="any"
+                required
+                value={amt}
+                onChange={e => setAmt(e.target.value)}
+                className="w-full text-2xl font-black border border-theme-dark/20 rounded-xl pl-11 pr-12 py-2.5 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white text-theme-dark [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCalculator(true)}
+                title="Open Calculator"
+                className="absolute right-3.5 text-[#66419C] hover:text-[#523380] active:scale-90 transition-transform p-1 flex items-center justify-center"
+              >
+                <i className="fa-solid fa-calculator text-xl"></i>
+              </button>
+            </div>
+          </div>
+
+          {showCalculator && (
+            <CalculatorModal
+              initialValue={amt}
+              onApply={(calculatedValue) => setAmt(calculatedValue)}
+              onClose={() => setShowCalculator(false)}
+            />
+          )}
+
+          <div className="grid grid-cols-12 gap-2.5">
+            <div className="col-span-5 space-y-1">
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">DATE *</label>
+              <AppDatePicker
+                required={true}
+                value={date}
+                onChange={setDate}
+                className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3 py-2.5 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white text-theme-dark cursor-pointer"
+              />
+            </div>
+
+            {(type === 'LENT' || type === 'BORROW') ? (
+              <div className="col-span-7 space-y-1">
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PROMISE DATE</label>
+                <AppDatePicker
+                  value={promiseDate}
+                  onChange={setPromiseDate}
+                  className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3 py-2.5 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white text-theme-dark cursor-pointer"
+                />
+              </div>
+            ) : (
+              <div className="col-span-7 space-y-1">
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">CATEGORY</label>
+                <SearchableDropdown
+                  value={category}
+                  onChange={setCategory}
+                  options={categoryOptions}
+                  placeholder="Category..."
+                />
+              </div>
+            )}
+          </div>
+
+          {(type === 'LENT' || type === 'BORROW') && (
+            <div className="space-y-1">
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PERSON NAME *</label>
+              <SearchableDropdown
+                value={personName}
+                onChange={setPersonName}
+                options={personOptions}
+                placeholder="Search person..."
+              />
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">DESCRIPTION</label>
+            <input
+              type="text"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-2.5 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white text-theme-dark"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">REFERENCE / A/C MODE</label>
+            <input
+              type="text"
+              value={refAc}
+              onChange={e => setRefAc(e.target.value)}
+              className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-2.5 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white text-theme-dark"
+            />
+          </div>
+
+          <div className="flex justify-center mt-4">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-3/4 bg-theme-dark hover:brightness-110 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
+            >
+              {isSubmitting && <i className="fa-solid fa-spinner animate-spin"></i>}
+              <span>{isSubmitting ? 'Saving Changes...' : 'Update Transaction'}</span>
+            </button>
+          </div>
+        </form>
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[60] bg-theme-dark/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { if (!isSubmitting) setShowDeleteConfirm(false); }}>
+            <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${isSubmitting ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-500'}`}>
+                <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
+              </div>
+              <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
+                {isSubmitting ? 'Deleting Entry...' : 'Delete Transaction?'}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 mb-5">
+                {isSubmitting ? 'Please wait while we update your sheet.' : 'This action cannot be undone.'}
+              </p>
+              <div className="flex gap-3 w-full">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
+                >
+                  No
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={executeDelete}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-70 cursor-wait"
+                >
+                  {isSubmitting ? <i className="fa-solid fa-spinner animate-spin text-xs"></i> : null}
+                  <span>{isSubmitting ? 'Deleting...' : 'Yes, Delete'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-    <Section title="Expense" txs={expenses} showType={false} />
-    <Section title="Income" txs={incomes} showType={false} />
-    <Section title="Given (Dr)" txs={lents} showType={false} />
-    <Section title="Received (Cr)" txs={borrows} showType={false} />
-    <Section title="Overall Records" txs={filteredTransactions} showType={true} />
-    <AppBottomBranding />
-  </div>
-);
+  );
+};
+
+const CalculatorModal = ({ initialValue, onApply, onClose }) => {
+  const [display, setDisplay] = useState(initialValue && !isNaN(initialValue) && Number(initialValue) > 0 ? String(initialValue) : '0');
+  const [prevValue, setPrevValue] = useState(null);
+  const [operation, setOperation] = useState(null);
+  const [clearOnNext, setClearOnNext] = useState(false);
+
+  const handleDigit = (digit) => {
+    if (display === '0' || clearOnNext) {
+      setDisplay(digit);
+      setClearOnNext(false);
+    } else {
+      setDisplay(display + digit);
+    }
+  };
+
+  const handleDecimal = () => {
+    if (clearOnNext) {
+      setDisplay('0.');
+      setClearOnNext(false);
+      return;
+    }
+    if (!display.includes('.')) {
+      setDisplay(display + '.');
+    }
+  };
+
+  const handleClear = () => {
+    setDisplay('0');
+    setPrevValue(null);
+    setOperation(null);
+    setClearOnNext(false);
+  };
+
+  const handleBackspace = () => {
+    if (clearOnNext) return;
+    if (display.length > 1) {
+      setDisplay(display.slice(0, -1));
+    } else {
+      setDisplay('0');
+    }
+  };
+
+  const calculate = (a, b, op) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (isNaN(numA) || isNaN(numB)) return numB || 0;
+    switch (op) {
+      case '+': return numA + numB;
+      case '-': return numA - numB;
+      case '×': return numA * numB;
+      case '÷': return numB !== 0 ? numA / numB : 0;
+      default: return numB;
+    }
+  };
+
+  const handleOp = (nextOp) => {
+    const currentNum = parseFloat(display);
+    if (prevValue === null) {
+      setPrevValue(currentNum);
+    } else if (operation && !clearOnNext) {
+      const result = calculate(prevValue, currentNum, operation);
+      const cleanRes = String(Math.round(result * 10000) / 10000);
+      setPrevValue(result);
+      setDisplay(cleanRes);
+    }
+    setOperation(nextOp);
+    setClearOnNext(true);
+  };
+
+  const handleEquals = () => {
+    if (operation && prevValue !== null) {
+      const result = calculate(prevValue, display, operation);
+      const cleanRes = String(Math.round(result * 10000) / 10000);
+      setDisplay(cleanRes);
+      setPrevValue(null);
+      setOperation(null);
+      setClearOnNext(true);
+    }
+  };
+
+  const handleEnterResult = () => {
+    let finalVal = display;
+    if (operation && prevValue !== null && !clearOnNext) {
+      const res = calculate(prevValue, display, operation);
+      finalVal = String(Math.round(res * 10000) / 10000);
+    }
+    onApply(finalVal);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-3xl p-5 w-full max-w-[320px] shadow-2xl flex flex-col gap-4 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-[#EEF1F4] rounded-2xl p-4 flex flex-col items-end justify-center min-h-[88px]">
+          <span className="text-[11px] font-bold text-gray-400 h-4">
+            {prevValue !== null && operation ? `${prevValue} ${operation}` : ''}
+          </span>
+          <span className="text-3xl font-black text-[#1E1E2D] truncate w-full text-right tracking-tight">
+            {display}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-5 gap-2 text-sm font-black">
+          <button type="button" onClick={() => handleDigit('7')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">7</button>
+          <button type="button" onClick={() => handleDigit('8')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">8</button>
+          <button type="button" onClick={() => handleDigit('9')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">9</button>
+          <button type="button" onClick={handleClear} className="h-11 rounded-xl bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 active:scale-95 text-[#7B2B8C] transition-all flex items-center justify-center font-bold">AC</button>
+          <button type="button" onClick={() => handleOp('÷')} className={`h-11 rounded-xl active:scale-95 transition-all flex items-center justify-center text-base ${operation === '÷' ? 'bg-[#1E104B] text-white' : 'bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 text-[#7B2B8C]'}`}>÷</button>
+
+          <button type="button" onClick={() => handleDigit('4')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">4</button>
+          <button type="button" onClick={() => handleDigit('5')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">5</button>
+          <button type="button" onClick={() => handleDigit('6')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">6</button>
+          <button type="button" onClick={() => handleOp('+')} className={`h-24 col-span-1 row-span-2 rounded-xl active:scale-95 transition-all flex items-center justify-center text-lg ${operation === '+' ? 'bg-[#1E104B] text-white' : 'bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 text-[#7B2B8C]'}`}>+</button>
+          <button type="button" onClick={() => handleOp('×')} className={`h-11 rounded-xl active:scale-95 transition-all flex items-center justify-center text-base ${operation === '×' ? 'bg-[#1E104B] text-white' : 'bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 text-[#7B2B8C]'}`}>×</button>
+
+          <button type="button" onClick={() => handleDigit('1')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">1</button>
+          <button type="button" onClick={() => handleDigit('2')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">2</button>
+          <button type="button" onClick={() => handleDigit('3')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">3</button>
+          <button type="button" onClick={() => handleOp('-')} className={`h-11 rounded-xl active:scale-95 transition-all flex items-center justify-center text-base ${operation === '-' ? 'bg-[#1E104B] text-white' : 'bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 text-[#7B2B8C]'}`}>-</button>
+
+          <button type="button" onClick={handleBackspace} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#625E70] transition-all flex items-center justify-center"><i className="fa-solid fa-delete-left text-xs"></i></button>
+          <button type="button" onClick={() => handleDigit('0')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">0</button>
+          <button type="button" onClick={handleDecimal} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">.</button>
+          <button type="button" onClick={handleEquals} className="h-11 col-span-2 rounded-xl bg-[#1E104B] hover:bg-[#2A186B] active:scale-95 text-white shadow-xs transition-all flex items-center justify-center text-base font-black">=</button>
+        </div>
+      </div>
+
+      <div className="w-full max-w-[320px] flex items-center gap-3 pt-2">
+        <button
+          type="button"
+          onClick={handleEnterResult}
+          className="flex-1 bg-[#682496] hover:bg-[#571B80] text-white font-black py-3.5 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+        >
+          <span>Enter Result</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onClose}
+          title="Close Calculator"
+          className="w-12 h-12 flex-none rounded-full bg-white text-gray-700 hover:text-black hover:bg-gray-100 active:scale-90 flex items-center justify-center shadow-xl border border-black/5 transition-all"
+        >
+          <i className="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const InputModal = ({ onClose }) => {
+  const { addTransaction, persons, categories, setMenuView, setIsMenuOpen } = useContext(AppContext);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const [type, setType] = useState('EXPENSE');
+  const [amt, setAmt] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [personName, setPersonName] = useState('');
+  const [promiseDate, setPromiseDate] = useState('');
+  const [note, setNote] = useState('');
+  const [refAc, setRefAc] = useState('');
+  const [category, setCategory] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [touched, setTouched] = useState(false);
+
+  const isPersonRequired = type === 'LENT' || type === 'BORROW';
+  const isAmtValid = amt !== '' && !isNaN(amt) && parseFloat(amt) > 0;
+  const isDateValid = !!date;
+  const isPersonValid = !isPersonRequired || (isPersonRequired && !!personName.trim());
+  const isFormValid = isAmtValid && isDateValid && isPersonValid;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setTouched(true);
+    if (!isFormValid) return;
+
+    setIsSubmitting(true);
+    const formattedDate = date.split('-').reverse().join('/');
+    const formattedPromise = promiseDate ? promiseDate.split('-').reverse().join('/') : '';
+
+    try {
+      await addTransaction({
+        type,
+        amount: parseFloat(amt),
+        category: (type === 'EXPENSE' || type === 'INCOME') ? category : '',
+        person: personName || '',
+        date: formattedDate,
+        promiseDate: formattedPromise,
+        note,
+        ref: refAc
+      });
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openAddMenu = (targetView) => {
+    onClose();
+    setMenuView(targetView);
+    setIsMenuOpen(true);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-theme-dark/60 backdrop-blur-sm flex items-end justify-center p-0"
+      onClick={(e) => { if (e.target === e.currentTarget && !isSubmitting) onClose(); }}
+    >
+      <div className="bg-white w-full max-w-md rounded-t-3xl p-5 max-h-[85%] overflow-y-auto relative shadow-2xl animate-slide-up hide-scrollbar" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-sm font-extrabold text-theme-dark uppercase tracking-wider">New Record</h2>
+          <button onClick={onClose} className="w-8 h-8 bg-theme-gray rounded-full text-theme-dark/50 hover:bg-theme-dark hover:text-white active:scale-90 transition-all flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div className="grid grid-cols-4 gap-1 p-1 bg-[#F4F3F8] rounded-xl mb-5 text-[10px] font-bold uppercase border border-[#E4E1EA]">
+          {[
+            { key: 'EXPENSE', label: 'EXPENSE' },
+            { key: 'INCOME', label: 'INCOME' },
+            { key: 'LENT', label: 'GIVEN' },
+            { key: 'BORROW', label: 'RECEIVED' }
+          ].map(item => {
+            const getActiveTabClass = () => {
+              if (type !== item.key) return 'text-[#625E70] hover:bg-white';
+              if (item.key === 'EXPENSE') return 'bg-[#D6455D] text-white shadow-xs';
+              if (item.key === 'INCOME') return 'bg-[#078A87] text-white shadow-xs';
+              if (item.key === 'LENT') return 'bg-[#7B2B8C] text-white shadow-xs';
+              return 'bg-[#B7791F] text-white shadow-xs';
+            };
+            return (
+              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{item.label}</button>
+            );
+          })}
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">AMOUNT (₹) *</label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-[#8A8596] font-extrabold text-xl pointer-events-none select-none">₹</span>
+              <input
+                style={SELECT_STYLE}
+                type="number"
+                step="any"
+                required
+                value={amt}
+                onChange={e => setAmt(e.target.value)}
+                className={`w-full text-2xl font-black rounded-xl pl-11 pr-12 py-3 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                  touched && !isAmtValid
+                    ? 'border-2 border-[#D6455D] bg-red-50/40 text-[#1E104B]'
+                    : 'border border-[#E4E1EA] bg-[#F4F3F8] focus:bg-white focus:border-[#7B2B8C] focus:ring-2 focus:ring-[#7B2B8C]/15 text-[#1E104B]'
+                }`}
+                placeholder="0.00"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCalculator(true)}
+                title="Open Calculator"
+                className="absolute right-3.5 text-[#7B2B8C] hover:text-[#5B1E68] active:scale-90 transition-transform p-1 flex items-center justify-center"
+              >
+                <i className="fa-solid fa-calculator text-xl"></i>
+              </button>
+            </div>
+          </div>
+
+          {showCalculator && (
+            <CalculatorModal
+              initialValue={amt}
+              onApply={(calculatedValue) => setAmt(calculatedValue)}
+              onClose={() => setShowCalculator(false)}
+            />
+          )}
+
+          <div className="grid grid-cols-12 gap-2.5">
+            <div className="col-span-5 space-y-1.5">
+              <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">DATE *</label>
+              <AppDatePicker
+                required={true}
+                value={date}
+                onChange={setDate}
+                className={`w-full font-bold text-xs rounded-xl px-3 py-3 outline-none transition-all ${
+                  touched && !isDateValid
+                    ? 'border-2 border-[#D6455D] bg-red-50/40 text-[#1E104B]'
+                    : 'border border-[#E4E1EA] bg-[#F4F3F8] focus:bg-white focus:border-[#7B2B8C] focus:ring-2 focus:ring-[#7B2B8C]/15 text-[#1E104B]'
+                }`}
+              />
+            </div>
+
+            {(type === 'LENT' || type === 'BORROW') ? (
+              <div className="col-span-7 space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PROMISE DATE</label>
+                <AppDatePicker
+                  value={promiseDate}
+                  onChange={setPromiseDate}
+                  className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white text-theme-dark cursor-pointer"
+                />
+              </div>
+            ) : (
+              <div className="col-span-7 space-y-1.5">
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">CATEGORY</label>
+                <div className="flex gap-1.5">
+                  <SearchableDropdown
+                    value={category}
+                    onChange={setCategory}
+                    options={type === 'INCOME' ? categories.income : categories.expense}
+                    placeholder="Category..."
+                  />
+                  <button type="button" onClick={() => openAddMenu('addCategory')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
+                    <i className="fa-solid fa-plus text-sm"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(type === 'LENT' || type === 'BORROW') && (
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PERSON NAME *</label>
+              <div className={`flex gap-2 rounded-xl ${touched && !isPersonValid ? 'ring-2 ring-[#D6455D]' : ''}`}>
+                <SearchableDropdown
+                  value={personName}
+                  onChange={setPersonName}
+                  options={persons.map(p => p.name)}
+                  placeholder="Type or select person..."
+                />
+                <button type="button" onClick={() => openAddMenu('addPerson')} className="w-10 h-10 flex-none rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] flex items-center justify-center text-[#7B2B8C] hover:bg-[#7B2B8C] hover:text-white transition-colors">
+                  <i className="fa-solid fa-plus text-sm"></i>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PURPOSE / DESCRIPTION</label>
+            <input
+              type="text"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white placeholder-theme-dark/30 text-theme-dark"
+              placeholder="e.g. for shopping, to EMI payment.."
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">REFERENCE / A/C MODE</label>
+            <input
+              type="text"
+              value={refAc}
+              onChange={e => setRefAc(e.target.value)}
+              className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white placeholder-theme-dark/30 text-theme-dark"
+              placeholder="e.g. PhonePe, NetBanking, Cash..."
+            />
+          </div>
+
+          <div className="flex justify-center mt-5">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-44 py-3 rounded-full font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 border shadow-xs ${
+                isSubmitting
+                  ? 'bg-[#078A87] text-white border-[#078A87] shadow-[0_0_20px_rgba(7,138,135,0.45)] cursor-wait'
+                  : isFormValid
+                  ? 'bg-[#078A87] hover:bg-[#056E6C] active:bg-[#078A87] active:text-white text-white border-[#078A87] shadow-[#078A87]/25'
+                  : 'bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87]/25 border-[#078A87]/25'
+              }`}
+            >
+              {isSubmitting && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
+              <span>{isSubmitting ? 'Saving...' : 'Save Entry'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 const MainApp = () => {
@@ -4734,4 +5392,4 @@ initDB().then(() => {
   );
 });
 
-// --- END OF src/main.jsx ---
+// --- END OF src/main.jsx (PART 4) ---
