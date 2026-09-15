@@ -1,21 +1,30 @@
-node_modules/
-dist/
-.DS_Store
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
 *.local
-.vscode/
-.idea/
 
-# Android build outputs
-android/app/build/
-android/.gradle/
-android/build/
-android/captures/
-android/app/src/main/assets/public/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Private keystore & signing files
+# --- Android Secure Signing Secrets ---
 *.keystore
-*.jks
 keystore.properties
 android/keystore.properties
 android/app/*.keystore
-android/app/*.jks
