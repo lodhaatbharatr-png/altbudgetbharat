@@ -1,0 +1,5 @@
+# --- Android Secure Signing Secrets ---
+*.keystore
+keystore.properties
+android/keystore.properties
+android/app/*.keystore
