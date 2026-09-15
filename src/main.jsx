@@ -1835,7 +1835,7 @@ const RecordsView = ({ onSelectTransaction }) => {
 
   const Section = ({ title, txs, showType = false }) => {
     const [visibleCount, setVisibleCount] = useState(6);
-    const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0), [txs]);
+    const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), [txs]));
     const displayTxs = txs.slice(0, visibleCount);
 
     return (
