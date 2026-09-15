@@ -600,7 +600,7 @@ const AppProvider = ({ children }) => {
 
   const csvEscape = (v) => {
     const s = (v === null || v === undefined) ? '' : String(v);
-    return (s.includes(',') || s.includes('"'] || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
   const csvSection = (headers, rows) => [headers.join(',')]
     .concat(rows.map(r => headers.map(h => csvEscape(r[h])).join(',')))
@@ -1581,3 +1581,3157 @@ const SideMenu = () => {
     </div>
   );
 };
+
+const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
+  const { filteredTransactions, transactions, persons, loans, setDirectoryFilter } = useContext(AppContext);
+
+  const kpi = useMemo(() => {
+    let e = 0, i = 0, dr = 0, cr = 0;
+    filteredTransactions.forEach(t => {
+      if (t.type === 'EXPENSE') e += t.amount;
+      else if (t.type === 'INCOME') i += t.amount;
+      else if (t.type === 'LENT') dr += t.amount;
+      else if (t.type === 'BORROW') cr += t.amount;
+    });
+    return { e, i, dr, cr };
+  }, [filteredTransactions]);
+
+  const catData = useMemo(() => {
+    const map = {};
+    let totalExp = 0;
+    filteredTransactions.filter(t => t.type === 'EXPENSE').forEach(t => {
+      const key = t.category || '(Uncategorized)';
+      map[key] = (map[key] || 0) + t.amount;
+      totalExp += t.amount;
+    });
+    return Object.keys(map).map(k => ({ name: k, val: map[k], pct: totalExp ? (map[k] / totalExp) * 100 : 0 })).sort((a, b) => b.val - a.val);
+  }, [filteredTransactions]);
+
+  const allPersonBalances = useMemo(() => {
+    return persons.map(p => {
+      let dr = 0, cr = 0;
+      transactions.filter(t => t.person === p.name).forEach(t => {
+        if (t.type === 'LENT') dr += Number(t.amount) || 0;
+        if (t.type === 'BORROW') cr += Number(t.amount) || 0;
+      });
+      return { ...p, totalDr: dr, totalCr: cr, bal: dr - cr };
+    });
+  }, [persons, transactions]);
+
+  const totalReceivable = allPersonBalances.filter(p => p.bal > 0).reduce((s, p) => s + p.bal, 0);
+  const totalPayable = allPersonBalances.filter(p => p.bal < 0).reduce((s, p) => s + Math.abs(p.bal), 0);
+
+  const topPeople = useMemo(() => (
+    allPersonBalances.filter(p => p.bal !== 0).sort((a, b) => Math.abs(b.bal) - Math.abs(a.bal)).slice(0, 6)
+  ), [allPersonBalances]);
+
+  return (
+    <div className="px-4 mt-2 pb-32 space-y-3.5">
+      <div className="flex justify-end items-start px-1">
+        <PeriodSelector />
+      </div>
+
+      <div className="grad-kpi rounded-2xl p-3.5 shadow-md flex justify-between divide-x divide-white/10 mt-0.5">
+        <div className="flex-1 text-center px-1">
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Expense</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.e)}</p>
+        </div>
+        <div className="flex-1 text-center px-1">
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Income</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.i)}</p>
+        </div>
+        <div className="flex-1 text-center px-1">
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Given (Dr)</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.dr)}</p>
+        </div>
+        <div className="flex-1 text-center px-1">
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Received</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.cr)}</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl p-4 border border-theme-dark/10 shadow-sm space-y-4">
+        <h2 className="text-[10px] font-bold text-theme-dark uppercase tracking-widest">Expense & Income Overview</h2>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#078A87]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#078A87]/25">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">Total Inflow</span>
+              <span className="text-[8px] font-semibold text-[#078A87]/70">(Inc + Recv)</span>
+            </div>
+            <span className="text-base font-extrabold text-[#078A87] mt-0.5">{formatMoney(kpi.i + kpi.cr)}</span>
+          </div>
+          <div className="bg-[#D6455D]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#D6455D]/25">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">Total Outflow</span>
+              <span className="text-[8px] font-semibold text-[#D6455D]/70">(Exp + Given)</span>
+            </div>
+            <span className="text-base font-extrabold text-[#D6455D] mt-0.5">{formatMoney(kpi.e + kpi.dr)}</span>
+          </div>
+        </div>
+
+        <div className="pt-2 space-y-2.5">
+          <p className="text-[10px] font-bold text-theme-dark/50 uppercase tracking-wider">Top Spending Categories</p>
+          {catData.slice(0, 3).map((c, i) => (
+            <div key={i}>
+              <div className="flex justify-between text-xs font-bold mb-1">
+                <span className="text-theme-dark">{c.name}</span>
+                <span className="text-theme-dark">{formatMoney(c.val)}</span>
+              </div>
+              <div className="w-full bg-theme-gray rounded-full h-1.5 overflow-hidden">
+                <div className="bg-theme-dark h-1.5 rounded-full" style={{ width: `${Math.min(c.pct, 100)}%` }}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-theme-dark/10 overflow-hidden shadow-sm">
+        <div className="px-3.5 py-3 border-b border-theme-dark/5">
+          <h2 className="text-[11px] font-black text-theme-dark uppercase tracking-wider">Recent Transactions</h2>
+        </div>
+        <TransactionTable transactions={filteredTransactions} maxRows={6} showViewAll={false} onSelectTransaction={onSelectTransaction} embedded={true} />
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 border border-[#E4E1EA] shadow-xs space-y-3.5">
+        <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">People Overview</h2>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div
+            onClick={() => { setDirectoryFilter('RECEIVABLE'); onNavigateTab && onNavigateTab('people'); }}
+            className="bg-[#078A87]/10 p-3 rounded-xl flex flex-col border border-[#078A87]/20 cursor-pointer hover:bg-[#078A87]/15 active:scale-95 transition-all"
+            title="Click to view all Credit (Receivable) parties"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">Total Receivable</span>
+              <i className="fa-solid fa-arrow-right text-[10px] text-[#078A87]"></i>
+            </div>
+            <span className="text-base font-black text-[#078A87] mt-0.5">+{formatMoney(totalReceivable)}</span>
+          </div>
+          <div
+            onClick={() => { setDirectoryFilter('PAYABLE'); onNavigateTab && onNavigateTab('people'); }}
+            className="bg-[#D6455D]/10 p-3 rounded-xl flex flex-col border border-[#D6455D]/20 cursor-pointer hover:bg-[#D6455D]/15 active:scale-95 transition-all"
+            title="Click to view all Debit (Payable) parties"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">Total Payable</span>
+              <i className="fa-solid fa-arrow-right text-[10px] text-[#D6455D]"></i>
+            </div>
+            <span className="text-base font-black text-[#D6455D] mt-0.5">-{formatMoney(totalPayable)}</span>
+          </div>
+        </div>
+
+        {topPeople.length > 0 && (
+          <div className="space-y-1.5">
+            {topPeople.map(p => (
+              <div key={p.id} onClick={() => onSelectPerson(p)} className="flex justify-between items-center p-2.5 rounded-xl hover:bg-[#F4F3F8] cursor-pointer transition-colors border border-transparent">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-[#7B2B8C]/15 flex items-center justify-center text-xs font-black text-[#7B2B8C]">
+                    {p.name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#1E104B]">{p.name}</p>
+                    <p className="text-[9px] font-bold text-[#8A8596] uppercase tracking-wide mt-0.5">
+                      {p.bal > 0 ? 'You will receive' : 'You need to pay'}
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-sm font-black ${p.bal > 0 ? 'text-[#078A87]' : 'text-[#D6455D]'}`}>
+                  {p.bal > 0 ? '+' : '-'}{formatMoney(Math.abs(p.bal))}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {(() => {
+        const activeLoansList = (loans || []).filter(l => {
+          const paidCount = (l.schedule || []).filter(s => s.paid).length;
+          return l.status !== 'CLOSED' && paidCount < (l.schedule || []).length;
+        });
+
+        let homeLoanToPay = 0;
+        let homeLoanPaid = 0;
+        (loans || []).forEach(l => {
+          homeLoanToPay += Number(l.loanAmount) || 0;
+          (l.schedule || []).forEach(s => {
+            if (s.paid) homeLoanPaid += Number(s.emiAmount) || 0;
+          });
+        });
+        const homeLoanRem = Math.max(0, homeLoanToPay - homeLoanPaid);
+
+        return (
+          <div className="bg-white rounded-2xl p-4 border border-[#E4E1EA] shadow-xs space-y-3.5">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">Active Loans Overview</h2>
+              <button
+                onClick={() => onNavigateTab && onNavigateTab('loans')}
+                className="text-[10px] font-black text-[#078A87] uppercase hover:underline"
+              >
+                View All ({activeLoansList.length})
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-[#1E104B]/5 p-2.5 rounded-xl flex flex-col justify-between border border-[#1E104B]/15">
+                <span className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider truncate">Total to Pay</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#1E104B] mt-1 truncate">{formatMoney(homeLoanToPay)}</span>
+              </div>
+              <div className="bg-[#078A87]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#078A87]/25">
+                <span className="text-[9px] font-bold text-[#078A87] uppercase tracking-wider truncate">Paid So Far</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#078A87] mt-1 truncate">{formatMoney(homeLoanPaid)}</span>
+              </div>
+              <div className="bg-[#D6455D]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#D6455D]/25">
+                <span className="text-[9px] font-bold text-[#D6455D] uppercase tracking-wider truncate">Remaining</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#D6455D] mt-1 truncate">{formatMoney(homeLoanRem)}</span>
+              </div>
+            </div>
+
+            {activeLoansList.length === 0 ? (
+              <p className="text-xs text-[#625E70] font-semibold text-center py-2">No active loans.</p>
+            ) : (
+              <div className="overflow-x-auto hide-scrollbar">
+                <table className="w-full table-fixed text-[10px]">
+                  <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
+                    <tr>
+                      <th className="w-[34%] px-2.5 py-1.5 text-left tracking-tight">Loan / Person</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">Loan Rs.</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">EMI Rs.</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">EMI Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
+                    {activeLoansList.slice(0, 4).map(l => {
+                      const pCount = (l.schedule || []).filter(s => s.paid).length;
+                      const tCount = (l.schedule || []).length;
+                      const lIsClosed = l.status === 'CLOSED' || (tCount > 0 && pCount === tCount);
+                      return (
+                        <tr
+                          key={l.id}
+                          onClick={() => {
+                            if (window.__TRIGGER_LOAN__) {
+                              window.__TRIGGER_LOAN__(l.person, l.id);
+                            } else {
+                              onNavigateTab && onNavigateTab('loans');
+                            }
+                          }}
+                          className="hover:bg-[#F4F3F8] cursor-pointer transition-colors active:bg-gray-100"
+                        >
+                          <td className="px-2.5 py-3 truncate">
+                            <span className="font-extrabold block truncate text-xs text-[#1E104B]">{l.loanName}</span>
+                            <span className="block truncate text-[9px] font-bold text-[#625E70]">{l.person}</span>
+                          </td>
+                          <td className="px-2 py-3 text-right font-black text-[#1E104B]">{formatMoney(l.loanAmount)}</td>
+                          <td className="px-2 py-3 text-right font-black text-[#1E104B]">{formatMoney(l.monthlyEmi)}</td>
+                          <td className="px-2 py-3 text-right font-black">
+                            <span className={lIsClosed ? 'text-gray-400' : 'text-emerald-600'}>{pCount}/{tCount}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+      <AppBottomBranding />
+    </div>
+  );
+};
+
+const PersonsView = ({ onSelectPerson }) => {
+  const { persons, transactions, showFeedback, admin, directoryFilter, setDirectoryFilter } = useContext(AppContext);
+  const [isSharingPersons, setIsSharingPersons] = useState(false);
+  const summarySlipRef = useRef(null);
+
+  const pData = useMemo(() => {
+    const raw = persons.map(p => {
+      let dr = 0, cr = 0;
+      transactions.filter(t => t.person === p.name).forEach(t => {
+        if (t.type === 'LENT') dr += t.amount;
+        if (t.type === 'BORROW') cr += t.amount;
+      });
+      return { ...p, totalDr: dr, totalCr: cr, remaining: dr - cr };
+    }).sort((a, b) => Math.abs(b.remaining) - Math.abs(a.remaining));
+
+    if (directoryFilter === 'RECEIVABLE') return raw.filter(p => p.remaining > 0);
+    if (directoryFilter === 'PAYABLE') return raw.filter(p => p.remaining < 0);
+    return raw;
+  }, [persons, transactions, directoryFilter]);
+
+  const totalReceivable = pData.filter(p => p.remaining > 0).reduce((sum, p) => sum + p.remaining, 0);
+  const totalPayable = pData.filter(p => p.remaining < 0).reduce((sum, p) => sum + Math.abs(p.remaining), 0);
+  const netBalance = totalReceivable - totalPayable;
+
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const handleTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; };
+  const handleTouchMove = (e) => { touchEndX.current = e.targetTouches[0].clientX; };
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current || pData.length === 0) return;
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      onSelectPerson(pData[0]);
+    }
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  const handleSharePersonsSummary = async () => {
+    showFeedback('Generating All Persons Ledger Image...');
+    setIsSharingPersons(true);
+    try {
+      await waitForPaint();
+
+      await shareReceiptToWhatsApp(
+        summarySlipRef, 
+        `All_Persons_Ledger_${Date.now()}`, 
+        `Budget Bharat — All Persons Ledger (${pData.length} parties)`
+      );
+      showFeedback('Ledger Ready');
+    } catch(err) {
+      console.error('Directory slip export error:', err);
+      showFeedback('Error: ' + (err && err.message ? err.message : 'generating image failed'));
+    } finally {
+      setIsSharingPersons(false);
+    }
+  };
+
+  return (
+    <div className="px-4 mt-2 space-y-3 pb-32" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      <div className="flex justify-between items-center">
+        <button
+          onClick={handleSharePersonsSummary}
+          disabled={isSharingPersons}
+          title="Share Directory Summary Image"
+          className={`w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs ${isSharingPersons ? 'opacity-50 cursor-wait' : ''}`}
+        >
+          <i className={`fa-solid ${isSharingPersons ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
+        </button>
+
+        <div className="flex bg-slate-200/90 p-1 rounded-xl shadow-inner gap-1">
+          <button
+            type="button"
+            onClick={() => setDirectoryFilter('ALL')}
+            className={`py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all ${
+              directoryFilter === 'ALL' ? 'bg-white text-[#1E104B] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setDirectoryFilter('RECEIVABLE')}
+            className={`py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all ${
+              directoryFilter === 'RECEIVABLE' ? 'bg-[#078A87] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Credit
+          </button>
+          <button
+            type="button"
+            onClick={() => setDirectoryFilter('PAYABLE')}
+            className={`py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all ${
+              directoryFilter === 'PAYABLE' ? 'bg-[#D6455D] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Debit
+          </button>
+        </div>
+      </div>
+
+      <div className="grad-kpi rounded-2xl p-3.5 shadow-md grid grid-cols-3 divide-x divide-white/10 text-center">
+        <div className="px-1">
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">RECEIVABLE</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(totalReceivable)}</p>
+        </div>
+        <div className="px-1">
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">PAYABLE</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(totalPayable)}</p>
+        </div>
+        <div className="px-1">
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">BALANCE</p>
+          <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(Math.abs(netBalance))}</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#E4E1EA] shadow-xs overflow-hidden">
+        <div className="w-full">
+          <table className="w-full table-fixed text-[10px]">
+            <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
+              <tr>
+                <th className="w-[34%] px-2.5 py-2 text-left tracking-tight">Person Name</th>
+                <th className="w-[22%] px-1.5 py-2 text-right tracking-tight">Given</th>
+                <th className="w-[22%] px-1.5 py-1.5 text-right tracking-tight">Recv</th>
+                <th className="w-[22%] px-2 py-2 text-right tracking-tight">Balance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
+              {pData.map((p) => {
+                const isRec = p.remaining > 0;
+                const isPay = p.remaining < 0;
+                const balColor = isRec ? '#078A87' : isPay ? '#D6455D' : '#625E70';
+                return (
+                  <tr key={p.id} onClick={() => onSelectPerson(p)} className="hover:bg-[#F4F3F8] cursor-pointer transition-colors active:bg-gray-100">
+                    <td className="px-2.5 py-3.5 truncate">
+                      <span className="font-extrabold block truncate text-xs text-[#1E104B]">{p.name}</span>
+                      {p.phone && <span className="block text-[8px] font-bold text-[#8A8596] truncate mt-0.5">{p.phone}</span>}
+                    </td>
+                    <td className="px-1.5 py-3.5 text-right font-bold text-[#7B2B8C] text-[11px] truncate">{formatMoney(p.totalDr)}</td>
+                    <td className="px-1.5 py-3.5 text-right font-bold text-[#078A87] text-[11px] truncate">{formatMoney(p.totalCr)}</td>
+                    <td className="px-2 py-3.5 text-right font-black text-[11px] truncate" style={{ color: balColor }}>
+                      {isRec ? '+' : isPay ? '-' : ''}{formatMoney(Math.abs(p.remaining))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <SafePortal>
+        <div className="canvas-hide">
+          <div ref={summarySlipRef} id="persons-summary-slip" className="bg-white px-5 py-4 font-sans box-border inline-block text-slate-900 relative overflow-hidden" style={{ width: '640px', fontFamily: "'Noto Sans Devanagari', sans-serif" }}>
+            <div 
+              className="absolute inset-0 pointer-events-none overflow-hidden flex flex-col justify-around items-center" 
+              style={{ zIndex: 0 }}
+            >
+              {Array.from({ length: Math.max(1, Math.ceil(((pData && pData.length) || 1) / 16)) }).map((_, wIdx) => (
+                <div key={wIdx} className="w-full flex items-center justify-center" style={{ minHeight: '820px' }}>
+                  <img
+                    src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                    alt=""
+                    className="w-72 h-72 object-contain select-none"
+                    style={{ opacity: 0.05 }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="border-b-2 border-[#1E104B] pb-2 mb-2.5 flex justify-between items-end relative z-10">
+              <div className="text-left">
+                <h1 className="text-[10px] font-black text-[#7B2B8C] uppercase tracking-widest mb-0.5">
+                  {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
+                </h1>
+                <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">
+                  All Persons Ledger
+                </h2>
+              </div>
+              <div className="text-right text-[10px] font-bold text-gray-500 leading-tight">
+                <p>Total Accounts: {pData.length}</p>
+                <p className="mt-0.5">Date: {formatDisplayDate(`${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`)}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-between bg-[#F4F3F8] rounded-xl py-2 px-2 text-center mb-2">
+              <div className="flex-1 px-1">
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">RECEIVABLE</p>
+                <p className="text-base font-black text-[#078A87]">+{formatMoney(totalReceivable)}</p>
+              </div>
+              <div className="flex-1 px-1">
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">PAYABLE</p>
+                <p className="text-base font-black text-[#D6455D]">-{formatMoney(totalPayable)}</p>
+              </div>
+              <div className="flex-1 px-1">
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">BALANCE</p>
+                <p className="text-base font-black text-[#1E104B]">{netBalance >= 0 ? '+' : '-'}{formatMoney(Math.abs(netBalance))}</p>
+              </div>
+            </div>
+
+            <table className="w-full text-left text-[12px] mb-2 border-collapse table-fixed leading-tight">
+              <colgroup>
+                <col style={{ width: '31%' }} />
+                <col style={{ width: '23%' }} />
+                <col style={{ width: '23%' }} />
+                <col style={{ width: '23%' }} />
+              </colgroup>
+              <thead className="bg-[#1E104B] text-white text-[11px]">
+                <tr>
+                  <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">Person Name</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Given</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Recv</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="text-[#1E104B] bg-transparent font-medium">
+                {pData.map(p => {
+                  const isRec = p.remaining > 0;
+                  const isPay = p.remaining < 0;
+                  const balColor = isRec ? '#078A87' : isPay ? '#D6455D' : '#625E70';
+                  return (
+                    <tr key={p.id}>
+                      <td className="py-3 px-2 font-bold border border-[#E4E1EA] truncate align-middle text-xs">{p.name}</td>
+                      <td className="py-3 px-2 text-right font-bold border border-[#E4E1EA] text-[#7B2B8C] align-middle text-xs">{formatMoney(p.totalDr)}</td>
+                      <td className="py-3 px-2 text-right font-bold border border-[#E4E1EA] text-[#078A87] align-middle text-xs">{formatMoney(p.totalCr)}</td>
+                      <td className="py-3 px-2 text-right font-black border border-[#E4E1EA] align-middle text-xs" style={{ color: balColor }}>
+                        {isRec ? '+' : isPay ? '-' : ''}{formatMoney(Math.abs(p.remaining))}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
+              <div className="flex flex-col justify-center text-left leading-tight">
+                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
+                <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+              </div>
+
+              <div className="flex items-center justify-center">
+                <img
+                  src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                  alt="Logo"
+                  className="w-[104px] h-[104px] object-contain select-none"
+                />
+              </div>
+
+              <div className="text-right leading-tight">
+                {admin && admin.footerNote && (
+                  <p className="text-[10px] font-semibold text-gray-700 italic mb-1">
+                    "{admin.footerNote}"
+                  </p>
+                )}
+                <span className="text-[11px] font-extrabold text-[#1E104B] block">
+                  {admin && admin.name ? admin.name : 'Bharat Rasve'}
+                </span>
+                {admin && admin.contact && (
+                  <span className="text-[10px] font-bold text-gray-600 block mt-1">
+                    Mo.No: {admin.contact}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </SafePortal>
+      <AppBottomBranding />
+    </div>
+  );
+};
+
+const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransaction, onOpenAddRecord }) => {
+  const { transactions, loans, showFeedback, admin, deletePerson, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [isSharingStatement, setIsSharingStatement] = useState(false);
+  const [showDeletePersonConfirm, setShowDeletePersonConfirm] = useState(false);
+  const [isDeletingPerson, setIsDeletingPerson] = useState(false);
+  const [isLoanDropdownOpen, setIsLoanDropdownOpen] = useState(false);
+  const loanDropdownRef = useRef(null);
+  const statementSlipRef = useRef(null);
+
+  const personActiveLoans = useMemo(() => {
+    if (!person || !person.name) return [];
+    const normTarget = String(person.name).trim().toLowerCase();
+
+    return (loans || []).filter(l => {
+      if (!l.person) return false;
+      if (String(l.person).trim().toLowerCase() !== normTarget) return false;
+      if (String(l.status || '').toUpperCase() === 'CLOSED') return false;
+      const sched = l.schedule || [];
+      if (sched.length === 0) return true;
+      const paidCount = sched.filter(s => s.paid === true || String(s.paid).toLowerCase() === 'true').length;
+      return paidCount < sched.length;
+    });
+  }, [loans, person]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (loanDropdownRef.current && !loanDropdownRef.current.contains(e.target)) {
+        setIsLoanDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const rawTxs = useMemo(() => transactions.filter(t => t.person === person.name), [transactions, person.name]);
+  
+  const txs = useMemo(() => {
+    if (!ledgerSearch.trim()) return rawTxs;
+    const q = ledgerSearch.toLowerCase().trim();
+    return rawTxs.filter(t => 
+      (t.note && t.note.toLowerCase().includes(q)) ||
+      (t.category && t.category.toLowerCase().includes(q)) ||
+      (t.ref && t.ref.toLowerCase().includes(q)) ||
+      (t.date && String(t.date).toLowerCase().includes(q)) ||
+      (t.amount && String(t.amount).includes(q))
+    );
+  }, [rawTxs, ledgerSearch]);
+
+  const currentIndex = allPersons.findIndex(p => p.name === person.name);
+
+  const goToPrev = () => {
+    if (currentIndex > 0) onSelectPerson(allPersons[currentIndex - 1]);
+    else onSelectPerson(allPersons[allPersons.length - 1]);
+  };
+
+  const goToNext = () => {
+    if (currentIndex < allPersons.length - 1) onSelectPerson(allPersons[currentIndex + 1]);
+    else onSelectPerson(allPersons[0]);
+  };
+
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const handleTouchStart = (e) => { touchStartX.current = e.targetTouches[0].clientX; };
+  const handleTouchMove = (e) => { touchEndX.current = e.targetTouches[0].clientX; };
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const diff = touchStartX.current - touchEndX.current;
+    if (diff > 50) goToNext();
+    else if (diff < -50) goToPrev();
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  const targetDateStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 5);
+    const day = d.getDate();
+    const mIdx = d.getMonth();
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${day}-${MONTHS_SHORT[mIdx]}-${yy}`;
+  }, []);
+
+  const handleShareImage = async () => {
+    const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
+    const captionText = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+
+    if (txs.length > 10) {
+      showFeedback('Loading fonts & generating PDF...');
+      setIsSharingStatement(true);
+      try {
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+        await waitForPaint();
+
+        const element = statementSlipRef.current || document.getElementById('whatsapp-share-slip');
+        if (!element) throw new Error('Statement DOM node not found');
+
+        const fileName = `${person.name.replace(/\s+/g, '_')}_Overall Statement.pdf`;
+        const opt = {
+          margin: [8, 8, 10, 8],
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            foreignObjectRendering: true,
+            letterRendering: false,
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        };
+
+        const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({
+            files: [pdfFile],
+            title: fileName,
+            text: captionText
+          });
+          showFeedback('PDF shared successfully');
+        } else {
+          html2pdf().set(opt).from(element).save();
+          showFeedback('PDF downloaded successfully');
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        console.error('PDF export error:', err);
+        showFeedback('Error: ' + (err && err.message ? err.message : 'Generating PDF failed'));
+      } finally {
+        setIsSharingStatement(false);
+      }
+      return;
+    }
+
+    showFeedback('Opening share dialog...');
+    setIsSharingStatement(true);
+    try {
+      await shareReceiptToWhatsApp(
+        statementSlipRef,
+        `${person.name.replace(/\s+/g, '_')}_Overall_Statement`,
+        captionText
+      );
+      showFeedback('Statement shared');
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.error('Ledger statement render error:', err);
+      showFeedback('Error: ' + (err && err.message ? err.message : 'rendering image failed'));
+    } finally {
+      setIsSharingStatement(false);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
+    const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    let phone = String(person.phone || '').replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+    if (phone.length === 10) phone = '91' + phone;
+
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <React.Fragment>
+      <div className="flex-none grad-dark px-3.5 py-3 text-white flex items-center justify-between shadow-md z-30">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+          <button onClick={onBack} title="Exit to Directory" className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
+            <i className="fa-solid fa-arrow-left text-base"></i>
+          </button>
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-sm sm:text-base font-extrabold truncate leading-tight">{person.name}</h1>
+            <div ref={loanDropdownRef} className="relative self-start mt-1.5 z-40">
+              <div
+                onClick={() => {
+                  if (personActiveLoans.length > 0) {
+                    setIsLoanDropdownOpen(prev => !prev);
+                  }
+                }}
+                className={`flex items-center rounded-lg border text-[10px] font-black transition-all ${
+                  personActiveLoans.length > 0
+                    ? 'bg-white/20 border-white/30 text-white hover:bg-white/30 cursor-pointer active:scale-95 shadow-xs'
+                    : 'bg-white/5 border-white/10 text-white/50 cursor-default'
+                }`}
+                style={{ height: '22px' }}
+              >
+                <span className="px-2.5 py-0.5 leading-none tracking-wide whitespace-nowrap">
+                  {personActiveLoans.length > 0 ? `${personActiveLoans.length} Loans` : 'No Loans'}
+                </span>
+                {personActiveLoans.length > 0 && (
+                  <span className="flex items-center justify-center border-l border-white/25 px-2 h-full bg-white/10 rounded-r-lg">
+                    <i className={`fa-solid ${isLoanDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'} text-[8px]`}></i>
+                  </span>
+                )}
+              </div>
+
+              {isLoanDropdownOpen && personActiveLoans.length > 0 && (
+                <div className="absolute top-full left-0 mt-1.5 w-52 bg-[#241457] border border-[#7B2B8C]/40 rounded-xl shadow-2xl py-1 z-50 animate-slide-up">
+                  <div className="px-3 py-1.5 text-[9px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10">
+                    Active Loans ({personActiveLoans.length})
+                  </div>
+                  <div className="max-h-48 overflow-y-auto hide-scrollbar divide-y divide-white/5">
+                    {personActiveLoans.map((l) => {
+                      const pCount = (l.schedule || []).filter(s => s.paid).length;
+                      const tCount = (l.schedule || []).length;
+                      return (
+                        <div
+                          key={l.id}
+                          onClick={() => {
+                            setIsLoanDropdownOpen(false);
+                            onBack();
+                            if (window.__TRIGGER_LOAN__) {
+                              window.__TRIGGER_LOAN__(person.name, l.id);
+                            }
+                          }}
+                          className="px-3 py-2 hover:bg-[#7B2B8C] cursor-pointer transition-colors text-left"
+                        >
+                          <p className="text-xs font-bold text-white truncate">{l.loanName}</p>
+                          <div className="flex justify-between items-center text-[10px] text-white/70 mt-0.5 font-semibold">
+                            <span>{formatMoney(l.loanAmount)}</span>
+                            <span className="text-emerald-400 font-bold">{pCount}/{tCount} Paid</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-none">
+          {allPersons.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10 text-[11px] font-black">
+              <button onClick={goToPrev} title="Previous Person" className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
+                <i className="fa-solid fa-chevron-left text-[9px]"></i>
+              </button>
+              <span className="opacity-75 select-none">({currentIndex + 1}/{allPersons.length})</span>
+              <button onClick={goToNext} title="Next Person" className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
+                <i className="fa-solid fa-chevron-right text-[9px]"></i>
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={uploadBackupToCloud}
+            disabled={syncStatus === 'syncing'}
+            className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
+            title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+          >
+            <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="app-content bg-theme-gray pb-32 select-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2.5 py-1 px-1">
+            <div className="flex items-center gap-2 flex-none">
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `tel:0${String(person.phone || '').replace(/\D/g, '').slice(-10)}`;
+                }}
+                title="Call"
+                className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
+              >
+                <i className="fa-solid fa-phone text-xs"></i>
+              </button>
+              <button
+                onClick={handleShareImage}
+                title="Share Statement Image"
+                className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
+              >
+                <i className="fa-solid fa-share-nodes text-xs"></i>
+              </button>
+              <button
+                onClick={handleWhatsAppShare}
+                title="Open WhatsApp chat"
+                className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:brightness-105 active:scale-95 transition-all shadow-xs"
+              >
+                <i className="fa-brands fa-whatsapp text-base"></i>
+              </button>
+              {(() => {
+                const personLoan = (loans || []).find(l => l.person === person.name);
+                return (
+                  <button
+                    onClick={() => {
+                      onBack();
+                      if (window.__TRIGGER_LOAN__) {
+                        window.__TRIGGER_LOAN__(person.name, personLoan ? personLoan.id : null);
+                      }
+                    }}
+                    title={personLoan ? `View ${personLoan.loanName}` : "Create New Loan for this Person"}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all border shadow-xs active:scale-95 ${
+                      personLoan
+                        ? 'bg-[#1E104B]/10 text-[#1E104B] border-[#1E104B]/20 hover:bg-[#1E104B] hover:text-white'
+                        : 'bg-[#078A87]/15 text-[#078A87] border-[#078A87]/30 hover:bg-[#078A87] hover:text-white'
+                    }`}
+                  >
+                    {personLoan ? (
+                      <i className="fa-solid fa-hand-holding-dollar text-xs"></i>
+                    ) : (
+                      <i className="fa-solid fa-hand-holding-medical text-xs"></i>
+                    )}
+                  </button>
+                );
+              })()}
+              <button
+                onClick={() => setShowDeletePersonConfirm(true)}
+                title="Delete Person & All Records"
+                className="w-9 h-9 rounded-full bg-[#D6455D]/15 text-[#D6455D] hover:bg-[#D6455D] hover:text-white active:bg-[#D6455D] active:text-white flex items-center justify-center transition-all border border-[#D6455D]/25 shadow-xs"
+              >
+                <i className="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </div>
+
+            <div className="flex-1 relative">
+              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+              <input
+                type="text"
+                value={ledgerSearch}
+                onChange={e => setLedgerSearch(e.target.value)}
+                placeholder="Search entry..."
+                className="w-full bg-white border border-[#E4E1EA] rounded-full py-1.5 pl-8 pr-7 text-xs text-[#1E104B] placeholder-slate-400 focus:outline-none focus:border-[#078A87] transition-all font-semibold shadow-xs"
+              />
+              {ledgerSearch && (
+                <button
+                  type="button"
+                  onClick={() => setLedgerSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <i className="fa-solid fa-xmark text-xs"></i>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grad-kpi py-3.5 px-3 rounded-2xl shadow-md grid grid-cols-3 divide-x divide-white/10 text-center">
+            <div className="px-1">
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">GIVEN (DR)</p>
+              <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(person.totalDr)}</p>
+            </div>
+            <div className="px-1">
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">RECEIVED (CR)</p>
+              <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(person.totalCr)}</p>
+            </div>
+            <div className="px-1">
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">BALANCE</p>
+              <p className="text-sm font-black text-white mt-1 truncate">
+                {person.remaining > 0 ? '+' : person.remaining < 0 ? '-' : ''}{formatMoney(Math.abs(person.remaining))}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xs border border-[#E4E1EA] overflow-hidden">
+            <div className="overflow-x-auto hide-scrollbar">
+              <table className="w-full text-left text-[10px] whitespace-nowrap">
+                <thead className="bg-[#E2DEEA] text-[#1E104B] font-black uppercase border-b border-[#CDC8DA] tracking-wider">
+                  <tr>
+                    <th className="px-3.5 py-1.5">Date</th>
+                    <th className="px-3.5 py-1.5">Description</th>
+                    <th className="px-3.5 py-1.5 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
+                  {txs.map(t => (
+                    <tr
+                      key={t.id || t.entryId}
+                      data-entry-id={t.id || t.entryId}
+                      onClick={() => onSelectTransaction && onSelectTransaction(t)}
+                      className="hover:bg-[#F4F3F8] transition-colors cursor-pointer active:bg-gray-100"
+                    >
+                      <td className="px-3.5 py-3 font-semibold text-[#625E70]">{formatDisplayDate(t.date)}</td>
+                      <td className="px-3.5 py-3 font-bold max-w-[140px] truncate text-[#1E104B]">
+                        {t.note || t.category}
+                        {(t.ref || t.promiseDate) && (
+                          <span className="block text-[8px] font-semibold text-[#8A8596] mt-0.5">
+                            {t.ref} {t.ref && t.promiseDate ? '•' : ''} {t.promiseDate && `Promise: ${formatDisplayDate(t.promiseDate)}`}
+                          </span>
+                        )}
+                      </td>
+                      <td className={`px-3.5 py-3 text-right font-black text-xs ${t.type === 'LENT' ? 'text-[#7B2B8C]' : 'text-[#078A87]'}`}>
+                        {t.type === 'LENT' ? '-' : '+'}{formatTableNum(t.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {showDeletePersonConfirm && (
+            <div className="fixed inset-0 z-50 bg-theme-dark/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { if (!isDeletingPerson) setShowDeletePersonConfirm(false); }}>
+              <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${isDeletingPerson ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-500'}`}>
+                  <i className={isDeletingPerson ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
+                </div>
+                <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
+                  {isDeletingPerson ? 'Deleting Person...' : 'Delete Person?'}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1 mb-5">
+                  {isDeletingPerson ? `Removing ${person.name} and all associated entries from sheet.` : <>Delete <strong>{person.name}</strong> and all associated transactions? This cannot be undone.</>}
+                </p>
+                <div className="flex gap-3 w-full">
+                  <button
+                    type="button"
+                    disabled={isDeletingPerson}
+                    onClick={() => setShowDeletePersonConfirm(false)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingPerson}
+                    onClick={async () => {
+                      setIsDeletingPerson(true);
+                      try {
+                        await deletePerson(person.name);
+                        setShowDeletePersonConfirm(false);
+                        onBack();
+                      } catch (err) {
+                        console.error("Person deletion failed:", err);
+                      } finally {
+                        setIsDeletingPerson(false);
+                      }
+                    }}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-70 cursor-wait"
+                  >
+                    {isDeletingPerson && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
+                    <span>{isDeletingPerson ? 'Deleting...' : 'Delete'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <SafePortal>
+            <div className="canvas-hide">
+              <style>{`
+                #whatsapp-share-slip tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+                #whatsapp-share-slip thead { display: table-header-group !important; }
+              `}</style>
+              <div 
+                ref={statementSlipRef} 
+                id="whatsapp-share-slip" 
+                className="bg-white px-4 pt-2 pb-3 box-border inline-block text-slate-900 relative overflow-hidden" 
+                style={{ width: '720px', fontFamily: "'Noto Sans Devanagari', sans-serif", letterSpacing: 'normal' }}
+              >
+                <div 
+                  className="absolute inset-0 pointer-events-none overflow-hidden flex flex-col justify-around items-center" 
+                  style={{ zIndex: 0 }}
+                >
+                  {Array.from({ length: Math.max(1, Math.ceil(((txs && txs.length) || 1) / 10)) }).map((_, wIdx) => (
+                    <div key={wIdx} className="w-full flex items-center justify-center" style={{ minHeight: '820px' }}>
+                      <img
+                        src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                        alt=""
+                        className="w-80 h-80 object-contain select-none"
+                        style={{ opacity: 0.05 }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-b-2 border-[#1E104B] pb-2 mb-2 relative z-10">
+                  <div className="flex justify-between items-start">
+                    <div className="text-left text-theme-dark leading-tight pr-2">
+                      <h1 className="text-[10px] font-black text-[#7B2B8C] uppercase tracking-widest mb-0.5">
+                        {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
+                      </h1>
+                      <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">
+                        A/C STATEMENT
+                      </h2>
+                      <p className="text-[9px] text-gray-500 font-bold mt-1">
+                        Date: {formatDisplayDate(`${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`)}
+                      </p>
+                    </div>
+                    <div className="text-right flex flex-col justify-start leading-tight">
+                      <h2 className="text-2xl font-black text-[#1E104B] tracking-tight leading-none mb-1">{person.name}</h2>
+                      <p className="text-xs font-bold text-gray-700">Mo.No: {person.phone ? person.phone : 'N/A'}</p>
+                      <p className="text-[10px] font-semibold text-gray-500 capitalize mt-0.5">{person.address ? person.address : 'Maharashtra'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between py-1.5 px-2 text-center mb-2 divide-x divide-slate-200">
+                  <div className="flex-1 px-1">
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">GIVEN (DR)</p>
+                    <p className="text-xl font-black text-[#7B2B8C] leading-none">{formatMoney(person.totalDr)}</p>
+                  </div>
+                  <div className="flex-1 px-1">
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">RECEIVED (CR)</p>
+                    <p className="text-xl font-black text-[#078A87] leading-none">{formatMoney(person.totalCr)}</p>
+                  </div>
+                  <div className="flex-1 px-1">
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">
+                      {person.remaining > 0 ? 'BAL (RECEIVABLE)' : person.remaining < 0 ? 'BAL (PAYABLE)' : 'BALANCE'}
+                    </p>
+                    <p className={`text-xl font-black leading-none ${person.remaining > 0 ? 'text-[#078A87]' : person.remaining < 0 ? 'text-[#D6455D]' : 'text-[#1E104B]'}`}>
+                      {person.remaining >= 0 ? '+' : '-'}{formatMoney(Math.abs(person.remaining))}
+                    </p>
+                  </div>
+                </div>
+
+                <table className="w-full text-left text-[11px] mb-3 border-collapse table-fixed">
+                  <colgroup>
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '29%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '13%' }} />
+                  </colgroup>
+                  <thead className="bg-[#1E104B] text-white">
+                    <tr>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">Date</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">Description</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">Ref A/C</th>
+                      <th className="py-1.5 px-1.5 font-bold uppercase text-right border border-[#E4E1EA]">Amount</th>
+                      <th className="py-1.5 px-1 font-bold uppercase text-center border border-[#E4E1EA]">Promise</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[#1E104B] bg-transparent">
+                    {txs.map(t => (
+                      <tr key={t.id || t.entryId}>
+                        <td className="py-1.5 px-2 font-semibold text-[#625E70] whitespace-nowrap border border-[#E4E1EA] align-middle text-[11px]">{formatDisplayDate(t.date)}</td>
+                        <td className="py-1.5 px-2 font-normal whitespace-normal break-words border border-[#E4E1EA] align-middle leading-snug text-[13px] text-[#1E104B]">{t.note || t.category}</td>
+                        <td className="py-1.5 px-2 font-semibold text-[#625E70] whitespace-normal break-words border border-[#E4E1EA] align-middle text-[11px]">{t.ref || '-'}</td>
+                        <td className={`py-1.5 px-1.5 text-right font-black whitespace-nowrap border border-[#E4E1EA] align-middle text-[15px] ${t.type === 'LENT' ? 'text-[#7B2B8C]' : 'text-[#078A87]'}`}>
+                          {t.type === 'LENT' ? '-' : '+'}{formatMoney(t.amount)}
+                        </td>
+                        <td className="py-1.5 px-1 text-[#B7791F] font-bold whitespace-nowrap text-center border border-[#E4E1EA] align-middle text-[10px]">{t.promiseDate ? formatDisplayDate(t.promiseDate) : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
+                  <div className="flex flex-col justify-center text-left leading-tight">
+                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
+                    <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                    <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+                  </div>
+
+                  <div className="flex items-center justify-center">
+                    <img
+                      src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                      alt="Logo"
+                      className="w-[104px] h-[104px] object-contain select-none"
+                    />
+                  </div>
+
+                  <div className="text-right leading-tight">
+                    {admin && admin.footerNote && (
+                      <p className="text-[10px] font-semibold text-gray-700 italic mb-1">
+                        "{admin.footerNote}"
+                      </p>
+                    )}
+                    <span className="text-[11px] font-extrabold text-[#1E104B] block">
+                      {admin && admin.name ? admin.name : 'Bharat Rasve'}
+                    </span>
+                    {admin && admin.contact && (
+                      <span className="text-[10px] font-bold text-gray-600 block mt-1">
+                        Mo.No: {admin.contact}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SafePortal>
+          <AppBottomBranding />
+        </div>
+      </div>
+    </React.Fragment>
+  );
+};
+
+const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLoanId = null, onClearLoanFocus, viewModeState, isCreatingLoanState }) => {
+  const { loans, persons, admin, saveLoanAction, deleteLoanAction, addTransaction, showFeedback, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
+
+  const [viewMode, setViewMode] = viewModeState || useState(initialLoanId ? 'detail' : 'master');
+  const [selectedLoanId, setSelectedLoanId] = useState(initialLoanId || (loans && loans.length > 0 ? loans[0].id : null));
+  const [isCreatingLoan, setIsCreatingLoan] = isCreatingLoanState || useState(!initialLoanId && initialPersonFilter ? true : false);
+
+  useEffect(() => {
+    if (loans && loans.length > 0 && !loans.some(l => l.id === selectedLoanId)) {
+      setSelectedLoanId(loans[0].id);
+    }
+  }, [loans, selectedLoanId]);
+
+  const [newPerson, setNewPerson] = useState(initialPersonFilter || '');
+  const [newLoanName, setNewLoanName] = useState('');
+  const [newLoanTaken, setNewLoanTaken] = useState('');
+  const [newLoanToPay, setNewLoanToPay] = useState('');
+  const [newMonthlyEmi, setNewMonthlyEmi] = useState('');
+  const [newTenure, setNewTenure] = useState('12');
+  const [newFirstDate, setNewFirstDate] = useState(toInputDate_(new Date()));
+
+  const [createStatus, setCreateStatus] = useState('idle');
+  const [payStatus, setPayStatus] = useState('idle');
+  const [actionError, setActionError] = useState('');
+
+  const [paymentModal, setPaymentModal] = useState({ open: false, row: null, who: 'ME', paymentId: '' });
+  const loanSlipRef = useRef(null);
+  const [isExportingSlip, setIsExportingSlip] = useState(false);
+  const [isLoanDropdownOpen, setIsLoanDropdownOpen] = useState(false);
+  const loanDropdownRef = useRef(null);
+
+  const currentLoan = useMemo(() => {
+    return (loans || []).find(l => l.id === selectedLoanId) || ((loans && loans.length > 0) ? loans[0] : null);
+  }, [loans, selectedLoanId]);
+
+  const activeBorrowerName = useMemo(() => {
+    if (currentLoan && currentLoan.person) return String(currentLoan.person).trim();
+    if (initialPersonFilter) return String(initialPersonFilter).trim();
+    return '';
+  }, [currentLoan, initialPersonFilter]);
+
+  const borrowerActiveLoans = useMemo(() => {
+    if (!activeBorrowerName) return [];
+    const normTarget = activeBorrowerName.replace(/\s+/g, ' ').toLowerCase();
+
+    return (loans || []).filter(l => {
+      if (!l.person) return false;
+      const normPerson = String(l.person).trim().replace(/\s+/g, ' ').toLowerCase();
+      if (normPerson !== normTarget) return false;
+      if (String(l.status || '').toUpperCase() === 'CLOSED') return false;
+      const sched = l.schedule || [];
+      if (sched.length === 0) return true;
+      const paidCount = sched.filter(s => s.paid === true || String(s.paid).toLowerCase() === 'true').length;
+      return paidCount < sched.length;
+    });
+  }, [loans, activeBorrowerName]);
+
+  const borrowerPersonObj = useMemo(() => {
+    if (!activeBorrowerName) return null;
+    const norm = activeBorrowerName.replace(/\s+/g, ' ').toLowerCase();
+    return (persons || []).find(p => String(p.name || '').trim().replace(/\s+/g, ' ').toLowerCase() === norm) || null;
+  }, [persons, activeBorrowerName]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (loanDropdownRef.current && !loanDropdownRef.current.contains(e.target)) {
+        setIsLoanDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (initialLoanId) {
+      setSelectedLoanId(initialLoanId);
+      setViewMode('detail');
+      setIsCreatingLoan(false);
+    } else if (initialPersonFilter) {
+      setNewPerson(initialPersonFilter);
+      setIsCreatingLoan(true);
+      setViewMode('detail');
+    }
+  }, [initialLoanId, initialPersonFilter]);
+
+  const [foreclosureModalOpen, setForeclosureModalOpen] = useState(false);
+  const [selectedClosureEmiNo, setSelectedClosureEmiNo] = useState(1);
+  const [closureAmountVal, setClosureAmountVal] = useState('');
+  const [foreclosingStatus, setForeclosingStatus] = useState('idle');
+
+  const [showDeleteLoanConfirm, setShowDeleteLoanConfirm] = useState(false);
+  const [isDeletingLoan, setIsDeletingLoan] = useState(false);
+
+  const currentLoanIndex = useMemo(() => {
+    return loans.findIndex(l => l.id === selectedLoanId);
+  }, [loans, selectedLoanId]);
+
+  const goToPrevLoan = () => {
+    if (loans.length <= 1) return;
+    const prevIdx = currentLoanIndex > 0 ? currentLoanIndex - 1 : loans.length - 1;
+    setSelectedLoanId(loans[prevIdx].id);
+  };
+
+  const goToNextLoan = () => {
+    if (loans.length <= 1) return;
+    const nextIdx = currentLoanIndex < loans.length - 1 ? currentLoanIndex + 1 : 0;
+    setSelectedLoanId(loans[nextIdx].id);
+  };
+
+  const computeNextDate = (baseStr, monthsToAdd) => {
+    const d = parseDate(baseStr);
+    if (isNaN(d.getTime())) return '-';
+    const target = new Date(d.getFullYear(), d.getMonth() + monthsToAdd, d.getDate());
+    return formatDisplayDate(target);
+  };
+
+  const masterSummary = useMemo(() => {
+    let totalLoanToPay = 0;
+    let totalPaidSoFar = 0;
+
+    loans.forEach(loan => {
+      totalLoanToPay += Number(loan.loanAmount) || 0;
+      (loan.schedule || []).forEach(s => {
+        if (s.paid) totalPaidSoFar += Number(s.emiAmount) || 0;
+      });
+    });
+
+    const totalRemaining = Math.max(0, totalLoanToPay - totalPaidSoFar);
+    return { totalLoanToPay, totalPaidSoFar, totalRemaining };
+  }, [loans]);
+
+  const handleCreateLoan = async (e) => {
+    e.preventDefault();
+    const loanTaken = parseFloat(newLoanTaken) || 0;
+    const loanToPay = parseFloat(newLoanToPay) || 0;
+    const emi = parseFloat(newMonthlyEmi) || 0;
+    const tenure = parseInt(newTenure, 10) || 1;
+
+    if (!loanToPay || !emi || !newPerson) {
+      alert('Please enter Loan to Pay, Monthly EMI, and Borrower.');
+      return;
+    }
+
+    setCreateStatus('loading');
+    setActionError('');
+
+    try {
+      const standardTotal = emi * tenure;
+      const extraChargesDiff = loanToPay > standardTotal ? Math.round((loanToPay - standardTotal) * 100) / 100 : 0;
+
+      let runningBal = loanToPay;
+      const schedule = [];
+      const baseDate = newFirstDate.split('-').reverse().join('/');
+
+      for (let i = 1; i <= tenure; i++) {
+        let thisEmiAmt = emi;
+        if (i === tenure && extraChargesDiff > 0) {
+          thisEmiAmt = Math.round((emi + extraChargesDiff) * 100) / 100;
+        }
+        runningBal = Math.max(0, runningBal - thisEmiAmt);
+        schedule.push({
+          emiNo: i,
+          date: computeNextDate(baseDate, i - 1),
+          emiAmount: thisEmiAmt,
+          outstandingBal: Math.round(runningBal * 100) / 100,
+          paid: false,
+          whoPaid: '',
+          paymentId: ''
+        });
+      }
+
+      const cleanLoan = (newLoanName || 'Loan')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1, 6).toLowerCase())
+        .join('_');
+
+      const cleanPerson = (newPerson || 'User')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1, 3).toLowerCase())
+        .join('_');
+
+      const random4 = Math.floor(1000 + Math.random() * 9000);
+      const customLoanId = `LN_${cleanLoan}_${cleanPerson}_${random4}`;
+
+      const payload = {
+        id: customLoanId,
+        person: newPerson,
+        loanName: newLoanName || 'Loan / EMI',
+        principalAmount: loanTaken || loanToPay,
+        loanAmount: loanToPay,
+        monthlyEmi: emi,
+        tenureMonths: tenure,
+        principalPayment: 0,
+        firstEmiDate: baseDate,
+        status: 'ACTIVE',
+        schedule: schedule
+      };
+
+      await saveLoanAction(payload);
+      setCreateStatus('success');
+      setNewLoanName('');
+      setNewLoanTaken('');
+      setNewLoanToPay('');
+      setNewMonthlyEmi('');
+      setNewTenure('12');
+      setNewFirstDate(toInputDate_(new Date()));
+      setTimeout(() => {
+        setIsCreatingLoan(false);
+        setCreateStatus('idle');
+        setSelectedLoanId(payload.id);
+        setViewMode('detail');
+      }, 600);
+    } catch (err) {
+      setCreateStatus('error');
+      setActionError(err && err.message ? err.message : 'Failed to create loan');
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!paymentModal.row || !currentLoan || payStatus === 'loading') return;
+    setPayStatus('loading');
+    setActionError('');
+
+    const targetNo = paymentModal.row.emiNo;
+    const emiAmt = paymentModal.row.emiAmount;
+
+    try {
+      const updatedSchedule = currentLoan.schedule.map(item => {
+        if (item.emiNo === targetNo) {
+          return {
+            ...item,
+            paid: true,
+            whoPaid: paymentModal.who,
+            paymentId: paymentModal.paymentId || (paymentModal.who === 'ME' ? 'Paid by Me' : 'Paid by Borrower'),
+            paidDate: formatDisplayDate(new Date())
+          };
+        }
+        return item;
+      });
+
+      if (paymentModal.who === 'ME') {
+        const now = new Date();
+        const pad = (n) => ('0' + n).slice(-2);
+        const strictDdMmYyyy = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+
+        const emiRowDate = parseDate(paymentModal.row.date);
+        const monthName = !isNaN(emiRowDate.getTime()) && emiRowDate.getTime() !== 0
+          ? MONTHS_SHORT[emiRowDate.getMonth()]
+          : MONTHS_SHORT[now.getMonth()];
+
+        await addTransaction({
+          type: 'LENT',
+          amount: emiAmt,
+          person: currentLoan.person,
+          category: 'EMI',
+          date: strictDdMmYyyy,
+          note: `${currentLoan.loanName} for (${monthName}) EMI #${targetNo} Paid`,
+          ref: paymentModal.paymentId || 'Auto-Debit'
+        });
+      }
+
+      const updatedLoan = {
+        ...currentLoan,
+        schedule: updatedSchedule,
+        status: updatedSchedule.every(s => s.paid) ? 'CLOSED' : currentLoan.status
+      };
+
+      await saveLoanAction(updatedLoan);
+      setPayStatus('success');
+      setTimeout(() => {
+        setPaymentModal({ open: false, row: null, who: 'ME', paymentId: '' });
+        setPayStatus('idle');
+      }, 600);
+    } catch (err) {
+      setPayStatus('error');
+      setActionError(err && err.message ? err.message : 'Failed to save payment');
+    }
+  };
+
+  const handleToggleCheckbox = (row) => {
+    if (row.paid) {
+      const updatedSchedule = currentLoan.schedule.map(item => {
+        if (item.emiNo === row.emiNo) {
+          return { ...item, paid: false, whoPaid: '', paymentId: '', paidDate: '' };
+        }
+        return item;
+      });
+      saveLoanAction({ ...currentLoan, schedule: updatedSchedule });
+    } else {
+      setActionError('');
+      setPayStatus('idle');
+      setPaymentModal({
+        open: true,
+        row: row,
+        who: 'ME',
+        paymentId: ''
+      });
+    }
+  };
+
+  const handleSendWhatsAppReminder = () => {
+    if (!currentLoan) return;
+    const nextPending = currentLoan.schedule.find(s => !s.paid);
+    if (!nextPending) {
+      showFeedback('All EMIs for this loan are cleared!');
+      return;
+    }
+    const phoneRaw = borrowerPersonObj ? borrowerPersonObj.phone : '';
+    let phone = String(phoneRaw || '').replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+    if (phone.length === 10) phone = '91' + phone;
+
+    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
+
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareLoanSchedule = async () => {
+    if (!currentLoan) return;
+    setIsExportingSlip(true);
+    showFeedback('Generating EMI Table...');
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      await waitForPaint();
+
+      const element = loanSlipRef.current;
+      if (!element) throw new Error('Slip DOM node not found');
+
+      const safePerson = String(currentLoan.person || 'User').replace(/\s+/g, '_');
+      const safeLoan = String(currentLoan.loanName || 'Loan').replace(/\s+/g, '_');
+      const fileName = `${safePerson}_${safeLoan}_EMI_Table.pdf`;
+
+      if (currentLoan.schedule.length > 12) {
+        const opt = {
+          margin: [8, 8, 10, 8],
+          filename: fileName,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({ files: [pdfFile], title: `${currentLoan.person} — ${currentLoan.loanName} EMI Table` });
+        } else {
+          html2pdf().set(opt).from(element).save();
+        }
+      } else {
+        await shareReceiptToWhatsApp(
+          loanSlipRef,
+          `${safePerson}_${safeLoan}_EMI_Table`,
+          `Budget Bharat — ${currentLoan.loanName} EMI Table for ${currentLoan.person}`
+        );
+      }
+      showFeedback('EMI Table shared');
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      showFeedback('Export failed: ' + err.message);
+    } finally {
+      setIsExportingSlip(false);
+    }
+  };
+
+  const loanTakenVal = currentLoan ? Number(currentLoan.principalAmount || currentLoan.loanAmount) || 0 : 0;
+  const loanToPayVal = currentLoan ? Number(currentLoan.loanAmount) || 0 : 0;
+  const loanInterestVal = Math.max(0, loanToPayVal - loanTakenVal);
+  const paidEmisList = currentLoan ? (currentLoan.schedule || []).filter(s => s.paid) : [];
+  const paymentMadeVal = paidEmisList.reduce((acc, curr) => acc + (Number(curr.emiAmount) || 0), 0);
+  const remainingBalanceVal = Math.max(0, loanToPayVal - paymentMadeVal);
+
+  const [isSharingMasterLoans, setIsSharingMasterLoans] = useState(false);
+  const masterLoansSlipRef = useRef(null);
+
+  const handleShareMasterLoans = async () => {
+    if (!loans || loans.length === 0) {
+      showFeedback('No loans to export');
+      return;
+    }
+    showFeedback('Generating Active Loans Statement...');
+    setIsSharingMasterLoans(true);
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      await waitForPaint();
+
+      const element = masterLoansSlipRef.current || document.getElementById('loans-master-summary-slip');
+      if (!element) throw new Error('Loans Summary DOM node not found');
+
+      if (loans.length > 12) {
+        const opt = {
+          margin: [8, 8, 10, 8],
+          filename: `Active_Loans_Statement_${Date.now()}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+        const pdfFile = new File([pdfBlob], `Active_Loans_Statement_${Date.now()}.pdf`, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({ files: [pdfFile], title: 'Active Loans Statement' });
+        } else {
+          html2pdf().set(opt).from(element).save();
+        }
+      } else {
+        await shareReceiptToWhatsApp(
+          masterLoansSlipRef,
+          `Active_Loans_Statement_${Date.now()}`,
+          `Budget Bharat — Active Loans Statement (${loans.length} loans)`
+        );
+      }
+      showFeedback('Statement shared');
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.error('Loans statement export error:', err);
+      showFeedback('Error: ' + (err && err.message ? err.message : 'generating export failed'));
+    } finally {
+      setIsSharingMasterLoans(false);
+    }
+  };
+
+  if (viewMode === 'master' && !isCreatingLoan) {
+    return (
+      <div className="px-4 mt-2 pb-32 space-y-3.5 animate-slide-up">
+        <div className="flex justify-between items-center px-1">
+          <button
+            onClick={handleShareMasterLoans}
+            disabled={isSharingMasterLoans}
+            title="Share Loans Summary Image"
+            className={`w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs ${isSharingMasterLoans ? 'opacity-50 cursor-wait' : ''}`}
+          >
+            <i className={`fa-solid ${isSharingMasterLoans ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
+          </button>
+
+          <button
+            onClick={() => {
+              setNewPerson('');
+              setNewLoanName('');
+              setNewLoanTaken('');
+              setNewLoanToPay('');
+              setNewMonthlyEmi('');
+              setNewTenure('12');
+              setIsCreatingLoan(true);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-[#078A87] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <i className="fa-solid fa-plus text-xs"></i>
+            <span>New Loan</span>
+          </button>
+        </div>
+
+        <div className="grad-kpi rounded-2xl p-4 shadow-md grid grid-cols-3 divide-x divide-white/10 text-center text-white">
+          <div className="px-1">
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Total to Pay</p>
+            <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(masterSummary.totalLoanToPay)}</p>
+          </div>
+          <div className="px-1">
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Paid So Far</p>
+            <p className="text-sm font-black text-emerald-400 mt-1 truncate">{formatMoney(masterSummary.totalPaidSoFar)}</p>
+          </div>
+          <div className="px-1">
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Remaining</p>
+            <p className="text-sm font-black text-[#07C0BE] mt-1 truncate">{formatMoney(masterSummary.totalRemaining)}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-[#E4E1EA] shadow-xs overflow-hidden">
+          {loans.length === 0 ? (
+            <div className="text-center py-12 px-4">
+              <i className="fa-solid fa-hand-holding-dollar text-3xl text-gray-300 mb-2"></i>
+              <p className="text-xs font-bold text-gray-500">No active loans found. Create your first loan above.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto hide-scrollbar">
+              <table className="w-full table-fixed text-[10px]">
+                <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
+                  <tr>
+                    <th className="w-[34%] px-3 py-2 text-left tracking-tight">Loan / Person</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">Loan Rs.</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">EMI Rs.</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">EMI Paid</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
+                  {loans.map(loan => {
+                    const paidCount = (loan.schedule || []).filter(s => s.paid).length;
+                    const totalCount = (loan.schedule || []).length;
+                    const isClosed = loan.status === 'CLOSED' || (totalCount > 0 && paidCount === totalCount);
+
+                    return (
+                      <tr
+                        key={loan.id}
+                        onClick={() => {
+                          setSelectedLoanId(loan.id);
+                          setViewMode('detail');
+                          setIsCreatingLoan(false);
+                        }}
+                        className="hover:bg-[#F4F3F8] cursor-pointer transition-colors active:bg-gray-100"
+                      >
+                        <td className="px-3 py-3.5 truncate">
+                          <span className="font-extrabold block truncate text-xs text-[#1E104B]">{loan.loanName}</span>
+                          <span className="block truncate text-[10px] font-bold text-[#625E70]">{loan.person}</span>
+                        </td>
+                        <td className="px-2 py-3.5 text-right font-black text-[#1E104B] text-xs">
+                          {formatMoney(loan.loanAmount)}
+                        </td>
+                        <td className="px-2 py-3.5 text-right font-black text-[#1E104B] text-xs">
+                          {formatMoney(loan.monthlyEmi)}
+                        </td>
+                        <td className="px-2 py-3.5 text-right font-black text-[11px]">
+                          <span className={isClosed ? 'text-gray-400' : 'text-emerald-600'}>
+                            {paidCount}/{totalCount}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <SafePortal>
+          <div className="canvas-hide">
+            <div
+              ref={masterLoansSlipRef}
+              id="loans-master-summary-slip"
+              className="bg-white px-5 py-4 font-sans box-border inline-block text-slate-900 relative overflow-hidden"
+              style={{ width: '640px', fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+            >
+              <div 
+                className="absolute inset-0 pointer-events-none overflow-hidden flex flex-col justify-around items-center" 
+                style={{ zIndex: 0 }}
+              >
+                {Array.from({ length: Math.max(1, Math.ceil(((loans && loans.length) || 1) / 14)) }).map((_, wIdx) => (
+                  <div key={wIdx} className="w-full flex items-center justify-center" style={{ minHeight: '820px' }}>
+                    <img
+                      src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                      alt=""
+                      className="w-72 h-72 object-contain select-none"
+                      style={{ opacity: 0.05 }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-b-2 border-[#1E104B] pb-2 mb-2 flex justify-between items-end relative z-10">
+                <div className="text-left">
+                  <h1 className="text-[10px] font-black text-[#7B2B8C] uppercase tracking-widest mb-0.5">
+                    {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
+                  </h1>
+                  <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">Active Loans Statement</h2>
+                </div>
+                <div className="text-right text-[10px] font-bold text-gray-500 leading-tight">
+                  <p>Total Loans: {loans.length}</p>
+                  <p className="mt-0.5">Date: {formatDisplayDate(`${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`)}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-between bg-[#F4F3F8] rounded-xl py-2 px-2 text-center mb-2.5">
+                <div className="flex-1 px-1">
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">TOTAL TO PAY</p>
+                  <p className="text-base font-black text-[#1E104B]">{formatMoney(masterSummary.totalLoanToPay)}</p>
+                </div>
+                <div className="flex-1 px-1 border-x border-[#E4E1EA]">
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">PAID SO FAR</p>
+                  <p className="text-base font-black text-[#078A87]">{formatMoney(masterSummary.totalPaidSoFar)}</p>
+                </div>
+                <div className="flex-1 px-1">
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">REMAINING</p>
+                  <p className="text-base font-black text-[#D6455D]">{formatMoney(masterSummary.totalRemaining)}</p>
+                </div>
+              </div>
+
+              <table className="w-full text-left text-[11px] mb-2 border-collapse table-fixed leading-tight">
+                <colgroup>
+                  <col style={{ width: '34%' }} />
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '22%' }} />
+                </colgroup>
+                <thead className="bg-[#1E104B] text-white text-[10px]">
+                  <tr>
+                    <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">Loan / Person</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Loan Rs.</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">EMI Rs.</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">EMI Paid</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[#1E104B] bg-transparent font-medium">
+                {loans.map((loan) => {
+                  const paidCount = (loan.schedule || []).filter(s => s.paid).length;
+                  const totalCount = (loan.schedule || []).length;
+                  const isClosed = loan.status === 'CLOSED' || (totalCount > 0 && paidCount === totalCount);
+                  return (
+                    <tr key={loan.id}>
+                      <td className="py-2 px-2 border border-[#E4E1EA] truncate align-middle">
+                        <span className="font-bold block truncate text-xs text-[#1E104B]">{loan.loanName}</span>
+                        <span className="text-[9px] text-gray-500 font-bold block truncate">{loan.person}</span>
+                      </td>
+                      <td className="py-2 px-2 text-right font-black border border-[#E4E1EA] align-middle text-xs">{formatMoney(loan.loanAmount)}</td>
+                      <td className="py-2 px-2 text-right font-bold border border-[#E4E1EA] align-middle text-xs">{formatMoney(loan.monthlyEmi)}</td>
+                      <td className="py-2 px-2 text-right font-black border border-[#E4E1EA] align-middle text-xs">
+                        <span className={isClosed ? 'text-gray-400' : 'text-emerald-600'}>
+                          {paidCount}/{totalCount}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
+              <div className="flex flex-col justify-center text-left leading-tight">
+                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
+                <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+              </div>
+
+              <div className="flex items-center justify-center">
+                <img
+                  src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                  alt="Logo"
+                  className="w-[104px] h-[104px] object-contain select-none"
+                />
+              </div>
+
+              <div className="text-right leading-tight">
+                {admin && admin.footerNote && (
+                  <p className="text-[10px] font-semibold text-gray-700 italic mb-1">
+                    "{admin.footerNote}"
+                  </p>
+                )}
+                <span className="text-[11px] font-extrabold text-[#1E104B] block">
+                  {admin && admin.name ? admin.name : 'Bharat Rasve'}
+                </span>
+                {admin && admin.contact && (
+                  <span className="text-[10px] font-bold text-gray-600 block mt-1">
+                    Mo.No: {admin.contact}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </SafePortal>
+      <AppBottomBranding />
+    </div>
+  );
+}
+
+return (
+  <div className="flex flex-col h-full select-none">
+    <div className="flex-none grad-dark px-3.5 py-3 text-white flex items-center justify-between shadow-md z-30">
+      <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+        <button
+          onClick={() => {
+            if (onClearLoanFocus) onClearLoanFocus();
+            setViewMode('master');
+            setIsCreatingLoan(false);
+          }}
+          title="Exit to Loans Directory"
+          className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95"
+        >
+          <i className="fa-solid fa-arrow-left text-base"></i>
+        </button>
+
+        <div className="text-left min-w-0 flex-1">
+          <h1 className="text-sm sm:text-base font-extrabold truncate leading-tight">
+            {currentLoan ? currentLoan.loanName : 'Loan Details'}
+          </h1>
+          {currentLoan && !isCreatingLoan && (
+            <div className="flex items-center gap-2.5 mt-0.5 min-w-0">
+              <button
+                onClick={() => {
+                  if (borrowerPersonObj) {
+                    onSelectPerson(borrowerPersonObj);
+                  } else {
+                    const fallbackObj = (persons || []).find(p => String(p.name).trim().toLowerCase() === String(currentLoan.person).trim().toLowerCase());
+                    if (fallbackObj) onSelectPerson(fallbackObj);
+                  }
+                }}
+                className="text-xs text-white font-extrabold hover:underline truncate leading-none cursor-pointer active:scale-95 transition-transform"
+                title={`Open ${currentLoan.person}'s Ledger`}
+              >
+                {currentLoan.person}
+              </button>
+
+              <div ref={loanDropdownRef} className="relative flex-none z-40">
+                <div
+                  onClick={() => {
+                    if (borrowerActiveLoans.length > 0) {
+                      setIsLoanDropdownOpen(prev => !prev);
+                    }
+                  }}
+                  className={`flex items-center rounded-lg border text-[10px] font-black transition-all ${
+                    borrowerActiveLoans.length > 0
+                      ? 'bg-white/20 border-white/30 text-white hover:bg-white/30 cursor-pointer active:scale-95 shadow-xs'
+                      : 'bg-white/5 border-white/10 text-white/50 cursor-default'
+                  }`}
+                  style={{ height: '22px' }}
+                >
+                  <span className="px-2.5 py-0.5 leading-none tracking-wide whitespace-nowrap">
+                    {borrowerActiveLoans.length > 0 ? `${borrowerActiveLoans.length} Loans` : 'No Loans'}
+                  </span>
+                  {borrowerActiveLoans.length > 0 && (
+                    <span className="flex items-center justify-center border-l border-white/25 px-2 h-full bg-white/10 rounded-r-lg">
+                      <i className={`fa-solid ${isLoanDropdownOpen ? 'fa-chevron-up' : 'fa-chevron-down'} text-[8px]`}></i>
+                    </span>
+                  )}
+                </div>
+
+                {isLoanDropdownOpen && borrowerActiveLoans.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1.5 w-56 bg-[#241457] border border-[#7B2B8C]/40 rounded-xl shadow-2xl py-1 z-50 animate-slide-up">
+                    <div className="px-3 py-1.5 text-[9px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10">
+                      Active Loans ({borrowerActiveLoans.length})
+                    </div>
+                    <div className="max-h-48 overflow-y-auto hide-scrollbar divide-y divide-white/5">
+                      {borrowerActiveLoans.map((l) => {
+                        const sched = l.schedule || [];
+                        const pCount = sched.filter(s => s.paid === true || String(s.paid).toLowerCase() === 'true').length;
+                        const tCount = sched.length;
+                        const isCurrent = l.id === currentLoan.id;
+                        return (
+                          <div
+                            key={l.id}
+                            onClick={() => {
+                              setSelectedLoanId(l.id);
+                              setIsLoanDropdownOpen(false);
+                            }}
+                            className={`px-3 py-2 cursor-pointer transition-colors text-left ${
+                              isCurrent ? 'bg-[#7B2B8C]/70' : 'hover:bg-[#7B2B8C]'
+                            }`}
+                          >
+                            <p className="text-xs font-bold text-white truncate flex items-center justify-between">
+                              <span>{l.loanName}</span>
+                              {isCurrent && <i className="fa-solid fa-check text-[9px] text-emerald-400"></i>}
+                            </p>
+                            <div className="flex justify-between items-center text-[10px] text-white/70 mt-0.5 font-semibold">
+                              <span>{formatMoney(l.loanAmount)}</span>
+                              <span className="text-emerald-400 font-bold">{pCount}/{tCount} Paid</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-none">
+        {!isCreatingLoan && loans.length > 0 && (
+          <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10 text-[11px] font-black">
+            <button
+              onClick={goToPrevLoan}
+              title="Previous Loan"
+              className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs"
+            >
+              <i className="fa-solid fa-chevron-left text-[9px]"></i>
+            </button>
+            <span className="opacity-75 select-none">({currentLoanIndex + 1}/{loans.length})</span>
+            <button
+              onClick={goToNextLoan}
+              title="Next Loan"
+              className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs"
+            >
+              <i className="fa-solid fa-chevron-right text-[9px]"></i>
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={uploadBackupToCloud}
+          disabled={syncStatus === 'syncing'}
+          className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
+          title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+        >
+          <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+        </button>
+      </div>
+    </div>
+
+    <div className="app-content px-4 mt-2 pb-32 space-y-3">
+      {!isCreatingLoan && currentLoan && (
+        <div className="flex items-center justify-between gap-2 py-1 px-1">
+          <div className="flex items-center gap-2 flex-none">
+            <button
+              onClick={handleShareLoanSchedule}
+              disabled={isExportingSlip}
+              title="Share Schedule (Image / PDF)"
+              className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
+            >
+              <i className={`fa-solid ${isExportingSlip ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
+            </button>
+
+            <button
+              onClick={handleSendWhatsAppReminder}
+              title="Send WhatsApp EMI Reminder"
+              className="w-9 h-9 rounded-full bg-[#25D366] text-white hover:brightness-105 active:scale-95 flex items-center justify-center text-sm transition-all shadow-xs"
+            >
+              <i className="fa-brands fa-whatsapp"></i>
+            </button>
+
+            <button
+              onClick={() => setShowDeleteLoanConfirm(true)}
+              title="Delete Loan"
+              className="w-9 h-9 rounded-full bg-[#D6455D]/15 text-[#D6455D] hover:bg-[#D6455D] hover:text-white active:bg-[#D6455D] active:text-white flex items-center justify-center transition-all border border-[#D6455D]/25 shadow-xs"
+            >
+              <i className="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (currentLoan && currentLoan.schedule && currentLoan.schedule.length > 0) {
+                  const firstPending = currentLoan.schedule.find(s => !s.paid) || currentLoan.schedule[0];
+                  setSelectedClosureEmiNo(firstPending.emiNo);
+                }
+                setClosureAmountVal('');
+                setForeclosingStatus('idle');
+                setForeclosureModalOpen(true);
+              }}
+              title="Foreclose Loan"
+              className="px-3 py-1.5 rounded-xl bg-[#D6455D] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-xmark text-xs font-black"></i>
+              <span>Foreclose</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setNewLoanName('');
+                setNewLoanTaken('');
+                setNewLoanToPay('');
+                setNewMonthlyEmi('');
+                setNewTenure('12');
+                setNewFirstDate(toInputDate_(new Date()));
+                setNewPerson(currentLoan ? currentLoan.person : '');
+                setIsCreatingLoan(true);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-[#078A87] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <i className="fa-solid fa-plus text-xs"></i>
+              <span>New Loan</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isCreatingLoan && (
+        <div
+          className="fixed inset-0 z-50 bg-[#1E104B]/60 backdrop-blur-md flex items-center justify-center p-4 select-none"
+          onClick={() => setIsCreatingLoan(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-5 max-w-md w-full shadow-2xl animate-slide-up space-y-3.5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+              <div>
+                <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">New Loan Details</h3>
+                <p className="text-[10px] text-gray-400 font-bold">Amortization Setup</p>
+              </div>
+              <button
+                onClick={() => setIsCreatingLoan(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            {actionError && (
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold flex items-center gap-2">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateLoan} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Borrower *</label>
+                  <SearchableDropdown
+                    value={newPerson}
+                    onChange={setNewPerson}
+                    options={persons.map(p => p.name)}
+                    placeholder="Select person..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Loan Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Phone EMI / Gold Loan"
+                    value={newLoanName}
+                    onChange={e => setNewLoanName(e.target.value)}
+                    className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Loan Taken (Disbursed) *</label>
+                  <input
+                    type="number"
+                    placeholder="Bank Disbursed Amount"
+                    value={newLoanTaken}
+                    onChange={e => setNewLoanTaken(e.target.value)}
+                    className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Loan to Pay (Total) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="Total Repayable"
+                    value={newLoanToPay}
+                    onChange={e => setNewLoanToPay(e.target.value)}
+                    className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Monthly EMI (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="e.g. 2285"
+                    value={newMonthlyEmi}
+                    onChange={e => setNewMonthlyEmi(e.target.value)}
+                    className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Tenure (Mo)</label>
+                  <input
+                    type="number"
+                    value={newTenure}
+                    onChange={e => setNewTenure(e.target.value)}
+                    className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">First Date</label>
+                  <AppDatePicker
+                    value={newFirstDate}
+                    onChange={setNewFirstDate}
+                    className="w-full border border-[#E4E1EA] rounded-xl px-2 py-2.5 font-bold text-[11px] bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingLoan(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-xs uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createStatus === 'loading'}
+                  className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md ${
+                    createStatus === 'loading'
+                      ? 'bg-slate-400 text-white cursor-not-allowed'
+                      : createStatus === 'success'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-[#1E104B] hover:bg-[#2A186B] active:scale-95 text-white'
+                  }`}
+                >
+                  {createStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
+                  {createStatus === 'success' && <i className="fa-solid fa-check"></i>}
+                  <span>
+                    {createStatus === 'loading'
+                      ? 'Creating...'
+                      : createStatus === 'success'
+                      ? 'Created'
+                      : 'Create Loan'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {!isCreatingLoan && currentLoan && (
+        <>
+          <div className="grad-kpi rounded-2xl p-3.5 shadow-md text-white space-y-2.5">
+            <div className="grid grid-cols-3 divide-x divide-white/10 text-center pb-2 border-b border-white/10">
+              <div className="px-1">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Total Loan Taken</p>
+                <p className="text-xs sm:text-sm font-black mt-0.5 truncate">{formatMoney(loanTakenVal)}</p>
+              </div>
+              <div className="px-1">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Total Loan to Pay</p>
+                <p className="text-xs sm:text-sm font-black text-[#07C0BE] mt-0.5 truncate">{formatMoney(loanToPayVal)}</p>
+              </div>
+              <div className="px-1">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Interest</p>
+                <p className="text-xs sm:text-sm font-black text-amber-300 mt-0.5 truncate">{formatMoney(loanInterestVal)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
+              <div className="px-1">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">EMI Paid</p>
+                <p className="text-xs sm:text-sm font-black text-emerald-400 mt-0.5 truncate">
+                  {paidEmisList.length} / {currentLoan.schedule.length}
+                </p>
+              </div>
+              <div className="px-1">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Payment Made</p>
+                <p className="text-xs sm:text-sm font-black text-emerald-400 mt-0.5 truncate">{formatMoney(paymentMadeVal)}</p>
+              </div>
+              <div className="px-1">
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Remaining</p>
+                <p className="text-xs sm:text-sm font-black text-rose-300 mt-0.5 truncate">{formatMoney(remainingBalanceVal)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-[#E4E1EA] overflow-hidden shadow-xs">
+            <div className="overflow-x-auto hide-scrollbar">
+              <table className="w-full text-left text-[11px] whitespace-nowrap">
+                <thead className="bg-[#1DA1D2] text-white uppercase font-black tracking-wider text-[10px]">
+                  <tr>
+                    <th className="px-3 py-2.5">DATE</th>
+                    <th className="px-3 py-2.5 text-right">AMOUNT</th>
+                    <th className="px-3 py-2.5 text-right">BALANCE</th>
+                    <th className="px-2.5 py-2.5 text-center">Paid/ Not</th>
+                    <th className="px-3 py-2.5">Txn. Id</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E1EA] font-semibold text-[#1E104B]">
+                  {currentLoan.schedule.map((row) => (
+                    <tr
+                      key={row.emiNo}
+                      className={`transition-colors ${row.paid ? 'bg-amber-50/70' : 'hover:bg-slate-50'}`}
+                    >
+                      <td className={`px-3 py-2.5 whitespace-nowrap ${row.paid ? 'line-through text-gray-500 font-bold' : 'text-[#1E104B]'}`}>
+                        {formatDisplayDate(row.date)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-black">{formatMoney(row.emiAmount)}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-gray-700">{formatMoney(row.outstandingBal)}</td>
+                      <td className="px-2.5 py-2.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={row.paid}
+                          onChange={() => handleToggleCheckbox(row)}
+                          className="w-4 h-4 rounded cursor-pointer accent-[#1E104B]"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 text-[10px] text-gray-600 font-mono truncate max-w-[170px]">
+                        {row.paymentId || '-'}
+                        {row.whoPaid && (
+                          <span className="block text-[8px] font-bold text-[#078A87] uppercase">
+                            {row.whoPaid === 'ME' 
+                              ? `Paid by ${toProperCase(typeof admin !== 'undefined' && admin && admin.name ? admin.name.trim().split(/\s+/)[0] : 'Me')}` 
+                              : `Paid by ${currentLoan.person ? currentLoan.person.trim().split(/\s+/)[0] : 'Borrower'}`}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {foreclosureModalOpen && (
+            <div 
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => { if (foreclosingStatus !== 'loading') setForeclosureModalOpen(false); }}
+            >
+              <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-slide-up space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-start border-b border-gray-100 pb-2">
+                  <div>
+                    <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">Loan Foreclosure</h3>
+                    <p className="text-[10px] font-bold text-[#625E70] mt-0.5">
+                      {currentLoan.loanName} • <span className="text-[#078A87]">{currentLoan.person}</span>
+                    </p>
+                  </div>
+                  <button
+                    disabled={foreclosingStatus === 'loading'}
+                    onClick={() => setForeclosureModalOpen(false)}
+                    className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    <i className="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Closure EMI / Date *</label>
+                    <select
+                      value={selectedClosureEmiNo}
+                      disabled={foreclosingStatus === 'loading'}
+                      onChange={e => setSelectedClosureEmiNo(Number(e.target.value))}
+                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold bg-[#F4F3F8] text-[#1E104B] outline-none cursor-pointer"
+                    >
+                      {(currentLoan.schedule || []).map((s) => (
+                        <option key={s.emiNo} value={s.emiNo}>
+                          {formatDisplayDate(s.date)} (EMI #{s.emiNo})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Closure Settlement Amount (₹) *</label>
+                    <input
+                      type="number"
+                      disabled={foreclosingStatus === 'loading'}
+                      placeholder="Enter final settlement amount"
+                      value={closureAmountVal}
+                      onChange={e => setClosureAmountVal(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1E104B] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={foreclosingStatus === 'loading'}
+                    onClick={() => setForeclosureModalOpen(false)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={foreclosingStatus === 'loading'}
+                    onClick={async () => {
+                      const closeAmt = parseFloat(closureAmountVal);
+                      if (isNaN(closeAmt) || closeAmt < 0) {
+                        alert('Please provide a valid settlement amount.');
+                        return;
+                      }
+
+                      setForeclosingStatus('loading');
+
+                      const now = new Date();
+                      const pad = (n) => ('0' + n).slice(-2);
+                      const todayStrictStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+
+                      const targetEmiNo = Number(selectedClosureEmiNo);
+
+                      const updatedSchedule = currentLoan.schedule.map((s) => {
+                        if (s.emiNo === targetEmiNo) {
+                          return {
+                            ...s,
+                            emiAmount: closeAmt,
+                            outstandingBal: 0,
+                            paid: true,
+                            whoPaid: 'PERSON',
+                            paymentId: 'Foreclosure Settlement',
+                            paidDate: todayStrictStr
+                          };
+                        } else if (s.emiNo > targetEmiNo) {
+                          return {
+                            ...s,
+                            emiAmount: 0,
+                            outstandingBal: 0,
+                            paid: true,
+                            whoPaid: 'PERSON',
+                            paymentId: 'Closed via Foreclosure',
+                            paidDate: todayStrictStr
+                          };
+                        }
+                        return s;
+                      });
+
+                      const finalLoanPayload = {
+                        ...currentLoan,
+                        status: 'CLOSED',
+                        schedule: updatedSchedule
+                      };
+
+                      try {
+                        await saveLoanAction(finalLoanPayload);
+                        setForeclosingStatus('success');
+                        setTimeout(() => {
+                          setForeclosureModalOpen(false);
+                          setForeclosingStatus('idle');
+                          showFeedback('Loan successfully foreclosed & closed');
+                        }, 500);
+                      } catch (err) {
+                        setForeclosingStatus('error');
+                        alert('Foreclosure failed: ' + (err && err.message ? err.message : String(err)));
+                      }
+                    }}
+                    className={`flex-1 font-black py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                      foreclosingStatus === 'loading'
+                        ? 'bg-amber-400 text-white cursor-wait'
+                        : foreclosingStatus === 'success'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-amber-600 hover:bg-amber-700 text-white'
+                    }`}
+                  >
+                    {foreclosingStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
+                    {foreclosingStatus === 'success' && <i className="fa-solid fa-check text-xs"></i>}
+                    <span>
+                      {foreclosingStatus === 'loading'
+                        ? 'Closing...'
+                        : foreclosingStatus === 'success'
+                        ? 'Closed'
+                        : 'Confirm Closure'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {showDeleteLoanConfirm && currentLoan && (
+        <div className="fixed inset-0 z-[60] bg-theme-dark/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { if (!isDeletingLoan) setShowDeleteLoanConfirm(false); }}>
+          <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${isDeletingLoan ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-500'}`}>
+              <i className={isDeletingLoan ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
+            </div>
+            <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
+              {isDeletingLoan ? 'Deleting Loan...' : 'Delete Loan?'}
+            </h3>
+            <p className="text-xs text-gray-500 mt-1 mb-5">
+              {isDeletingLoan ? `Deleting "${currentLoan.loanName}" and all associated schedule records...` : <>Are you sure you want to delete <strong>"{currentLoan.loanName}"</strong>? This action cannot be undone.</>}
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                disabled={isDeletingLoan}
+                onClick={() => setShowDeleteLoanConfirm(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingLoan}
+                onClick={async () => {
+                  setIsDeletingLoan(true);
+                  try {
+                    await deleteLoanAction(currentLoan.id);
+                    setShowDeleteLoanConfirm(false);
+                    setViewMode('master');
+                  } catch (err) {
+                    console.error("Delete loan error:", err);
+                  } finally {
+                    setIsDeletingLoan(false);
+                  }
+                }}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-70 cursor-wait"
+              >
+                {isDeletingLoan && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
+                <span>{isDeletingLoan ? 'Deleting...' : 'Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paymentModal.open && paymentModal.row && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-slide-up space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+              <div>
+                <h3 className="text-sm font-black text-[#1E104B] uppercase">Record EMI Payment</h3>
+                <p className="text-[10px] text-gray-500 font-bold">
+                  {currentLoan.loanName} • {formatMoney(paymentModal.row.emiAmount)}
+                </p>
+              </div>
+              <button
+                disabled={payStatus === 'loading'}
+                onClick={() => setPaymentModal({ open: false, row: null, who: 'ME', paymentId: '' })}
+                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 disabled:opacity-50"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            {actionError && (
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold flex items-center gap-2">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold text-[#625E70] uppercase">Who Paid this EMI? *</label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl text-xs font-black">
+                <button
+                  type="button"
+                  onClick={() => setPaymentModal(prev => ({ ...prev, who: 'ME' }))}
+                  className={`py-2 rounded-lg transition-all ${
+                    paymentModal.who === 'ME' ? 'bg-[#1E104B] text-white shadow-xs' : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  I Paid (Me)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentModal(prev => ({ ...prev, who: 'PERSON' }))}
+                  className={`py-2 rounded-lg transition-all ${
+                    paymentModal.who === 'PERSON' ? 'bg-[#078A87] text-white shadow-xs' : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  Borrower Paid
+                </button>
+              </div>
+              {paymentModal.who === 'ME' ? (
+                <p className="text-[9px] text-[#078A87] font-semibold mt-1">
+                  <i className="fa-solid fa-circle-info mr-1"></i>
+                  Auto-logs a <strong>GIVEN (LENT)</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
+                </p>
+              ) : (
+                <p className="text-[9px] text-gray-500 font-semibold mt-1">
+                  <i className="fa-solid fa-circle-info mr-1"></i>
+                  Marks installment cleared by borrower. Ledger balance remains unchanged.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-[10px] font-bold text-[#625E70] uppercase">UTR / Payment ID / Note</label>
+              <input
+                type="text"
+                placeholder="e.g. T2403050925367... or paid advance"
+                value={paymentModal.paymentId}
+                onChange={e => setPaymentModal({ ...paymentModal, paymentId: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1E104B] outline-none focus:border-[#1E104B]"
+              />
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={payStatus === 'loading'}
+                onClick={() => setPaymentModal({ open: false, row: null, who: 'ME', paymentId: '' })}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={payStatus === 'loading'}
+                onClick={handleConfirmPayment}
+                className={`flex-1 font-black py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                  payStatus === 'loading'
+                    ? 'bg-slate-400 text-white cursor-not-allowed'
+                    : payStatus === 'success'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-[#1E104B] hover:bg-[#2A186B] active:scale-95 text-white'
+                }`}
+              >
+                {payStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
+                {payStatus === 'success' && <i className="fa-solid fa-check"></i>}
+                <span>
+                  {payStatus === 'loading' ? 'Saving...' : payStatus === 'success' ? 'Saved' : 'Confirm & Save'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentLoan && SafePortal && ReactDOM.createPortal(
+        <div className="canvas-hide">
+          {(() => {
+            const safeAdmin = typeof admin !== 'undefined' ? admin : {};
+            const rawAdminFirst = safeAdmin.name ? safeAdmin.name.trim().split(/\s+/)[0] : 'Me';
+            const adminFirstName = toProperCase(rawAdminFirst);
+            const borrowerFirstName = currentLoan.person ? currentLoan.person.trim().split(/\s+/)[0] : 'Borrower';
+            const emiStartDate = currentLoan.schedule && currentLoan.schedule.length > 0 ? formatDisplayDate(currentLoan.schedule[0].date) : '-';
+
+            return (
+              <div
+                ref={loanSlipRef}
+                className="bg-white px-5 py-3 font-sans box-border text-slate-900 relative overflow-hidden"
+                style={{ width: '720px', fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                <div 
+                  className="absolute inset-0 pointer-events-none overflow-hidden flex flex-col justify-around items-center" 
+                  style={{ zIndex: 0 }}
+                >
+                  {Array.from({ length: Math.max(1, Math.ceil(((currentLoan.schedule && currentLoan.schedule.length) || 1) / 14)) }).map((_, wIdx) => (
+                    <div key={wIdx} className="w-full flex items-center justify-center" style={{ minHeight: '820px' }}>
+                      <img
+                        src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                        alt=""
+                        className="w-80 h-auto max-h-48 object-contain select-none"
+                        style={{ opacity: 0.05 }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-b-2 border-[#1E104B] pb-2 mb-2 flex justify-between items-start relative z-10">
+                  <div className="text-left">
+                    <h1 className="text-[10px] font-black text-[#7B2B8C] uppercase tracking-widest mb-0.5">
+                      {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
+                    </h1>
+                    <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">{currentLoan.loanName}</h2>
+                    <p className="text-[10px] font-black text-[#078A87] uppercase tracking-wider mt-0.5">EMI TABLE</p>
+                    <p className="text-[9px] text-gray-500 font-bold mt-0.5">
+                      Date: {formatDisplayDate(`${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`)}
+                    </p>
+                  </div>
+                  <div className="text-right leading-tight">
+                    <h2 className="text-2xl font-black text-[#1E104B] tracking-tight leading-none mb-1">{currentLoan.person}</h2>
+                    <p className="text-xs font-bold text-gray-700">
+                      Mo.No: {
+                        (borrowerPersonObj && borrowerPersonObj.phone) ||
+                        ((persons || []).find(p => String(p.name || '').trim().toLowerCase() === String(currentLoan.person || '').trim().toLowerCase()) || {}).phone ||
+                        'N/A'
+                      }
+                    </p>
+                    <p className="text-[10px] font-semibold text-gray-500 capitalize mt-0.5">
+                      {
+                        (borrowerPersonObj && borrowerPersonObj.address) ||
+                        ((persons || []).find(p => String(p.name || '').trim().toLowerCase() === String(currentLoan.person || '').trim().toLowerCase()) || {}).address ||
+                        'Maharashtra'
+                      }
+                    </p>
+                    <p className="text-[9px] font-bold text-gray-500">EMI Start: {emiStartDate}</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#1E104B] text-white rounded-xl py-3.5 px-3 mb-3 mx-2 grid grid-cols-3 gap-2.5 text-center">
+                  <div>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">TOTAL LOAN TAKEN</p>
+                    <p className="text-base font-black mt-0.5">{formatMoney(loanTakenVal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">TOTAL LOAN TO PAY</p>
+                    <p className="text-base font-black text-[#07C0BE] mt-0.5">{formatMoney(loanToPayVal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">INTEREST</p>
+                    <p className="text-base font-black text-amber-300 mt-0.5">{formatMoney(loanInterestVal)}</p>
+                  </div>
+                  <div className="pt-2.5 border-t border-white/15">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">EMI PAID</p>
+                    <p className="text-base font-black text-emerald-400 mt-0.5">{paidEmisList.length} / {currentLoan.schedule.length}</p>
+                  </div>
+                  <div className="pt-2.5 border-t border-white/15">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">PAYMENT MADE</p>
+                    <p className="text-base font-black text-emerald-400 mt-0.5">{formatMoney(paymentMadeVal)}</p>
+                  </div>
+                  <div className="pt-2.5 border-t border-white/15">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">REMAINING</p>
+                    <p className="text-base font-black text-rose-300 mt-0.5">{formatMoney(remainingBalanceVal)}</p>
+                  </div>
+                </div>
+
+                <table className="w-full text-left text-xs mb-3 border-collapse table-fixed">
+                  <colgroup>
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '29%' }} />
+                  </colgroup>
+                  <thead className="bg-[#1DA1D2] text-white uppercase text-[10px]">
+                    <tr>
+                      <th className="py-2 px-2 border">DATE</th>
+                      <th className="py-2 px-2 text-right border">AMOUNT</th>
+                      <th className="py-2 px-2 text-right border">BALANCE</th>
+                      <th className="py-2 px-2 text-center border">STATUS</th>
+                      <th className="py-2 px-2 text-center border">WHO PAID</th>
+                      <th className="py-2 px-2 border">TXN ID</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-transparent">
+                    {currentLoan.schedule.map((row) => (
+                      <tr key={row.emiNo} className={row.paid ? 'bg-amber-50/50' : ''}>
+                        <td className="py-2 px-2 border">{formatDisplayDate(row.date)}</td>
+                        <td className="py-2 px-2 border text-right font-bold">{formatMoney(row.emiAmount)}</td>
+                        <td className="py-2 px-2 border text-right font-bold">{formatMoney(row.outstandingBal)}</td>
+                        <td className="py-2 px-2 border text-center font-bold">
+                          {row.paid ? 'Paid' : '-'}
+                        </td>
+                        <td className="py-2 px-2 border text-center font-bold">
+                          {row.paid ? (row.whoPaid === 'ME' ? adminFirstName : borrowerFirstName) : '-'}
+                        </td>
+                        <td className="py-2 px-2 border font-mono text-[10px] truncate">{row.paymentId || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
+                  <div className="flex flex-col justify-center text-left leading-tight">
+                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
+                    <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                    <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+                  </div>
+
+                  <div className="flex items-center justify-center">
+                    <img
+                      src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
+                      alt="Logo"
+                      className="w-32 h-auto max-h-12 object-contain select-none"
+                    />
+                  </div>
+
+                  <div className="text-right leading-tight">
+                    {admin && admin.footerNote && (
+                      <p className="text-[10px] font-semibold text-gray-700 italic mb-1">
+                        "{admin.footerNote}"
+                      </p>
+                    )}
+                    <span className="text-[11px] font-extrabold text-[#1E104B] block">
+                      {admin && admin.name ? admin.name : 'Bharat Rasve'}
+                    </span>
+                    {admin && admin.contact && (
+                      <span className="text-[10px] font-bold text-gray-600 block mt-1">
+                        Mo.No: {admin.contact}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>,
+        document.body
+      )}
+      <AppBottomBranding />
+    </div>
+  </div>
+);
+};
+
+const RecordsView = ({ onSelectTransaction }) => {
+const { filteredTransactions } = useContext(AppContext);
+
+const expenses = useMemo(() => filteredTransactions.filter(t => t.type === 'EXPENSE'), [filteredTransactions]);
+const incomes = useMemo(() => filteredTransactions.filter(t => t.type === 'INCOME'), [filteredTransactions]);
+const lents = useMemo(() => filteredTransactions.filter(t => t.type === 'LENT'), [filteredTransactions]);
+const borrows = useMemo(() => filteredTransactions.filter(t => t.type === 'BORROW'), [filteredTransactions]);
+
+const Section = ({ title, txs, showType = false }) => {
+  const [visibleCount, setVisibleCount] = useState(6);
+  const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0), [txs]);
+  const displayTxs = txs.slice(0, visibleCount);
+
+  return (
+    <div className="mb-3.5 bg-white rounded-2xl border border-[#E4E1EA] overflow-hidden shadow-xs">
+      <div className="bg-[#1E104B] px-3.5 py-2.5 flex justify-between items-center text-white">
+        <span className="text-[10px] font-black uppercase tracking-wider">{title} ({txs.length})</span>
+        <span className="text-[10px] font-semibold tracking-wide text-white/80">
+          Total: <span className="font-black text-white">{formatMoney(totalAmount)}</span>
+        </span>
+      </div>
+
+      {txs.length === 0 ? (
+        <p className="text-xs text-[#625E70] font-semibold px-3 py-3">No records found.</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto hide-scrollbar">
+            <table className="w-full text-left text-[10px] whitespace-nowrap">
+              <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
+                <tr>
+                  <th className="px-3 py-1.5">Date</th>
+                  <th className="px-3 py-1.5">Description</th>
+                  {showType && <th className="px-3 py-1.5">Type</th>}
+                  <th className="px-3 py-1.5 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
+                {displayTxs.map(t => {
+                  const txColor = t.type === 'INCOME' ? '#078A87' : t.type === 'EXPENSE' ? '#D6455D' : t.type === 'LENT' ? '#7B2B8C' : '#B7791F';
+                  const isPos = ['INCOME', 'BORROW'].includes(t.type);
+                  return (
+                    <tr
+                      key={t.id || t.entryId}
+                      data-entry-id={t.id || t.entryId}
+                      onClick={() => onSelectTransaction && onSelectTransaction(t)}
+                      className="hover:bg-[#E0E7FF]/30 transition-colors cursor-pointer active:bg-gray-100"
+                    >
+                      <td className="px-3 py-2.5 font-semibold text-[#625E70]">{formatDisplayDate(t.date)}</td>
+                      <td className="px-3 py-2.5 font-bold max-w-[150px] truncate text-[#1E104B]">
+                        {t.note || t.category}
+                        {(t.person || t.ref) && (
+                          <span className="block text-[8px] font-semibold text-[#8A8596] mt-0.5">
+                            {t.person} {t.person && t.ref ? '•' : ''} {t.ref}
+                          </span>
+                        )}
+                      </td>
+                      {showType && (
+                        <td className="px-3 py-2.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
+                          {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
+                        </td>
+                      )}
+                      <td className="px-3 py-2.5 text-right font-black text-xs" style={{ color: txColor }}>
+                        {isPos ? '+' : '-'}{formatTableNum(t.amount)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {txs.length > 6 && (
+            <div className="border-t border-theme-dark/5 bg-theme-gray/60 py-1.5 px-3 flex justify-between items-center text-[9px]">
+              <span className="font-bold opacity-60">Showing {Math.min(visibleCount, txs.length)} of {txs.length}</span>
+              <div className="space-x-2">
+                {visibleCount < txs.length ? (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount(v => v + 6)}
+                    className="font-black text-theme-dark hover:opacity-75 uppercase tracking-wider py-1 px-2.5 bg-white border border-theme-dark/10 rounded shadow-xs"
+                  >
+                    Load More (+6)
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount(6)}
+                    className="font-black text-theme-dark hover:opacity-75 uppercase tracking-wider py-1 px-2.5 bg-white border border-theme-dark/10 rounded shadow-xs"
+                  >
+                    Show Less
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+return (
+  <div className="px-4 mt-2 pb-32">
+    <div className="flex justify-end mb-2.5">
+      <PeriodSelector />
+    </div>
+    <Section title="Expense" txs={expenses} showType={false} />
+    <Section title="Income" txs={incomes} showType={false} />
+    <Section title="Given (Dr)" txs={lents} showType={false} />
+    <Section title="Received (Cr)" txs={borrows} showType={false} />
+    <Section title="Overall Records" txs={filteredTransactions} showType={true} />
+    <AppBottomBranding />
+  </div>
+);
+};
+
+const MainApp = () => {
+  const { searchQuery, setSearchQuery, persons, transactions, loans, loading, loadError, refresh } = useContext(AppContext);
+  const [tab, setTab] = useState('home');
+  const [selectedPerson, setSelectedPerson] = useState(null);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showInput, setShowInput] = useState(false);
+
+  const [fabShowingAppIcon, setFabShowingAppIcon] = useState(true);
+
+  useEffect(() => {
+    const fabCycle = setInterval(() => {
+      setFabShowingAppIcon(prev => !prev);
+    }, 6000);
+
+    return () => clearInterval(fabCycle);
+  }, []);
+
+  const [focusedLoan, setFocusedLoan] = useState({ person: null, loanId: null });
+
+  const [viewMode, setViewMode] = useState('master');
+  const [isCreatingLoan, setIsCreatingLoan] = useState(false);
+
+  useEffect(() => {
+    window.__TRIGGER_TAB__ = (targetTab) => {
+      setSearchQuery('');
+      setFocusedLoan({ person: null, loanId: null });
+      setTab(targetTab);
+    };
+    window.__TRIGGER_LOAN__ = (personName, loanId) => {
+      setSearchQuery('');
+      setFocusedLoan({ person: personName, loanId: loanId });
+      setTab('loans');
+    };
+  }, []);
+
+  const fullPersonList = useMemo(() => {
+    return persons.map(p => {
+      let dr = 0, cr = 0;
+      transactions.filter(t => t.person === p.name).forEach(t => {
+        if (t.type === 'LENT') dr += t.amount;
+        if (t.type === 'BORROW') cr += t.amount;
+      });
+      return { ...p, totalDr: dr, totalCr: cr, remaining: dr - cr };
+    }).sort((a, b) => Math.abs(b.remaining) - Math.abs(a.remaining));
+  }, [persons, transactions]);
+
+  if (loading && transactions.length === 0 && persons.length === 0) {
+    return <div className="app-shell"><LoadingScreen /></div>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-shell">
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 p-6">
+          <i className="fa-solid fa-triangle-exclamation text-3xl text-red-400"></i>
+          <p className="text-sm font-bold text-theme-dark">Couldn't load your data</p>
+          <p className="text-xs text-theme-dark/60">{loadError}</p>
+          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedPerson) {
+    const refreshedPerson = fullPersonList.find(p => p.name === selectedPerson.name);
+    if (!refreshedPerson) {
+      setTimeout(() => setSelectedPerson(null), 0);
+      return null;
+    }
+    return (
+      <div className="app-shell">
+        <ErrorBoundary key={refreshedPerson.name} label={refreshedPerson.name + "'s ledger"} onReset={() => setSelectedPerson(null)}>
+          <LedgerView
+            person={refreshedPerson}
+            onBack={() => setSelectedPerson(null)}
+            onSelectPerson={setSelectedPerson}
+            allPersons={fullPersonList}
+            onSelectTransaction={setSelectedTransaction}
+            onOpenAddRecord={() => setShowInput(true)}
+          />
+        </ErrorBoundary>
+
+        {showInput && (
+          <ErrorBoundary key="input-modal" label="New Entry" onReset={() => setShowInput(false)}>
+            <InputModal onClose={() => setShowInput(false)} />
+          </ErrorBoundary>
+        )}
+        {selectedTransaction && (
+          <ErrorBoundary key="tx-modal" label="Transaction Details" onReset={() => setSelectedTransaction(null)}>
+            <TransactionDetailModal
+              tx={selectedTransaction}
+              onClose={() => setSelectedTransaction(null)}
+            />
+          </ErrorBoundary>
+        )}
+
+        <div className="notched-nav-container select-none">
+          <div className="notched-pill">
+            <div className="flex items-center gap-7 sm:gap-9 pr-4">
+              <button
+                onClick={() => { setSelectedPerson(null); setTab('home'); }}
+                className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+                title="Home"
+              >
+                <i className="fa-solid fa-house text-lg"></i>
+                {tab === 'home' && (
+                  <span
+                    className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                    style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                  ></span>
+                )}
+              </button>
+              <button
+                onClick={() => { setSelectedPerson(null); setTab('people'); }}
+                className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+                title="Directory"
+              >
+                <i className="fa-solid fa-users text-lg"></i>
+                {tab === 'people' && (
+                  <span
+                    className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                    style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                  ></span>
+                )}
+              </button>
+              <button
+                onClick={() => { setSelectedPerson(null); setTab('loans'); }}
+                className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+                title="Loans / EMIs"
+              >
+                <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
+                {tab === 'loans' && (
+                  <span
+                    className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                    style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                  ></span>
+                )}
+              </button>
+              <button
+                onClick={() => { setSelectedPerson(null); setTab('records'); }}
+                className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+                title="Records"
+              >
+                <i className="fa-solid fa-receipt text-lg"></i>
+                {tab === 'records' && (
+                  <span
+                    className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                    style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                  ></span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowInput(true)}
+            title="Add New Entry"
+            className="notched-fab"
+          >
+            <span className="relative w-8 h-8 flex items-center justify-center">
+              <img
+                src={APP_ICON_WHITE}
+                alt="Budget Bharat"
+                className={`absolute w-8 h-8 object-contain transition-all duration-700 ${
+                  fabShowingAppIcon
+                    ? 'opacity-100 scale-100 rotate-0'
+                    : 'opacity-0 scale-75 rotate-90'
+                }`}
+              />
+              <span
+                aria-hidden="true"
+                className={`fab-heavy-plus absolute transition-all duration-700 ${
+                  fabShowingAppIcon
+                    ? 'opacity-0 scale-75 -rotate-90'
+                    : 'opacity-100 scale-100 rotate-0'
+                }`}
+              ></span>
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isIndvLoanDetail = tab === 'loans' && viewMode === 'detail' && !isCreatingLoan;
+
+  return (
+    <div className="app-shell">
+      {!isIndvLoanDetail && <Header />}
+      <SideMenu />
+
+      <div className="app-content">
+        {searchQuery.trim().length > 0 && !isIndvLoanDetail ? (
+          <ErrorBoundary key="search" label="Search">
+            <SearchView onSelectPerson={setSelectedPerson} onSelectTransaction={setSelectedTransaction} />
+          </ErrorBoundary>
+        ) : (
+          <>
+            {tab === 'home' && (
+              <ErrorBoundary key="home" label="Home" onReset={() => refresh(false, false)}>
+                <HomeView
+                  onSelectPerson={setSelectedPerson}
+                  onSelectTransaction={setSelectedTransaction}
+                  onNavigateTab={(t) => {
+                    if (window.__TRIGGER_TAB__) window.__TRIGGER_TAB__(t);
+                    else setTab(t);
+                  }}
+                />
+              </ErrorBoundary>
+            )}
+            {tab === 'people' && (
+              <ErrorBoundary key="people" label="Persons">
+                <PersonsView onSelectPerson={setSelectedPerson} />
+              </ErrorBoundary>
+            )}
+            {tab === 'loans' && (
+              <ErrorBoundary key={'loans-' + (focusedLoan.loanId || 'master')} label="Loans / EMIs" onReset={() => setFocusedLoan({ person: null, loanId: null })}>
+                <LoanManagerView
+                  key={focusedLoan.loanId || 'master'}
+                  onSelectPerson={setSelectedPerson}
+                  initialPersonFilter={focusedLoan.person}
+                  initialLoanId={focusedLoan.loanId}
+                  onClearLoanFocus={() => setFocusedLoan({ person: null, loanId: null })}
+                  viewModeState={[viewMode, setViewMode]}
+                  isCreatingLoanState={[isCreatingLoan, setIsCreatingLoan]}
+                />
+              </ErrorBoundary>
+            )}
+            {tab === 'records' && (
+              <ErrorBoundary key="records" label="Records">
+                <RecordsView onSelectTransaction={setSelectedTransaction} />
+              </ErrorBoundary>
+            )}
+          </>
+        )}
+      </div>
+
+      {showInput && (
+        <ErrorBoundary key="input-modal" label="New Entry" onReset={() => setShowInput(false)}>
+          <InputModal onClose={() => setShowInput(false)} />
+        </ErrorBoundary>
+      )}
+      {selectedTransaction && (
+        <ErrorBoundary key="tx-modal" label="Transaction Details" onReset={() => setSelectedTransaction(null)}>
+          <TransactionDetailModal tx={selectedTransaction} onClose={() => setSelectedTransaction(null)} />
+        </ErrorBoundary>
+      )}
+
+      <div className="notched-nav-container select-none">
+        <div className="notched-pill">
+          <div className="flex items-center gap-7 sm:gap-9 pr-4">
+            <button
+              onClick={() => setTab('home')}
+              className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+              title="Home"
+            >
+              <i className="fa-solid fa-house text-lg"></i>
+              {tab === 'home' && (
+                <span
+                  className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                  style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                ></span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab('people')}
+              className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+              title="Directory"
+            >
+              <i className="fa-solid fa-users text-lg"></i>
+              {tab === 'people' && (
+                <span
+                  className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                  style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                ></span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab('loans')}
+              className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+              title="Loans / EMIs"
+            >
+              <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
+              {tab === 'loans' && (
+                <span
+                  className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                  style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                ></span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab('records')}
+              className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
+              title="Records"
+            >
+              <i className="fa-solid fa-receipt text-lg"></i>
+              {tab === 'records' && (
+                <span
+                  className="w-5 h-[1px] rounded-full bg-[#07C0BE] mt-1.5"
+                  style={{ boxShadow: '0 -5px 12px 2.5px rgba(7, 192, 190, 0.55), 0 0 4px 1px rgba(7, 192, 190, 0.85)' }}
+                ></span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowInput(true)}
+          title="Add New Entry"
+          className="notched-fab"
+        >
+          <span className="relative w-8 h-8 flex items-center justify-center">
+            <img
+              src={APP_ICON_WHITE}
+              alt="Budget Bharat"
+              className={`absolute w-8 h-8 object-contain transition-all duration-700 ${
+                fabShowingAppIcon
+                  ? 'opacity-100 scale-100 rotate-0'
+                  : 'opacity-0 scale-75 rotate-90'
+              }`}
+            />
+            <span
+              aria-hidden="true"
+              className={`fab-heavy-plus absolute transition-all duration-700 ${
+                fabShowingAppIcon
+                  ? 'opacity-0 scale-75 -rotate-90'
+                  : 'opacity-100 scale-100 rotate-0'
+              }`}
+            ></span>
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+initDB().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <ErrorBoundary label="Budget Bharat">
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    </ErrorBoundary>
+  );
+});
+
+// --- END OF src/main.jsx ---
