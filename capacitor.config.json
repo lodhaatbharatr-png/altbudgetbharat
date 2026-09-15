@@ -10,8 +10,12 @@
       "androidIsEncryption": false
     },
     "GoogleAuth": {
-      "scopes": ["https://www.googleapis.com/auth/drive.file"],
-      "serverClientId": "REPLACE_WITH_YOUR_OAUTH_WEB_CLIENT_ID.apps.googleusercontent.com",
+      "scopes": [
+        "profile",
+        "email",
+        "https://www.googleapis.com/auth/drive.file"
+      ],
+      "serverClientId": "1077395714582-77dq86odd2arklmgn7eeg9qf0kk7h8a9.apps.googleusercontent.com",
       "forceCodeForRefreshToken": false
     }
   }
