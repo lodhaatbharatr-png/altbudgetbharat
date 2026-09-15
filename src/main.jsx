@@ -1,7 +1,8 @@
 // --- START OF src/main.jsx (PART 1) ---
 
 import React, { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
-import ReactDOM from 'react-dom/client';
+import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import html2pdf from 'html2pdf.js';
 
@@ -5383,7 +5384,7 @@ const MainApp = () => {
 };
 
 initDB().then(() => {
-  ReactDOM.createRoot(document.getElementById('root')).render(
+  createRoot(document.getElementById('root')).render(
     <ErrorBoundary label="Budget Bharat">
       <AppProvider>
         <MainApp />
