@@ -1,5 +1,21 @@
-# --- Android Secure Signing Secrets ---
+node_modules/
+dist/
+.DS_Store
+*.local
+.vscode/
+.idea/
+
+# Android build outputs
+android/app/build/
+android/.gradle/
+android/build/
+android/captures/
+android/app/src/main/assets/public/
+
+# Private keystore & signing files
 *.keystore
+*.jks
 keystore.properties
 android/keystore.properties
 android/app/*.keystore
+android/app/*.jks
