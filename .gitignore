@@ -23,8 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 
-# --- Android Secure Signing Secrets ---
+# Capacitor native assets / output
+android/app/build
+android/build
+android/.gradle
+android/capacitor-cordova-android-plugins
+
+# --- Android Secure Signing Secrets (NEVER COMMIT) ---
 *.keystore
+*.jks
 keystore.properties
 android/keystore.properties
 android/app/*.keystore
+android/app/*.jks
