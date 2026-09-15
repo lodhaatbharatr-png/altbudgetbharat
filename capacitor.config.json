@@ -1,0 +1,18 @@
+{
+  "appId": "com.bharatrasve.budgetbharat",
+  "appName": "Budget Bharat",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "CapacitorSQLite": {
+      "iosDatabaseLocation": "Library/CapacitorDatabase",
+      "iosIsEncryption": false,
+      "androidIsEncryption": false
+    },
+    "GoogleAuth": {
+      "scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "serverClientId": "REPLACE_WITH_YOUR_OAUTH_WEB_CLIENT_ID.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": false
+    }
+  }
+}
