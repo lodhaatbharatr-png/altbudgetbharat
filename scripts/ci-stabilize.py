@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,16 +41,144 @@ new_section = """const sortedTxs = sortTransactionsByDateDesc(txs);\n    const d
 if old_section in text:
     text = text.replace(old_section, new_section, 1)
 
-# New Record -> + Category opens the shared manager with Expense selected by default.
-old_open = """    if (targetView === 'addCategory' && categoryType) {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;\n    }\n"""
-new_open = """    if (targetView === 'addCategory') {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = 'expense';\n    }\n"""
-if old_open in text:
-    text = text.replace(old_open, new_open, 1)
+# New Record -> + Category follows the current record type:
+# Expense entry => Expense selected; Income entry => Income selected.
+forced_expense = """    if (targetView === 'addCategory') {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = 'expense';\n    }\n"""
+contextual_category = """    if (targetView === 'addCategory' && categoryType) {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;\n    }\n"""
+if forced_expense in text:
+    text = text.replace(forced_expense, contextual_category, 1)
+
+# Payment reminder: light app-gray ticket card, logo watermark, greeting first,
+# then reminder title, amount and supporting details. Keep it native-canvas based.
+start = text.find('const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {')
+if start >= 0:
+    end = text.find('\n\nconst AppContext = createContext();', start)
+    if end < 0:
+        raise SystemExit('Payment reminder function end marker not found')
+    replacement = r'''const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
+  const width = 900, height = 620;
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas is not available on this device.');
+
+  const roundRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+
+  ctx.fillStyle = '#F4F3F8';
+  ctx.fillRect(0, 0, width, height);
+
+  const ticketX = 48, ticketY = 34, ticketW = width - 96, ticketH = height - 68;
+  ctx.save();
+  roundRect(ticketX, ticketY, ticketW, ticketH, 28);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+
+  // Ticket notches and perforation line.
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.62, 24, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#D8D3E0';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([9, 10]);
+  ctx.beginPath();
+  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.62);
+  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.62);
+  ctx.stroke();
+  ctx.restore();
+
+  // Low-opacity logo watermark, preserving its natural aspect ratio.
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) await new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 330, maxH = 150;
+      const scale = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.save();
+      ctx.globalAlpha = 0.055;
+      ctx.drawImage(img, (width - w) / 2, ticketY + 118, w, h);
+      ctx.restore();
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = logoSrc;
+  });
+
+  const centerX = width / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 34px sans-serif';
+  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 95);
+
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 25px sans-serif';
+  ctx.fillText('Payment reminder for', centerX, 140);
+
+  // Amount emphasis box.
+  roundRect(205, 166, 490, 86, 22);
+  ctx.fillStyle = '#F1EAF4'; ctx.fill();
+  ctx.fillStyle = '#7B2B8C';
+  ctx.font = '900 58px sans-serif';
+  ctx.fillText(formatMoney(amount), centerX, 211);
+
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '800 25px sans-serif';
+  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 285);
+
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 23px sans-serif';
+  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 322);
+
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '800 21px sans-serif';
+  ctx.fillText(`Sent by ${admin?.name || 'Bharat Rasve'}`, centerX, 430);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 19px sans-serif';
+  ctx.fillText(admin?.contact || '7218838122', centerX, 462);
+
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '700 16px sans-serif';
+  ctx.fillText('Budget Bharat • Personal Finance', centerX, 530);
+
+  const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
+  return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
+};'''
+    text = text[:start] + replacement + text[end:]
+
+# Export-image footer logos: explicit dimensions prevent html2canvas/WebView flex stretching.
+text = text.replace(
+    'className="w-32 h-auto max-h-12 object-contain select-none"',
+    'className="w-[104px] h-[32px] object-contain select-none flex-none"',
+)
+text = text.replace(
+    'alt="Logo"\n                  className="w-[104px] h-[104px] object-contain select-none"',
+    'alt="Logo"\n                  className="w-[104px] h-[32px] object-contain select-none flex-none"',
+)
+
+# Active-loans first column: give date text normal line-height and vertical alignment.
+text = text.replace(
+    '<td className="py-2 px-2 border">{formatDisplayDate(row.date)}</td>',
+    '<td className="py-2 px-2 border align-middle leading-normal whitespace-nowrap">{formatDisplayDate(row.date)}</td>',
+    1,
+)
 
 p.write_text(text, encoding='utf-8')
 
-# Google sign-in diagnostics. This identifies Android OAuth configuration errors
-# without inventing credentials or hiding ordinary cancellation/errors.
+# Google sign-in diagnostics. This identifies Android OAuth configuration errors.
 gp = ROOT / 'src' / 'googleSync.js'
 g = gp.read_text(encoding='utf-8')
 marker = "  login: async function () {\n    try: {"
@@ -62,6 +191,15 @@ new_catch = """    } catch (err) {\n      const code = String(err?.code ?? err?.
 if old_catch in g and 'Google sign-in developer configuration error (code 10)' not in g:
     g = g.replace(old_catch, new_catch, 1)
 gp.write_text(g, encoding='utf-8')
+
+# Restore the desired launcher artwork used by the earlier known-good APK build.
+# The asset was previously committed as assets/2icon.png; use that exact historical blob.
+try:
+    icon_bytes = subprocess.check_output(['git', 'show', '9f4f9f678307fe2fa0b01e57a6e9cd2fc8f003de:assets/2icon.png'])
+    (ROOT / 'assets' / 'icon.png').write_bytes(icon_bytes)
+    print(f'Launcher icon restored from historical 2icon.png ({len(icon_bytes)} bytes).')
+except Exception as exc:
+    print(f'Historical launcher icon restore skipped: {exc}')
 
 print(f'LoadingScreen removed: {n1}; loading early return removed: {n2}')
 print('Stabilization source pass complete.')
