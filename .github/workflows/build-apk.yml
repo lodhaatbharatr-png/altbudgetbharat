@@ -9,6 +9,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      build_branch:
+        description: 'Branch to build and test'
+        required: true
+        default: 'main'
+        type: string
 
 permissions:
   contents: write
@@ -19,8 +25,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout selected branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_branch || github.ref_name }}
+          fetch-depth: 0
 
       - name: Set up Node.js 18
         uses: actions/setup-node@v4
@@ -130,7 +139,38 @@ jobs:
           gp.write_text(g, encoding='utf-8')
           PY
 
-          echo 'Requested source fixes applied in the build workspace.'
+      - name: Apply restore picker fix
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('src/main.jsx')
+          text = path.read_text(encoding='utf-8')
+          old_accept = 'accept=".csv,text/csv"'
+          if old_accept in text:
+              text = text.replace(old_accept, 'accept="*/*"', 1)
+          old_handler = """                  const file = e.target.files && e.target.files[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  if (!window.confirm('Restoring a backup replaces all current data on this device. Continue?')) return;
+                  setIsMenuOpen(false);
+                  importFullBackupCsv(file);"""
+          new_handler = """                  const file = e.target.files && e.target.files[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  const fileName = String(file.name || '').toLowerCase();
+                  const fileType = String(file.type || '').toLowerCase();
+                  if (!fileName.endsWith('.csv') && fileType !== 'text/csv' && fileType !== 'application/csv') {
+                    showFeedback('Please select a Budget Bharat CSV backup file.');
+                    return;
+                  }
+                  if (!window.confirm('Restoring a backup replaces all current data on this device. Continue?')) return;
+                  setIsMenuOpen(false);
+                  importFullBackupCsv(file);"""
+          if old_handler in text:
+              text = text.replace(old_handler, new_handler, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
