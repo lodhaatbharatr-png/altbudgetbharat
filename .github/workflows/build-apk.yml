@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       build_branch:
-        description: 'Branch to build and test'
+        description: Branch to build and test
         required: true
-        default: 'fix/native-exports-backup-sync-ci'
+        default: fix/native-exports-backup-sync-ci
         type: string
 
 permissions:
@@ -23,7 +23,6 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout selected branch
         uses: actions/checkout@v4
@@ -39,108 +38,24 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: zulu
           java-version: '17'
 
-      - name: Apply requested source fixes
-        shell: bash
+      - name: Apply stabilization source fixes
+        run: python3 scripts/ci-stabilize.py
+
+      - name: Commit stabilization source fixes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/native-exports-backup-sync-ci'
         run: |
-          python3 <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path('src/main.jsx')
-          text = p.read_text(encoding='utf-8')
-
-          # Remove the legacy full-screen startup loader and its early return.
-          # The app shell should render immediately while the local store refreshes.
-          text, n = re.subn(
-              r"\nconst LoadingScreen = \(\) => \(.*?\n\);",
-              "",
-              text,
-              count=1,
-              flags=re.S
-          )
-          print('Removed legacy LoadingScreen component.' if n else 'Legacy LoadingScreen component already absent.')
-
-          text, n = re.subn(
-              r"\n  if \(loading && transactions\.length === 0 && persons\.length === 0\) \{\n    return <div className=\"app-shell\"><LoadingScreen \/><\/div>;\n  \}\n",
-              "\n",
-              text,
-              count=1
-          )
-          print('Removed legacy loading early return.' if n else 'Legacy loading early return already absent.')
-
-          # Central transaction ordering: newest transaction date first, with a stable
-          # timestamp/id tie-breaker. This is applied to Home and Records rendering.
-          if 'const sortTransactionsByDateDesc' not in text:
-              helper = '''const sortTransactionsByDateDesc = (items = []) => [...items].sort((a, b) => {
-  const dateDiff = parseDate(b?.date || b?.Date || b?.transactionDate || b?.timestamp || b?.Timestamp).getTime()
-    - parseDate(a?.date || a?.Date || a?.transactionDate || a?.timestamp || a?.Timestamp).getTime();
-  if (dateDiff !== 0) return dateDiff;
-  return String(b?.timestamp || b?.Timestamp || b?.entryId || b?.ENTRY_ID || b?.id || '')
-    .localeCompare(String(a?.timestamp || a?.Timestamp || a?.entryId || a?.ENTRY_ID || a?.id || ''));
-});
-
-'''
-              marker = 'const toInputDate_ ='
-              if marker not in text:
-                  raise SystemExit('Date helper insertion marker not found')
-              text = text.replace(marker, helper + marker, 1)
-
-          old_table = 'const displayTxs = expanded ? transactions : transactions.slice(0, maxRows);'
-          new_table = '''const sortedTransactions = sortTransactionsByDateDesc(transactions);
-  const displayTxs = expanded ? sortedTransactions : sortedTransactions.slice(0, maxRows);'''
-          if old_table in text:
-              text = text.replace(old_table, new_table, 1)
-
-          old_section = 'const displayTxs = txs.slice(0, visibleCount);'
-          new_section = '''const sortedTxs = sortTransactionsByDateDesc(txs);
-    const displayTxs = sortedTxs.slice(0, visibleCount);'''
-          if old_section in text:
-              text = text.replace(old_section, new_section, 1)
-
-          # New Record -> + Category should always open the shared category manager
-          # with Expense selected; the user can switch to Income there.
-          old_open = """    if (targetView === 'addCategory' && categoryType) {
-      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;
-    }
-"""
-          new_open = """    if (targetView === 'addCategory') {
-      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = 'expense';
-    }
-"""
-          if old_open in text:
-              text = text.replace(old_open, new_open, 1)
-
-          p.write_text(text, encoding='utf-8')
-
-          # Keep the explicit Google initialization/error diagnostics in the source
-          # branch as well as in the build workspace. This does not fabricate OAuth
-          # credentials; code 10 still correctly identifies Android OAuth configuration.
-          gp = Path('src/googleSync.js')
-          g = gp.read_text(encoding='utf-8')
-          marker = "  login: async function () {\n    try {"
-          replacement = "  login: async function () {\n    try {\n      try { GoogleAuth.initialize(); } catch (_) {}"
-          if 'GoogleAuth.initialize();' not in g and marker in g:
-              g = g.replace(marker, replacement, 1)
-
-          old_catch = """    } catch (err) {
-      throw this._normalizeError(err, 'Sign-in canceled or failed.');
-    }
-  },"""
-          new_catch = """    } catch (err) {
-      const code = String(err?.code ?? err?.statusCode ?? err?.errorCode ?? '');
-      if (code === '10' || String(err?.message || '').toLowerCase().includes('something went wrong')) {
-        throw new Error('Google sign-in developer configuration error (code 10). The installed Android APK must be signed with a SHA-1 registered on the Android OAuth client for com.bharatrasve.budgetbharat.');
-      }
-      throw this._normalizeError(err, 'Sign-in canceled or failed.');
-    }
-  },"""
-          if old_catch in g and 'Google sign-in developer configuration error (code 10)' not in g:
-              g = g.replace(old_catch, new_catch, 1)
-          gp.write_text(g, encoding='utf-8')
-          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "fix: persist startup sorting and category defaults"
+            git push
+          fi
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -148,25 +63,10 @@ jobs:
       - name: Build Web Assets (Vite)
         run: npm run build
 
-      - name: Commit requested source fixes on branch
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/native-exports-backup-sync-ci'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/index.css src/googleSync.js
-          if git diff --cached --quiet; then
-            echo 'No source changes to commit.'
-          else
-            git commit -m "fix: persist startup sorting and category defaults"
-            git push
-          fi
-
       - name: Prepare complete Capacitor Android project
-        shell: bash
         run: |
           if [ ! -f android/gradlew ]; then
-            echo 'Committed Android project is incomplete; generating the missing Capacitor Android wrapper.'
+            echo "Committed Android project is incomplete; generating the missing Capacitor Android wrapper."
             mkdir -p /tmp/budget-bharat-android-backup
             if [ -f android/app/build.gradle ]; then
               cp android/app/build.gradle /tmp/budget-bharat-android-backup/build.gradle
@@ -182,7 +82,6 @@ jobs:
         run: npx cap sync android
 
       - name: Generate Android launcher icon
-        shell: bash
         run: |
           if [ -f assets/icon.png ]; then
             npx @capacitor/assets generate --android
@@ -190,7 +89,7 @@ jobs:
             cp assets/icon.PNG assets/icon.png
             npx @capacitor/assets generate --android
           else
-            echo 'No assets/icon.png or assets/icon.PNG found; keeping any committed launcher assets.'
+            echo "No icon source found; keeping committed launcher assets."
           fi
 
       - name: Sync generated Android assets
@@ -203,14 +102,12 @@ jobs:
           ./gradlew assembleDebug --stacktrace
 
       - name: Report DEBUG signing SHA-1
-        shell: bash
         run: |
           KEYSTORE="$HOME/.android/debug.keystore"
           if [ ! -f "$KEYSTORE" ]; then
             echo "DEBUG keystore was not created at $KEYSTORE"
             exit 1
           fi
-          echo 'DEBUG signing certificate:'
           keytool -list -v \
             -keystore "$KEYSTORE" \
             -alias AndroidDebugKey \
