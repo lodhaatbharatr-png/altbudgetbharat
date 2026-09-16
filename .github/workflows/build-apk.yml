@@ -80,8 +80,16 @@ jobs:
         run: npm run build
 
       - name: Prepare Capacitor Android Platform
+        shell: bash
         run: |
-          if [ ! -f android/gradlew ]; then
+          if [ -f android/gradlew ]; then
+            echo 'Existing Android platform is complete; syncing it.'
+          elif [ -d android ]; then
+            echo 'Android directory exists but is incomplete; recreating the native platform.'
+            rm -rf android
+            npx cap add android
+          else
+            echo 'Android platform is missing; adding it.'
             npx cap add android
           fi
           npx cap sync android
