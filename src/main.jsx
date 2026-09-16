@@ -222,114 +222,111 @@ const gasRun = async (fnName, ...args) => {
 const downloadCsv = async (csv, filename) => {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const file = new File([blob], filename, { type: 'text/csv' });
-  
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [file],
-        title: filename,
-        text: 'Budget Bharat Export'
-      });
-      return;
+      await navigator.share({ files: [file], title: filename, text: 'Budget Bharat Export' });
+      return true;
     } catch (e) {
-      if (e.name === 'AbortError') return;
+      if (e && e.name === 'AbortError') return false;
+      throw e;
     }
   }
-
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 };
 
 const shareReceiptToWhatsApp = async (ref, filename, captionText) => {
   let target = ref && ref.current ? ref.current : (typeof ref === 'string' ? document.getElementById(ref) : ref);
-  if (!target) {
-    throw new Error("Target render reference not found");
-  }
-
-  if (target instanceof HTMLElement === false && target.nodeType !== 1) {
-    target = target.current || target;
-  }
-
+  if (!target) throw new Error('Target render reference not found');
+  if (target instanceof HTMLElement === false && target.nodeType !== 1) target = target.current || target;
   if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (e) { /* non-fatal */ }
+    try { await document.fonts.ready; } catch (_) {}
   }
-
-  const targetWidth = parseInt(target && target.style ? target.style.width : 0, 10) || Math.ceil((target && target.getBoundingClientRect ? target.getBoundingClientRect().width : 0) || target.offsetWidth) || 640;
-  const targetHeight = Math.ceil((target && target.getBoundingClientRect ? target.getBoundingClientRect().height : 0) || target.offsetHeight || target.scrollHeight);
-
+  const rect = target.getBoundingClientRect ? target.getBoundingClientRect() : { width: 640, height: target.offsetHeight || target.scrollHeight };
+  const targetWidth = parseInt(target.style?.width || 0, 10) || Math.ceil(rect.width || 0) || 640;
+  const targetHeight = Math.ceil(rect.height || target.offsetHeight || target.scrollHeight || 800);
   const dynamicScale = targetHeight > 2500 ? 1.2 : targetHeight > 1500 ? 1.5 : 2;
-
   let canvas;
   try {
-    canvas = await html2canvas(target, { 
-      backgroundColor: '#ffffff', 
-      scale: dynamicScale, 
-      logging: false, 
-      useCORS: true, 
-      allowTaint: true,
-      foreignObjectRendering: true,
-      letterRendering: false,
-      width: targetWidth,
-      height: targetHeight,
-      windowWidth: targetWidth,
-      windowHeight: targetHeight,
-      scrollY: 0,
-      scrollX: 0
+    canvas = await html2canvas(target, {
+      backgroundColor: '#ffffff', scale: dynamicScale, logging: false,
+      useCORS: true, allowTaint: false, foreignObjectRendering: false,
+      letterRendering: false, width: targetWidth, height: targetHeight,
+      windowWidth: targetWidth, windowHeight: targetHeight, scrollY: 0, scrollX: 0
     });
-  } catch (canvasErr) {
-    throw new Error("Statement is too long to export as a single image on this device.");
+  } catch (_) {
+    throw new Error('Statement is too long to export as a single image on this device.');
   }
-
   const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((b) => {
-      if (b) resolve(b);
-      else reject(new Error("Canvas blob generation failed"));
-    }, 'image/jpeg', 0.85);
+    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas blob generation failed')), 'image/jpeg', 0.9);
   });
-
-  if (!blob) throw new Error("Empty image blob created");
-
+  if (!blob) throw new Error('Empty image blob created');
   const file = new File([blob], `${filename}.jpg`, { type: 'image/jpeg' });
-
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [file],
-        title: filename,
-        text: captionText
-      });
+      await navigator.share({ files: [file], title: filename, text: captionText });
       return true;
     } catch (err) {
-      if (err.name === 'AbortError') return true;
-      if (err.name === 'NotAllowedError') {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${filename}.jpg`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        return true;
-      }
+      if (err && err.name === 'AbortError') return false;
       throw err;
     }
-  } else {
+  }
+  const url = URL.createObjectURL(blob);
+  try {
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `${filename}.jpg`;
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(link.href);
+    link.remove();
     return true;
+  } finally {
+    URL.revokeObjectURL(url);
   }
 };
 
 const waitForPaint = () => new Promise(resolve => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
 });
+
+const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
+  const width = 900, height = 620;
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas is not available on this device.');
+  const gradient = ctx.createLinearGradient(0, 0, width, 0);
+  gradient.addColorStop(0, '#7B2B8C'); gradient.addColorStop(1, '#F45777');
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height);
+  ctx.save(); ctx.globalAlpha = 0.09; ctx.translate(width / 2, height / 2); ctx.rotate(-Math.PI / 7);
+  ctx.fillStyle = '#fff'; ctx.font = '900 82px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('BUDGET BHARAT', 0, 0); ctx.restore();
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+  ctx.font = '900 34px sans-serif'; ctx.fillText('Payment reminder for', width / 2, 95);
+  ctx.font = '900 76px sans-serif'; ctx.fillText(formatMoney(amount), width / 2, 190);
+  ctx.font = '800 34px sans-serif'; ctx.fillText(`on ${formatDisplayDate(dueDate)}`, width / 2, 255);
+  ctx.font = '700 25px sans-serif'; ctx.fillText(`${personName || 'Customer'} • ${loanName || 'EMI'}${emiNo ? ` • EMI #${emiNo}` : ''}`, width / 2, 315);
+  ctx.font = '700 25px sans-serif'; ctx.fillText('Sent by', width / 2, 405);
+  ctx.font = '900 30px sans-serif'; ctx.fillText(`${admin?.name || 'Bharat Rasve'} | ${admin?.contact || '7218838122'}`, width / 2, 448);
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) await new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { const scale = Math.min(210 / img.width, 90 / img.height); const w = img.width * scale, h = img.height * scale; ctx.drawImage(img, (width - w) / 2, 505, w, h); resolve(); };
+    img.onerror = resolve; img.src = logoSrc;
+  });
+  const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
+  return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
+};
+
 
 const AppContext = createContext();
 
@@ -573,11 +570,17 @@ const AppProvider = ({ children }) => {
       .catch((err) => { showFeedback('Save failed: ' + err.message); throw err; });
   };
 
-  const exportCsv = (rpcFn, filename) => {
+  const exportCsv = async (rpcFn, filename) => {
     showFeedback('Preparing export...');
-    gasRun(rpcFn)
-      .then((csv) => { downloadCsv(csv, filename); showFeedback('Exported ' + filename); })
-      .catch((err) => showFeedback('Export failed: ' + err.message));
+    try {
+      const csv = await gasRun(rpcFn);
+      const exported = await downloadCsv(csv, filename);
+      showFeedback(exported ? 'Exported ' + filename : 'Export canceled');
+      return exported;
+    } catch (err) {
+      showFeedback('Export failed: ' + (err.message || String(err)));
+      return false;
+    }
   };
 
   const csvEscape = (v) => {
@@ -588,7 +591,7 @@ const AppProvider = ({ children }) => {
     .concat(rows.map(r => headers.map(h => csvEscape(r[h])).join(',')))
     .join('\n');
 
-  const exportFullBackupCsv = () => {
+  const exportFullBackupCsv = async () => {
     showFeedback('Preparing full backup...');
     try {
       const lines = [];
@@ -610,8 +613,9 @@ const AppProvider = ({ children }) => {
       lines.push('##SECTION:admin');
       lines.push(csvSection(['name', 'contact', 'email', 'headerNote', 'footerNote'], [admin || {}]));
 
-      downloadCsv(lines.join('\n'), `budget_bharat_full_backup_${Date.now()}.csv`);
-      showFeedback('Full backup exported');
+      const exported = await downloadCsv(lines.join('\n'), `budget_bharat_full_backup_${Date.now()}.csv`);
+      showFeedback(exported ? 'Full backup exported' : 'Backup export canceled');
+      return exported;
     } catch (err) {
       showFeedback('Backup export failed: ' + err.message);
     }
@@ -1196,7 +1200,14 @@ const SideMenu = () => {
 
   const [formData, setFormData] = useState({});
   const [editItem, setEditItem] = useState(null);
-  const [catType, setCatType] = useState('expense');
+  const [catType, setCatType] = useState(() => window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ || 'expense');
+
+  useEffect(() => {
+    if (menuView === 'addCategory' && window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__) {
+      setCatType(window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__);
+      delete window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__;
+    }
+  }, [menuView]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
@@ -1245,10 +1256,13 @@ const SideMenu = () => {
         });
       }
 
+      const keepAddFormOpen = menuView === 'addPerson' || menuView === 'addCategory';
       setFormData({});
       setEditItem(null);
-      setMenuView('menu');
-      setIsMenuOpen(false);
+      if (!keepAddFormOpen) {
+        setMenuView('menu');
+        setIsMenuOpen(false);
+      }
     } catch (err) {
       console.error("Admin config save error:", err);
     } finally {
@@ -1442,6 +1456,12 @@ const SideMenu = () => {
             <p className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4">
               {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}
             </p>
+            {menuView === 'addCategory' && (
+              <div className="flex gap-2 mb-4">
+                <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>
+                <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>
+              </div>
+            )}
             <form onSubmit={handleFormSubmit} className="space-y-4 pb-12">
               <div className="space-y-4">
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
@@ -3017,24 +3037,30 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     }
   };
 
-  const handleSendWhatsAppReminder = () => {
+  const handleSendWhatsAppReminder = async () => {
     if (!currentLoan) return;
     const nextPending = currentLoan.schedule.find(s => !s.paid);
     if (!nextPending) {
       showFeedback('All EMIs for this loan are cleared!');
       return;
     }
-    const phoneRaw = borrowerPersonObj ? borrowerPersonObj.phone : '';
-    let phone = String(phoneRaw || '').replace(/\D/g, '');
-    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
-    if (phone.length === 10) phone = '91' + phone;
-
     const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
-
-    const waUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    try {
+      const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Budget Bharat Payment Reminder', text: textMsg });
+        showFeedback('Reminder ready to share');
+      } else {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        showFeedback('Reminder image saved; share it in WhatsApp');
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') { showFeedback('Reminder share canceled'); return; }
+      console.error('Payment reminder image error:', err);
+      showFeedback('Reminder failed: ' + (err && err.message ? err.message : 'image generation failed'));
+    }
   };
 
   const handleShareLoanSchedule = async () => {
@@ -4869,8 +4895,11 @@ const InputModal = ({ onClose }) => {
     }
   };
 
-  const openAddMenu = (targetView) => {
+  const openAddMenu = (targetView, categoryType = null) => {
     onClose();
+    if (targetView === 'addCategory' && categoryType) {
+      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;
+    }
     setMenuView(targetView);
     setIsMenuOpen(true);
   };
@@ -4978,7 +5007,7 @@ const InputModal = ({ onClose }) => {
                     options={type === 'INCOME' ? categories.income : categories.expense}
                     placeholder="Category..."
                   />
-                  <button type="button" onClick={() => openAddMenu('addCategory')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
+                  <button type="button" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
                     <i className="fa-solid fa-plus text-sm"></i>
                   </button>
                 </div>
