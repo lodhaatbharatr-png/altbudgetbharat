@@ -18,7 +18,7 @@ jobs:
         with:
           ref: fix/native-exports-backup-sync-ci
 
-      - name: Patch tested issues
+      - name: Apply tested device fixes
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -26,61 +26,208 @@ jobs:
           p = Path('src/main.jsx')
           s = p.read_text(encoding='utf-8')
 
-          replacements = [
-            ("""      return;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""", """      return false;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);"""),
-            ("""  URL.revokeObjectURL(url);\n};\n\nconst shareReceiptToWhatsApp""", """  URL.revokeObjectURL(url);\n  return true;\n};\n\nconst shareReceiptToWhatsApp"""),
-            ("""      if (e.name === 'AbortError') return;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""", """      if (e.name === 'AbortError') return false;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);"""),
-            ("""      if (err.name === 'AbortError') return true;\n      if (err.name === 'NotAllowedError') {""", """      if (err.name === 'AbortError') return false;\n      if (err.name === 'NotAllowedError') {"""),
-            ("""      foreignObjectRendering: true,\n      letterRendering: false,\n      width: targetWidth,""", """      foreignObjectRendering: false,\n      letterRendering: false,\n      width: targetWidth,"""),
-            ("""  const exportCsv = (rpcFn, filename) => {\n    showFeedback('Preparing export...');\n    gasRun(rpcFn)\n      .then((csv) => { downloadCsv(csv, filename); showFeedback('Exported ' + filename); })\n      .catch((err) => showFeedback('Export failed: ' + err.message));\n  };""", """  const exportCsv = async (rpcFn, filename) => {\n    showFeedback('Preparing export...');\n    try {\n      const csv = await gasRun(rpcFn);\n      const exported = await downloadCsv(csv, filename);\n      showFeedback(exported ? 'Exported ' + filename : 'Export canceled');\n      return exported;\n    } catch (err) {\n      showFeedback('Export failed: ' + err.message);\n      return false;\n    }\n  };"""),
-            ("""      downloadCsv(lines.join('\\n'), `budget_bharat_full_backup_${Date.now()}.csv`);\n      showFeedback('Full backup exported');""", """      const exported = await downloadCsv(lines.join('\\n'), `budget_bharat_full_backup_${Date.now()}.csv`);\n      showFeedback(exported ? 'Full backup exported' : 'Backup export canceled');\n      return exported;"""),
-            ("""  const exportFullBackupCsv = () => {""", """  const exportFullBackupCsv = async () => {"""),
-            ("""      } else if (menuView === 'manageAdmin') {""", """      } else if (menuView === 'manageAdmin') {"""),
-            ("""      setFormData({});\n      setEditItem(null);\n      setMenuView('menu');\n      setIsMenuOpen(false);\n    } catch (err) {""", """      const keepAddFormOpen = menuView === 'addPerson' || menuView === 'addCategory';\n      setFormData({});\n      setEditItem(null);\n      if (!keepAddFormOpen) {\n        setMenuView('menu');\n        setIsMenuOpen(false);\n      }\n    } catch (err) {"""),
-            ("""  const openAddMenu = (targetView) => {\n    onClose();\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };""", """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) setCatType?.(categoryType);\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };"""),
-          ]
-
-          # The InputModal does not own catType; replace its helper separately below.
-          for old, new in replacements:
+          def replace_once(old, new, label, required=True):
+              global s
               if old not in s:
-                  if old.startswith('  const openAddMenu'):
-                      continue
-                  raise SystemExit(f'Missing expected source fragment: {old[:100]!r}')
+                  if required:
+                      raise SystemExit(f'Missing expected source fragment: {label}')
+                  return False
               s = s.replace(old, new, 1)
+              return True
 
-          # Correct the InputModal helper: use the menu's category-type setter through a global handoff.
-          old = """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) setCatType?.(categoryType);\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };"""
-          new = """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;\n    }\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };"""
-          if old not in s:
-              raise SystemExit('InputModal helper patch did not apply')
-          s = s.replace(old, new, 1)
+          replace_once(
+              """      return;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""",
+              """      return false;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""",
+              'downloadCsv share success return'
+          )
+          replace_once(
+              """  URL.revokeObjectURL(url);\n};\n\nconst shareReceiptToWhatsApp""",
+              """  URL.revokeObjectURL(url);\n  return true;\n};\n\nconst shareReceiptToWhatsApp""",
+              'downloadCsv fallback return'
+          )
+          replace_once(
+              """      if (e.name === 'AbortError') return;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""",
+              """      if (e.name === 'AbortError') return false;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""",
+              'downloadCsv cancel return'
+          )
+          replace_once(
+              """      if (err.name === 'AbortError') return true;\n      if (err.name === 'NotAllowedError') {""",
+              """      if (err.name === 'AbortError') return false;\n      if (err.name === 'NotAllowedError') {""",
+              'image share cancel return'
+          )
+          replace_once(
+              """      foreignObjectRendering: true,\n      letterRendering: false,\n      width: targetWidth,""",
+              """      foreignObjectRendering: false,\n      letterRendering: false,\n      width: targetWidth,""",
+              'html2canvas blank-image fix'
+          )
 
-          old = """  const [catType, setCatType] = useState('expense');"""
-          new = """  const [catType, setCatType] = useState(() => window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ || 'expense');\n\n  useEffect(() => {\n    if (menuView === 'addCategory' && window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__) {\n      setCatType(window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__);\n      delete window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__;\n    }\n  }, [menuView]);"""
-          if old not in s:
-              raise SystemExit('catType declaration not found')
-          s = s.replace(old, new, 1)
+          replace_once(
+              """  const exportCsv = (rpcFn, filename) => {\n    showFeedback('Preparing export...');\n    gasRun(rpcFn)\n      .then((csv) => { downloadCsv(csv, filename); showFeedback('Exported ' + filename); })\n      .catch((err) => showFeedback('Export failed: ' + err.message));\n  };""",
+              """  const exportCsv = async (rpcFn, filename) => {\n    showFeedback('Preparing export...');\n    try {\n      const csv = await gasRun(rpcFn);\n      const exported = await downloadCsv(csv, filename);\n      showFeedback(exported ? 'Exported ' + filename : 'Export canceled');\n      return exported;\n    } catch (err) {\n      showFeedback('Export failed: ' + err.message);\n      return false;\n    }\n  };""",
+              'CSV export await and status'
+          )
+          replace_once(
+              """  const exportFullBackupCsv = () => {""",
+              """  const exportFullBackupCsv = async () => {""",
+              'full backup async'
+          )
+          replace_once(
+              """      downloadCsv(lines.join('\\n'), `budget_bharat_full_backup_${Date.now()}.csv`);\n      showFeedback('Full backup exported');""",
+              """      const exported = await downloadCsv(lines.join('\\n'), `budget_bharat_full_backup_${Date.now()}.csv`);\n      showFeedback(exported ? 'Full backup exported' : 'Backup export canceled');\n      return exported;""",
+              'full backup await and status'
+          )
 
-          old = """            <p className=\"text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4\">\n              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}\n            </p>\n            <form onSubmit={handleFormSubmit}"""
-          new = """            <p className=\"text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4\">\n              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}\n            </p>\n            {menuView === 'addCategory' && (\n              <div className=\"flex gap-2 mb-4\">\n                <button type=\"button\" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>\n                <button type=\"button\" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>\n              </div>\n            )}\n            <form onSubmit={handleFormSubmit}"""
-          if old not in s:
-              raise SystemExit('add category form heading not found')
-          s = s.replace(old, new, 1)
+          replace_once(
+              """      setFormData({});\n      setEditItem(null);\n      setMenuView('menu');\n      setIsMenuOpen(false);\n    } catch (err) {""",
+              """      const keepAddFormOpen = menuView === 'addPerson' || menuView === 'addCategory';\n      setFormData({});\n      setEditItem(null);\n      if (!keepAddFormOpen) {\n        setMenuView('menu');\n        setIsMenuOpen(false);\n      }\n    } catch (err) {""",
+              'keep add person/category screen open'
+          )
 
-          old = """                  <button type=\"button\" onClick={() => openAddMenu('addCategory')} className=\"w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors\">"""
-          new = """                  <button type=\"button\" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className=\"w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors\">"""
-          if old not in s:
-              raise SystemExit('new-record category plus not found')
-          s = s.replace(old, new, 1)
+          replace_once(
+              """  const [catType, setCatType] = useState('expense');""",
+              """  const [catType, setCatType] = useState(() => window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ || 'expense');\n\n  useEffect(() => {\n    if (menuView === 'addCategory' && window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__) {\n      setCatType(window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__);\n      delete window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__;\n    }\n  }, [menuView]);""",
+              'category type handoff'
+          )
+
+          replace_once(
+              """  const openAddMenu = (targetView) {""",
+              """  const openAddMenu = (targetView) => {""",
+              'noop helper normalization',
+              required=False
+          )
+          replace_once(
+              """  const openAddMenu = (targetView) => {\n    onClose();\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };""",
+              """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;\n    }\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };""",
+              'InputModal shared add-category entry point'
+          )
+
+          replace_once(
+              """            <p className=\"text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4\">\n              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}\n            </p>\n            <form onSubmit={handleFormSubmit}""",
+              """            <p className=\"text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4\">\n              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}\n            </p>\n            {menuView === 'addCategory' && (\n              <div className=\"flex gap-2 mb-4\">\n                <button type=\"button\" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>\n                <button type=\"button\" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>\n              </div>\n            )}\n            <form onSubmit={handleFormSubmit}""",
+              'add-category dialog type selector'
+          )
+
+          replace_once(
+              """                  <button type=\"button\" onClick={() => openAddMenu('addCategory')} className=\"w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors\">""",
+              """                  <button type=\"button\" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className=\"w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors\">""",
+              'New Record category plus selects matching type'
+          )
+
+          reminder_helper = """
+const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
+  const width = 900;
+  const height = 620;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas is not available on this device.');
+
+  const gradient = ctx.createLinearGradient(0, 0, width, 0);
+  gradient.addColorStop(0, '#7B2B8C');
+  gradient.addColorStop(1, '#F45777');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate(-Math.PI / 6);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 86px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('BUDGET BHARAT', 0, 0);
+  ctx.restore();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.font = '900 34px sans-serif';
+  ctx.fillText('Payment reminder for', width / 2, 95);
+  ctx.font = '900 76px sans-serif';
+  ctx.fillText(formatMoney(amount), width / 2, 190);
+  ctx.font = '800 34px sans-serif';
+  ctx.fillText(`on ${formatDisplayDate(dueDate)}`, width / 2, 255);
+
+  ctx.font = '700 25px sans-serif';
+  ctx.fillText(`${personName || 'Customer'} • ${loanName || 'EMI'}${emiNo ? ` • EMI #${emiNo}` : ''}`, width / 2, 315);
+
+  const adminName = admin && admin.name ? admin.name : 'Bharat Rasve';
+  const adminContact = admin && admin.contact ? admin.contact : '7218838122';
+  ctx.font = '700 25px sans-serif';
+  ctx.fillText('Sent by', width / 2, 405);
+  ctx.font = '900 30px sans-serif';
+  ctx.fillText(`${adminName} | ${adminContact}`, width / 2, 448);
+
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(330, 485, 240, 2);
+  ctx.globalAlpha = 1;
+
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) {
+    try {
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 210;
+          const maxH = 90;
+          const scale = Math.min(maxW / img.width, maxH / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          ctx.drawImage(img, (width - w) / 2, 505, w, h);
+          resolve();
+        };
+        img.onerror = resolve;
+        img.src = logoSrc;
+      });
+    } catch (_) {}
+  }
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
+  });
+  return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
+};
+"""
+
+          if 'const createPaymentReminderImage = async' not in s:
+              replace_once(
+                  """const waitForPaint = () => new Promise(resolve => {\n  requestAnimationFrame(() => requestAnimationFrame(resolve));\n});\n\nconst AppContext = createContext();""",
+                  """const waitForPaint = () => new Promise(resolve => {\n  requestAnimationFrame(() => requestAnimationFrame(resolve));\n});\n""" + reminder_helper + """\nconst AppContext = createContext();""",
+                  'payment reminder image generator'
+              )
+
+          old_reminder_start = """  const handleSendWhatsAppReminder = () => {\n    if (!currentLoan) return;"""
+          new_reminder = """  const handleSendWhatsAppReminder = async () => {\n    if (!currentLoan) return;"""
+          replace_once(old_reminder_start, new_reminder, 'WhatsApp reminder async')
+
+          old_reminder_body = """    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;\n\n    const waUrl = phone\n      ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`\n      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;\n    window.open(waUrl, '_blank', 'noopener,noreferrer');\n  };"""
+          new_reminder_body = """    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;\n\n    try {\n      const file = await createPaymentReminderImage({\n        personName: currentLoan.person,\n        amount: nextPending.emiAmount,\n        dueDate: nextPending.date,\n        loanName: currentLoan.loanName,\n        emiNo: nextPending.emiNo,\n        admin\n      });\n      if (navigator.canShare && navigator.canShare({ files: [file] })) {\n        const shared = await navigator.share({ files: [file], title: 'Budget Bharat Payment Reminder', text: textMsg });\n        showFeedback(shared === false ? 'Reminder share canceled' : 'Reminder ready to share');\n      } else {\n        const url = URL.createObjectURL(file);\n        const link = document.createElement('a');\n        link.href = url;\n        link.download = file.name;\n        document.body.appendChild(link);\n        link.click();\n        link.remove();\n        URL.revokeObjectURL(url);\n        showFeedback('Reminder image saved; share it in WhatsApp');\n      }\n    } catch (err) {\n      if (err && err.name === 'AbortError') {\n        showFeedback('Reminder share canceled');\n        return;\n      }\n      console.error('Payment reminder image error:', err);\n      showFeedback('Reminder failed: ' + (err && err.message ? err.message : 'image generation failed'));\n    }\n  };"""
+          replace_once(old_reminder_body, new_reminder_body, 'WhatsApp reminder image flow')
 
           p.write_text(s, encoding='utf-8')
+
+          css = Path('src/index.css')
+          c = css.read_text(encoding='utf-8')
+          old_grad = """  .grad-dark {\n    background: linear-gradient(135deg, #1E104B 0%, #2A186B 100%);\n  }"""
+          new_grad = """  .grad-dark {\n    background: linear-gradient(90deg, #7B2B8C 0%, #F45777 100%);\n  }"""
+          if old_grad in c:
+              c = c.replace(old_grad, new_grad, 1)
+          elif "linear-gradient(90deg, #7B2B8C 0%, #F45777 100%)" not in c:
+              raise SystemExit('Header gradient rule not found')
+          css.write_text(c, encoding='utf-8')
           PY
+
+      - name: Build-check the patched app
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
 
       - name: Commit fixes and remove one-time patcher
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/main.jsx
+          git add src/main.jsx src/index.css
           git rm .github/workflows/apply-device-fixes.yml
-          git commit -m 'fix: address device test issues [device-fix]'
+          git commit -m 'fix: address device UI, sharing, and reminder issues [device-fix]'
           git push origin HEAD:fix/native-exports-backup-sync-ci
