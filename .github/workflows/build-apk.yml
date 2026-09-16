@@ -49,11 +49,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py
+          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py index.html assets/icon.png
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
-            git commit -m "fix: persist startup sorting and category defaults"
+            git commit -m "fix: persist export slips, launcher, and startup polish"
             git push
           fi
 
