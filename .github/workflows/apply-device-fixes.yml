@@ -1,0 +1,86 @@
+name: Apply device test fixes
+
+on:
+  push:
+    branches:
+      - fix/native-exports-backup-sync-ci
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[device-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/native-exports-backup-sync-ci
+
+      - name: Patch tested issues
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/main.jsx')
+          s = p.read_text(encoding='utf-8')
+
+          replacements = [
+            ("""      return;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""", """      return false;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);"""),
+            ("""  URL.revokeObjectURL(url);\n};\n\nconst shareReceiptToWhatsApp""", """  URL.revokeObjectURL(url);\n  return true;\n};\n\nconst shareReceiptToWhatsApp"""),
+            ("""      if (e.name === 'AbortError') return;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);""", """      if (e.name === 'AbortError') return false;\n    }\n  }\n\n  const url = URL.createObjectURL(blob);"""),
+            ("""      if (err.name === 'AbortError') return true;\n      if (err.name === 'NotAllowedError') {""", """      if (err.name === 'AbortError') return false;\n      if (err.name === 'NotAllowedError') {"""),
+            ("""      foreignObjectRendering: true,\n      letterRendering: false,\n      width: targetWidth,""", """      foreignObjectRendering: false,\n      letterRendering: false,\n      width: targetWidth,"""),
+            ("""  const exportCsv = (rpcFn, filename) => {\n    showFeedback('Preparing export...');\n    gasRun(rpcFn)\n      .then((csv) => { downloadCsv(csv, filename); showFeedback('Exported ' + filename); })\n      .catch((err) => showFeedback('Export failed: ' + err.message));\n  };""", """  const exportCsv = async (rpcFn, filename) => {\n    showFeedback('Preparing export...');\n    try {\n      const csv = await gasRun(rpcFn);\n      const exported = await downloadCsv(csv, filename);\n      showFeedback(exported ? 'Exported ' + filename : 'Export canceled');\n      return exported;\n    } catch (err) {\n      showFeedback('Export failed: ' + err.message);\n      return false;\n    }\n  };"""),
+            ("""      downloadCsv(lines.join('\\n'), `budget_bharat_full_backup_${Date.now()}.csv`);\n      showFeedback('Full backup exported');""", """      const exported = await downloadCsv(lines.join('\\n'), `budget_bharat_full_backup_${Date.now()}.csv`);\n      showFeedback(exported ? 'Full backup exported' : 'Backup export canceled');\n      return exported;"""),
+            ("""  const exportFullBackupCsv = () => {""", """  const exportFullBackupCsv = async () => {"""),
+            ("""      } else if (menuView === 'manageAdmin') {""", """      } else if (menuView === 'manageAdmin') {"""),
+            ("""      setFormData({});\n      setEditItem(null);\n      setMenuView('menu');\n      setIsMenuOpen(false);\n    } catch (err) {""", """      const keepAddFormOpen = menuView === 'addPerson' || menuView === 'addCategory';\n      setFormData({});\n      setEditItem(null);\n      if (!keepAddFormOpen) {\n        setMenuView('menu');\n        setIsMenuOpen(false);\n      }\n    } catch (err) {"""),
+            ("""  const openAddMenu = (targetView) => {\n    onClose();\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };""", """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) setCatType?.(categoryType);\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };"""),
+          ]
+
+          # The InputModal does not own catType; replace its helper separately below.
+          for old, new in replacements:
+              if old not in s:
+                  if old.startswith('  const openAddMenu'):
+                      continue
+                  raise SystemExit(f'Missing expected source fragment: {old[:100]!r}')
+              s = s.replace(old, new, 1)
+
+          # Correct the InputModal helper: use the menu's category-type setter through a global handoff.
+          old = """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) setCatType?.(categoryType);\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };"""
+          new = """  const openAddMenu = (targetView, categoryType = null) => {\n    onClose();\n    if (targetView === 'addCategory' && categoryType) {\n      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;\n    }\n    setMenuView(targetView);\n    setIsMenuOpen(true);\n  };"""
+          if old not in s:
+              raise SystemExit('InputModal helper patch did not apply')
+          s = s.replace(old, new, 1)
+
+          old = """  const [catType, setCatType] = useState('expense');"""
+          new = """  const [catType, setCatType] = useState(() => window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ || 'expense');\n\n  useEffect(() => {\n    if (menuView === 'addCategory' && window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__) {\n      setCatType(window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__);\n      delete window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__;\n    }\n  }, [menuView]);"""
+          if old not in s:
+              raise SystemExit('catType declaration not found')
+          s = s.replace(old, new, 1)
+
+          old = """            <p className=\"text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4\">\n              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}\n            </p>\n            <form onSubmit={handleFormSubmit}"""
+          new = """            <p className=\"text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4\">\n              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}\n            </p>\n            {menuView === 'addCategory' && (\n              <div className=\"flex gap-2 mb-4\">\n                <button type=\"button\" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>\n                <button type=\"button\" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>\n              </div>\n            )}\n            <form onSubmit={handleFormSubmit}"""
+          if old not in s:
+              raise SystemExit('add category form heading not found')
+          s = s.replace(old, new, 1)
+
+          old = """                  <button type=\"button\" onClick={() => openAddMenu('addCategory')} className=\"w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors\">"""
+          new = """                  <button type=\"button\" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className=\"w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors\">"""
+          if old not in s:
+              raise SystemExit('new-record category plus not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit fixes and remove one-time patcher
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.jsx
+          git rm .github/workflows/apply-device-fixes.yml
+          git commit -m 'fix: address device test issues [device-fix]'
+          git push origin HEAD:fix/native-exports-backup-sync-ci
