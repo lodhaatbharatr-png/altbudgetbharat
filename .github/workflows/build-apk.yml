@@ -35,14 +35,32 @@ jobs:
       - name: Build Web Assets (Vite)
         run: npm run build
 
-      - name: Generate Android launcher icon from assets/icon.PNG
+      - name: Generate Android launcher icon
         shell: bash
         run: |
-          if [ -f assets/icon.PNG ]; then
+          if [ -f assets/icon.png ]; then
+            npx @capacitor/assets generate --android
+          elif [ -f assets/icon.PNG ]; then
             cp assets/icon.PNG assets/icon.png
             npx @capacitor/assets generate --android
           else
-            echo 'assets/icon.PNG is not present in this branch; keeping committed Android launcher assets.'
+            echo 'No assets/icon.png or assets/icon.PNG found; keeping any committed launcher assets.'
+          fi
+
+      - name: Prepare complete Capacitor Android project
+        shell: bash
+        run: |
+          if [ ! -f android/gradlew ]; then
+            echo 'Committed Android project is incomplete; generating the missing Capacitor Android wrapper.'
+            mkdir -p /tmp/budget-bharat-android-backup
+            if [ -f android/app/build.gradle ]; then
+              cp android/app/build.gradle /tmp/budget-bharat-android-backup/build.gradle
+            fi
+            rm -rf android
+            npx cap add android
+            if [ -f /tmp/budget-bharat-android-backup/build.gradle ]; then
+              cp /tmp/budget-bharat-android-backup/build.gradle android/app/build.gradle
+            fi
           fi
 
       - name: Sync Capacitor Android project
