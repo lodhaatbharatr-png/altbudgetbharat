@@ -1,0 +1,155 @@
+name: Apply share and export fixes
+
+on:
+  push:
+    branches:
+      - fix/native-exports-backup-sync-ci
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'fix: share/export') == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch share and export rendering
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('src/main.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''  const handleWhatsAppShare = () => {
+    const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
+    const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    let phone = String(person.phone || '').replace(/\\D/g, '');
+    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+    if (phone.length === 10) phone = '91' + phone;
+
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };'''
+
+          new = '''  const handleWhatsAppShare = async () => {
+    const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
+    const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+
+    try {
+      showFeedback('Preparing WhatsApp reminder...');
+      const reminderFile = await createPaymentReminderImage({
+        personName: person.name,
+        amount: Math.abs(person.remaining),
+        dueDate: targetDateStr,
+        loanName: 'Ledger Payment Reminder',
+        emiNo: null,
+        admin
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [reminderFile] })) {
+        await navigator.share({
+          files: [reminderFile],
+          title: 'Budget Bharat Payment Reminder',
+          text: textMsg
+        });
+        showFeedback('Reminder ready to share');
+        return;
+      }
+
+      let phone = String(person.phone || '').replace(/\\D/g, '');
+      if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+      if (phone.length === 10) phone = '91' + phone;
+      const waUrl = phone
+        ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      const url = URL.createObjectURL(reminderFile);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = reminderFile.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showFeedback('Reminder image saved and WhatsApp opened');
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        showFeedback('Reminder share canceled');
+        return;
+      }
+      console.error('Person reminder share error:', err);
+      showFeedback('Reminder failed: ' + (err && err.message ? err.message : 'image generation failed'));
+    }
+  };'''
+
+          if old not in text:
+              raise SystemExit('Expected Ledger WhatsApp handler was not found')
+          text = text.replace(old, new, 1)
+
+          # Add one shared marker to every hidden export slip so exported tables get
+          # consistent vertical centering without changing the live app tables.
+          replacements = {
+              'className="bg-white px-5 py-4 font-sans box-border inline-block text-slate-900 relative overflow-hidden"': 'className="bb-export-slip bg-white px-5 py-4 font-sans box-border inline-block text-slate-900 relative overflow-hidden"',
+              'className="bg-white px-4 pt-2 pb-3 box-border inline-block text-slate-900 relative overflow-hidden"': 'className="bb-export-slip bg-white px-4 pt-2 pb-3 box-border inline-block text-slate-900 relative overflow-hidden"',
+              'className="bg-white px-5 py-3 font-sans box-border text-slate-900 relative overflow-hidden"': 'className="bb-export-slip bg-white px-5 py-3 font-sans box-border text-slate-900 relative overflow-hidden"',
+          }
+          for old_class, new_class in replacements.items():
+              text = text.replace(old_class, new_class)
+
+          # Keep the colored footer logo at its natural aspect ratio. The export CSS
+          # below also protects against renderer-specific image stretching.
+          text = text.replace(
+              'className="w-[104px] h-[104px] object-contain select-none"',
+              'className="w-[104px] h-auto object-contain select-none" style={{ height: \'auto\', maxHeight: \'104px\' }}'
+          )
+
+          css_marker = "const waitForPaint = () => new Promise(resolve => {"
+          export_css = '''const EXPORT_SLIP_CSS = `
+  .bb-export-slip table { border-collapse: collapse !important; }
+  .bb-export-slip th,
+  .bb-export-slip td { vertical-align: middle !important; }
+  .bb-export-slip td { padding-top: 4px !important; padding-bottom: 4px !important; }
+  .bb-export-slip img { height: auto !important; object-fit: contain !important; }
+`;
+
+'''
+          if 'const EXPORT_SLIP_CSS = `' not in text:
+              if css_marker not in text:
+                  raise SystemExit('waitForPaint marker not found')
+              text = text.replace(css_marker, export_css + css_marker, 1)
+
+          # Apply the shared export CSS only inside hidden export portals.
+          portal_marker = '<div className="canvas-hide">'
+          if text.count(portal_marker) < 3:
+              raise SystemExit('Expected export portals were not found')
+          text = text.replace(portal_marker, '<div className="canvas-hide"><style>{EXPORT_SLIP_CSS}</style>', 4)
+
+          path.write_text(text, encoding='utf-8')
+
+          # Verify the critical changes landed exactly once where expected.
+          checks = [
+              'const handleWhatsAppShare = async () => {',
+              'const EXPORT_SLIP_CSS = `',
+              'bb-export-slip',
+              'await navigator.share({\n          files: [reminderFile],\n          title: \'Budget Bharat Payment Reminder\',\n          text: textMsg\n        });',
+          ]
+          for item in checks:
+              if item not in text:
+                  raise SystemExit(f'Missing expected change: {item[:80]}')
+
+      - name: Commit patched files and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.jsx .github/workflows/apply-share-export-fixes.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: share/export rendering and reminders"
+          git rm .github/workflows/apply-share-export-fixes.yml
+          git commit -m "chore: remove temporary share/export patch workflow"
+          git push
