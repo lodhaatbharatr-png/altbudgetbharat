@@ -17,6 +17,7 @@ import {
 
 import { initDB, BackendBridge } from './db.js';
 import { GoogleDriveSync } from './googleSync.js';
+import { exportDomAsJpeg, EXPORT_STATUS } from './export/exportService.js';
 import './index.css';
 
 const SafePortal = ({ children }) => {
@@ -257,50 +258,20 @@ const shareReceiptToWhatsApp = async (ref, filename, captionText) => {
   let target = ref && ref.current ? ref.current : (typeof ref === 'string' ? document.getElementById(ref) : ref);
   if (!target) throw new Error('Target render reference not found');
   if (target instanceof HTMLElement === false && target.nodeType !== 1) target = target.current || target;
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (_) {}
-  }
-  const rect = target.getBoundingClientRect ? target.getBoundingClientRect() : { width: 640, height: target.offsetHeight || target.scrollHeight };
-  const targetWidth = parseInt(target.style?.width || 0, 10) || Math.ceil(rect.width || 0) || 640;
-  const targetHeight = Math.ceil(rect.height || target.offsetHeight || target.scrollHeight || 800);
-  const dynamicScale = targetHeight > 2500 ? 1.2 : targetHeight > 1500 ? 1.5 : 2;
-  let canvas;
-  try {
-    canvas = await html2canvas(target, {
-      backgroundColor: '#ffffff', scale: dynamicScale, logging: false,
-      useCORS: true, allowTaint: false, foreignObjectRendering: false,
-      letterRendering: false, width: targetWidth, height: targetHeight,
-      windowWidth: targetWidth, windowHeight: targetHeight, scrollY: 0, scrollX: 0
-    });
-  } catch (_) {
-    throw new Error('Statement is too long to export as a single image on this device.');
-  }
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas blob generation failed')), 'image/jpeg', 0.9);
+
+  const result = await exportDomAsJpeg(target, {
+    filename: `${filename}.jpg`,
+    title: filename,
+    text: captionText,
+    quality: 0.9,
+    backgroundColor: '#FFFFFF'
   });
-  if (!blob) throw new Error('Empty image blob created');
-  const file = new File([blob], `${filename}.jpg`, { type: 'image/jpeg' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: filename, text: captionText });
-      return true;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return false;
-      throw err;
-    }
+
+  if (result.status === EXPORT_STATUS.CANCELLED) return false;
+  if (result.status === EXPORT_STATUS.FAILED) {
+    throw result.error || new Error('Statement image generation failed.');
   }
-  const url = URL.createObjectURL(blob);
-  try {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filename}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    return true;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  return true;
 };
 
 const waitForPaint = () => new Promise(resolve => {
@@ -334,7 +305,6 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.fill();
   ctx.restore();
 
-  // Ticket notches and perforation line.
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
   ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
@@ -351,7 +321,6 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.stroke();
   ctx.restore();
 
-  // Low-opacity logo watermark, preserving its natural aspect ratio.
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) await new Promise((resolve) => {
     const img = new Image();
@@ -380,7 +349,6 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.font = '800 25px sans-serif';
   ctx.fillText('Payment reminder for', centerX, 140);
 
-  // Amount emphasis box.
   roundRect(205, 166, 490, 86, 22);
   ctx.fillStyle = '#F1EAF4'; ctx.fill();
   ctx.fillStyle = '#7B2B8C';
