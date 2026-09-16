@@ -313,28 +313,102 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available on this device.');
-  const gradient = ctx.createLinearGradient(0, 0, width, 0);
-  gradient.addColorStop(0, '#7B2B8C'); gradient.addColorStop(1, '#F45777');
-  ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height);
-  ctx.save(); ctx.globalAlpha = 0.09; ctx.translate(width / 2, height / 2); ctx.rotate(-Math.PI / 7);
-  ctx.fillStyle = '#fff'; ctx.font = '900 82px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('BUDGET BHARAT', 0, 0); ctx.restore();
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.font = '900 34px sans-serif'; ctx.fillText('Payment reminder for', width / 2, 95);
-  ctx.font = '900 76px sans-serif'; ctx.fillText(formatMoney(amount), width / 2, 190);
-  ctx.font = '800 34px sans-serif'; ctx.fillText(`on ${formatDisplayDate(dueDate)}`, width / 2, 255);
-  ctx.font = '700 25px sans-serif'; ctx.fillText(`${personName || 'Customer'} • ${loanName || 'EMI'}${emiNo ? ` • EMI #${emiNo}` : ''}`, width / 2, 315);
-  ctx.font = '700 25px sans-serif'; ctx.fillText('Sent by', width / 2, 405);
-  ctx.font = '900 30px sans-serif'; ctx.fillText(`${admin?.name || 'Bharat Rasve'} | ${admin?.contact || '7218838122'}`, width / 2, 448);
+
+  const roundRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+
+  ctx.fillStyle = '#F4F3F8';
+  ctx.fillRect(0, 0, width, height);
+
+  const ticketX = 48, ticketY = 34, ticketW = width - 96, ticketH = height - 68;
+  ctx.save();
+  roundRect(ticketX, ticketY, ticketW, ticketH, 28);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+
+  // Ticket notches and perforation line.
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.62, 24, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#D8D3E0';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([9, 10]);
+  ctx.beginPath();
+  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.62);
+  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.62);
+  ctx.stroke();
+  ctx.restore();
+
+  // Low-opacity logo watermark, preserving its natural aspect ratio.
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) await new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => { const scale = Math.min(210 / img.width, 90 / img.height); const w = img.width * scale, h = img.height * scale; ctx.drawImage(img, (width - w) / 2, 505, w, h); resolve(); };
-    img.onerror = resolve; img.src = logoSrc;
+    img.onload = () => {
+      const maxW = 330, maxH = 150;
+      const scale = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.save();
+      ctx.globalAlpha = 0.055;
+      ctx.drawImage(img, (width - w) / 2, ticketY + 118, w, h);
+      ctx.restore();
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = logoSrc;
   });
+
+  const centerX = width / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 34px sans-serif';
+  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 95);
+
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 25px sans-serif';
+  ctx.fillText('Payment reminder for', centerX, 140);
+
+  // Amount emphasis box.
+  roundRect(205, 166, 490, 86, 22);
+  ctx.fillStyle = '#F1EAF4'; ctx.fill();
+  ctx.fillStyle = '#7B2B8C';
+  ctx.font = '900 58px sans-serif';
+  ctx.fillText(formatMoney(amount), centerX, 211);
+
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '800 25px sans-serif';
+  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 285);
+
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 23px sans-serif';
+  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 322);
+
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '800 21px sans-serif';
+  ctx.fillText(`Sent by ${admin?.name || 'Bharat Rasve'}`, centerX, 430);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 19px sans-serif';
+  ctx.fillText(admin?.contact || '7218838122', centerX, 462);
+
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '700 16px sans-serif';
+  ctx.fillText('Budget Bharat • Personal Finance', centerX, 530);
+
   const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
   return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
 };
-
 
 const AppContext = createContext();
 
@@ -2101,7 +2175,7 @@ const PersonsView = ({ onSelectPerson }) => {
                 <img
                   src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
                   alt="Logo"
-                  className="w-[104px] h-[104px] object-contain select-none"
+                  className="w-[104px] h-[32px] object-contain select-none flex-none"
                 />
               </div>
 
@@ -3364,7 +3438,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
                 <img
                   src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
                   alt="Logo"
-                  className="w-[104px] h-[104px] object-contain select-none"
+                  className="w-[104px] h-[32px] object-contain select-none flex-none"
                 />
               </div>
 
@@ -4231,7 +4305,7 @@ return (
                   <tbody className="bg-transparent">
                     {currentLoan.schedule.map((row) => (
                       <tr key={row.emiNo} className={row.paid ? 'bg-amber-50/50' : ''}>
-                        <td className="py-2 px-2 border">{formatDisplayDate(row.date)}</td>
+                        <td className="py-2 px-2 border align-middle leading-normal whitespace-nowrap">{formatDisplayDate(row.date)}</td>
                         <td className="py-2 px-2 border text-right font-bold">{formatMoney(row.emiAmount)}</td>
                         <td className="py-2 px-2 border text-right font-bold">{formatMoney(row.outstandingBal)}</td>
                         <td className="py-2 px-2 border text-center font-bold">
@@ -4258,7 +4332,7 @@ return (
                     <img
                       src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
                       alt="Logo"
-                      className="w-32 h-auto max-h-12 object-contain select-none"
+                      className="w-[104px] h-[32px] object-contain select-none flex-none"
                     />
                   </div>
 
@@ -4892,8 +4966,8 @@ const InputModal = ({ onClose }) => {
 
   const openAddMenu = (targetView, categoryType = null) => {
     onClose();
-    if (targetView === 'addCategory') {
-      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = 'expense';
+    if (targetView === 'addCategory' && categoryType) {
+      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;
     }
     setMenuView(targetView);
     setIsMenuOpen(true);
