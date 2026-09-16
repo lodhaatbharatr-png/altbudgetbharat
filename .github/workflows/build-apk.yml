@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -33,15 +36,15 @@ jobs:
       - name: Build Web Assets (Vite)
         run: npm run build
 
-      - name: Prepare Android launcher icon from repository asset
+      - name: Generate Android launcher icon from assets/icon.PNG
+        shell: bash
         run: |
-          mkdir -p assets
-          if [ ! -f assets/icon.PNG ]; then
-            echo 'assets/icon.PNG is required for Android icon generation.'
-            exit 1
+          if [ -f assets/icon.PNG ]; then
+            cp assets/icon.PNG assets/icon.png
+            npx @capacitor/assets generate --android
+          else
+            echo 'assets/icon.PNG is not present in this branch; keeping committed Android launcher assets.'
           fi
-          cp assets/icon.PNG assets/icon.png
-          npx @capacitor/assets generate --android
 
       - name: Sync Capacitor Android project
         run: npx cap sync android
