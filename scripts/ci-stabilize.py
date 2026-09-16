@@ -82,7 +82,6 @@ if start >= 0:
   ctx.fill();
   ctx.restore();
 
-  // Ticket notches and perforation line.
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
   ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
@@ -99,7 +98,6 @@ if start >= 0:
   ctx.stroke();
   ctx.restore();
 
-  // Low-opacity logo watermark, preserving its natural aspect ratio.
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) await new Promise((resolve) => {
     const img = new Image();
@@ -128,7 +126,6 @@ if start >= 0:
   ctx.font = '800 25px sans-serif';
   ctx.fillText('Payment reminder for', centerX, 140);
 
-  // Amount emphasis box.
   roundRect(205, 166, 490, 86, 22);
   ctx.fillStyle = '#F1EAF4'; ctx.fill();
   ctx.fillStyle = '#7B2B8C';
@@ -176,6 +173,42 @@ text = text.replace(
     1,
 )
 
+# Use html-to-image for the statement/ledger image path and route the resulting Blob
+# through the unified native Filesystem + Share service. Keep html2canvas/html2pdf
+# available for the existing PDF path until Android PDF rendering is separately validated.
+if "from './export/exportService.js'" not in text:
+    text = text.replace(
+        "import { GoogleDriveSync } from './googleSync.js';",
+        "import { GoogleDriveSync } from './googleSync.js';\nimport { exportDomAsJpeg, EXPORT_STATUS } from './export/exportService.js';",
+        1,
+    )
+
+share_start = text.find('const shareReceiptToWhatsApp = async (ref, filename, captionText) => {')
+if share_start >= 0:
+    share_end = text.find('\n\nconst waitForPaint', share_start)
+    if share_end < 0:
+        raise SystemExit('shareReceiptToWhatsApp end marker not found')
+    share_replacement = r'''const shareReceiptToWhatsApp = async (ref, filename, captionText) => {
+  let target = ref && ref.current ? ref.current : (typeof ref === 'string' ? document.getElementById(ref) : ref);
+  if (!target) throw new Error('Target render reference not found');
+  if (target instanceof HTMLElement === false && target.nodeType !== 1) target = target.current || target;
+
+  const result = await exportDomAsJpeg(target, {
+    filename: `${filename}.jpg`,
+    title: filename,
+    text: captionText,
+    quality: 0.9,
+    backgroundColor: '#FFFFFF'
+  });
+
+  if (result.status === EXPORT_STATUS.CANCELLED) return false;
+  if (result.status === EXPORT_STATUS.FAILED) {
+    throw result.error || new Error('Statement image generation failed.');
+  }
+  return true;
+};'''
+    text = text[:share_start] + share_replacement + text[share_end:]
+
 p.write_text(text, encoding='utf-8')
 
 # Google sign-in diagnostics. This identifies Android OAuth configuration errors.
@@ -192,14 +225,14 @@ if old_catch in g and 'Google sign-in developer configuration error (code 10)' n
     g = g.replace(old_catch, new_catch, 1)
 gp.write_text(g, encoding='utf-8')
 
-# Restore the desired launcher artwork used by the earlier known-good APK build.
-# The asset was previously committed as assets/2icon.png; use that exact historical blob.
+# The authoritative launcher artwork is assets/icon.png from commit 9eb05a0.
+# Restore that exact historical blob in every stabilization build; do not substitute 2icon.png.
 try:
-    icon_bytes = subprocess.check_output(['git', 'show', '9f4f9f678307fe2fa0b01e57a6e9cd2fc8f003de:assets/2icon.png'])
+    icon_bytes = subprocess.check_output(['git', 'show', '9eb05a0324b5e57de93e79b144ba3c9480920bad:assets/icon.png'])
     (ROOT / 'assets' / 'icon.png').write_bytes(icon_bytes)
-    print(f'Launcher icon restored from historical 2icon.png ({len(icon_bytes)} bytes).')
+    print(f'Authoritative launcher icon restored from 9eb05a0/assets/icon.png ({len(icon_bytes)} bytes).')
 except Exception as exc:
-    print(f'Historical launcher icon restore skipped: {exc}')
+    print(f'Authoritative launcher icon restore skipped: {exc}')
 
 print(f'LoadingScreen removed: {n1}; loading early return removed: {n2}')
 print('Stabilization source pass complete.')
