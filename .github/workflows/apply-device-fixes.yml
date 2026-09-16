@@ -30,3 +30,5 @@ jobs:
           git rm scripts/apply_device_fixes.py .github/workflows/apply-device-fixes.yml
           git commit -m 'fix: device UI, sharing, and reminder flows [device-fix]'
           git push origin HEAD:fix/native-exports-backup-sync-ci
+
+# One-time patch workflow; removes itself after a successful device-fix commit.
