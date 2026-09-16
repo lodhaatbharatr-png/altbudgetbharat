@@ -55,6 +55,10 @@ export const GoogleDriveSync = {
       this.inMemoryAccessToken = user.authentication ? user.authentication.accessToken : null;
       return user;
     } catch (err) {
+      const code = String(err?.code ?? err?.statusCode ?? err?.errorCode ?? '');
+      if (code === '10' || String(err?.message || '').toLowerCase().includes('something went wrong')) {
+        throw new Error('Google sign-in developer configuration error (code 10). The installed Android APK must be signed with a SHA-1 registered on the Android OAuth client for com.bharatrasve.budgetbharat.');
+      }
       throw this._normalizeError(err, 'Sign-in canceled or failed.');
     }
   },

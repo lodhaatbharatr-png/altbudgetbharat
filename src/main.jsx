@@ -161,6 +161,14 @@ const parseDate = (dStr) => {
   return isNaN(parsed.getTime()) ? new Date(0) : parsed;
 };
 
+const sortTransactionsByDateDesc = (items = []) => [...items].sort((a, b) => {
+  const dateDiff = parseDate(b?.date || b?.Date || b?.transactionDate || b?.timestamp || b?.Timestamp).getTime()
+    - parseDate(a?.date || a?.Date || a?.transactionDate || a?.timestamp || a?.Timestamp).getTime();
+  if (dateDiff !== 0) return dateDiff;
+  return String(b?.timestamp || b?.Timestamp || b?.entryId || b?.ENTRY_ID || b?.id || '')
+    .localeCompare(String(a?.timestamp || a?.Timestamp || a?.entryId || a?.ENTRY_ID || a?.id || ''));
+});
+
 const toInputDate_ = (dStr) => {
   if (!dStr) return '';
   if (dStr instanceof Date) {
@@ -928,7 +936,8 @@ const PeriodSelector = () => {
 
 const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSelectTransaction, embedded = false }) => {
   const [expanded, setExpanded] = useState(false);
-  const displayTxs = expanded ? transactions : transactions.slice(0, maxRows);
+  const sortedTransactions = sortTransactionsByDateDesc(transactions);
+  const displayTxs = expanded ? sortedTransactions : sortedTransactions.slice(0, maxRows);
 
   if (transactions.length === 0) return <p className="text-xs text-theme-dark/60 font-semibold px-3 py-3">No records found.</p>;
 
@@ -1170,22 +1179,7 @@ const SideMenuBranding = () => (
     <p className="text-[9px] font-bold text-[#8A8596]">Developed by - Bharat Rasve © 2026</p>
   </div>
 );
-
-const LoadingScreen = () => (
-  <div className="flex-1 min-h-screen bg-[#07d9d6] flex flex-col items-center justify-center p-6 select-none animate-fade-in">
-    <div className="flex flex-col items-center justify-center space-y-4">
-      <img
-        src={APP_LOGO_COLORED}
-        alt="Budget Bharat"
-        className="w-56 max-w-xs object-contain drop-shadow-2xl animate-pulse"
-      />
-      <div className="flex items-center gap-2 text-[#1E104B]/80 text-xs font-black tracking-widest uppercase mt-4">
-        <i className="fa-solid fa-circle-notch animate-spin text-sm text-[#1E104B]"></i>
-        <span>Loading Records...</span>
-      </div>
-    </div>
-  </div>
-);// --- START OF src/main.jsx (PART 3) ---
+// --- START OF src/main.jsx (PART 3) ---
 
 const SideMenu = () => {
   const {
@@ -4307,7 +4301,8 @@ const RecordsView = ({ onSelectTransaction }) => {
   const Section = ({ title, txs, showType = false }) => {
     const [visibleCount, setVisibleCount] = useState(6);
     const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0), [txs]);
-    const displayTxs = txs.slice(0, visibleCount);
+    const sortedTxs = sortTransactionsByDateDesc(txs);
+    const displayTxs = sortedTxs.slice(0, visibleCount);
 
     return (
       <div className="mb-3.5 bg-white rounded-2xl border border-[#E4E1EA] overflow-hidden shadow-xs">
@@ -4897,8 +4892,8 @@ const InputModal = ({ onClose }) => {
 
   const openAddMenu = (targetView, categoryType = null) => {
     onClose();
-    if (targetView === 'addCategory' && categoryType) {
-      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;
+    if (targetView === 'addCategory') {
+      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = 'expense';
     }
     setMenuView(targetView);
     setIsMenuOpen(true);
@@ -5122,9 +5117,6 @@ const MainApp = () => {
     }).sort((a, b) => Math.abs(b.remaining) - Math.abs(a.remaining));
   }, [persons, transactions]);
 
-  if (loading && transactions.length === 0 && persons.length === 0) {
-    return <div className="app-shell"><LoadingScreen /></div>;
-  }
 
   if (loadError) {
     return (
