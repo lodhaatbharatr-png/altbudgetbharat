@@ -1,0 +1,112 @@
+name: Apply final app fixes
+
+on:
+  push:
+    branches:
+      - fix/native-exports-backup-sync-ci
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch app
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('src/main.jsx')
+          text = p.read_text(encoding='utf-8')
+
+          # Remove the React loading screen; native launcher/splash is sufficient.
+          text, n = re.subn(r"const LoadingScreen = \(\) => \(.*?\n\);", "const LoadingScreen = () => null;", text, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('LoadingScreen not found')
+
+          # Person Ledger WhatsApp is always a compact reminder image + caption in one share.
+          person_new = '''  const handleWhatsAppShare = async () => {
+    const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
+    const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    try {
+      showFeedback('Preparing WhatsApp reminder...');
+      const reminderFile = await createPaymentReminderImage({
+        personName: person.name,
+        amount: Math.abs(person.remaining),
+        dueDate: targetDateStr,
+        loanName: 'Ledger Payment Reminder',
+        emiNo: null,
+        admin
+      });
+      if (navigator.canShare && navigator.canShare({ files: [reminderFile] })) {
+        await navigator.share({ files: [reminderFile], title: 'Budget Bharat Payment Reminder', text: textMsg });
+        showFeedback('Reminder ready to share');
+        return;
+      }
+      let phone = String(person.phone || '').replace(/\\D/g, '');
+      if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+      if (phone.length === 10) phone = '91' + phone;
+      const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}` : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      const url = URL.createObjectURL(reminderFile);
+      const link = document.createElement('a'); link.href = url; link.download = reminderFile.name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    } catch (err) {
+      if (err && err.name === 'AbortError') { showFeedback('Reminder share canceled'); return; }
+      console.error('Person reminder share error:', err);
+      showFeedback('Reminder failed: ' + (err?.message || 'image generation failed'));
+    }
+  };'''
+          text, n = re.subn(r"  const handleWhatsAppShare = \(\) => \{.*?\n  \};", person_new, text, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('Person WhatsApp handler not found')
+
+          # Export CSS: center cell content and preserve logo aspect ratio for all hidden slips.
+          css = '''const EXPORT_SLIP_CSS = `
+  .canvas-hide table { border-collapse: collapse !important; }
+  .canvas-hide th, .canvas-hide td { vertical-align: middle !important; }
+  .canvas-hide th, .canvas-hide td { padding-top: 4px !important; padding-bottom: 4px !important; }
+  .canvas-hide img { height: auto !important; object-fit: contain !important; }
+`;
+
+'''
+          if 'const EXPORT_SLIP_CSS = `' not in text:
+              marker = 'const AppContext = createContext();'
+              if marker not in text: raise SystemExit('AppContext marker not found')
+              text = text.replace(marker, css + marker, 1)
+          if '<style>{EXPORT_SLIP_CSS}</style>' not in text:
+              text = text.replace('<div className="canvas-hide">', '<div className="canvas-hide"><style>{EXPORT_SLIP_CSS}</style>')
+
+          text = text.replace('className="w-[104px] h-[104px] object-contain select-none"', 'className="w-[104px] h-auto object-contain select-none" style={{ height: \'auto\', maxHeight: \'104px\' }}')
+
+          p.write_text(text, encoding='utf-8')
+
+          # Make Google developer errors explicit for this exact debug build.
+          gp = Path('src/googleSync.js')
+          g = gp.read_text(encoding='utf-8')
+          old = """    } catch (err) {\n      throw this._normalizeError(err, 'Sign-in canceled or failed.');\n    }\n  },"""
+          new = """    } catch (err) {\n      const code = String(err?.code ?? err?.statusCode ?? err?.errorCode ?? '');\n      if (code === '10' || code.toLowerCase().includes('developer')) {\n        throw new Error('Google sign-in developer configuration error (code 10). Add this debug SHA-1 to the Android OAuth client for com.bharatrasve.budgetbharat: 97:72:9E:58:67:70:44:4A:61:7F:65:69:42:C4:3B:21:84:DF:3E:ED.');\n      }\n      throw this._normalizeError(err, 'Sign-in canceled or failed.');\n    }\n  },"""
+          if old in g:
+              gp.write_text(g.replace(old, new, 1), encoding='utf-8')
+
+          for marker in ['const LoadingScreen = () => null;', 'const handleWhatsAppShare = async () => {', 'const EXPORT_SLIP_CSS = `', 'w-[104px] h-auto object-contain select-none']:
+              if marker not in text: raise SystemExit('Missing marker: ' + marker)
+          PY
+
+      - name: Build-check web app
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
+
+      - name: Commit fixes and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.jsx src/googleSync.js
+          git commit -m "fix: final app behavior" || true
+          git rm .github/workflows/apply-final-fixes.yml
+          git commit -m "chore: remove final fix workflow" || true
+          git push
