@@ -32,3 +32,4 @@ jobs:
           git push origin HEAD:fix/native-exports-backup-sync-ci
 
 # One-time patch workflow; removes itself after a successful device-fix commit.
+# Corrected patcher version: 2026-09-16
