@@ -27,7 +27,9 @@ jobs:
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.build_branch || github.ref_name }}
+          # pull_request runs use the actual PR head branch; github.ref_name is
+          # the synthetic PR merge ref (for example 1/merge), which is not a branch.
+          ref: ${{ inputs.build_branch || (github.event_name == 'pull_request' && github.head_ref) || github.ref_name }}
           fetch-depth: 0
 
       - name: Set up Node.js 18
