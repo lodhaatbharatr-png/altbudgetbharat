@@ -17,6 +17,7 @@ import {
 
 import { initDB, BackendBridge } from './db.js';
 import { GoogleDriveSync } from './googleSync.js';
+import { exportDomAsJpeg, EXPORT_STATUS } from './export/exportService.js';
 import './index.css';
 
 const SafePortal = ({ children }) => {
@@ -161,6 +162,14 @@ const parseDate = (dStr) => {
   return isNaN(parsed.getTime()) ? new Date(0) : parsed;
 };
 
+const sortTransactionsByDateDesc = (items = []) => [...items].sort((a, b) => {
+  const dateDiff = parseDate(b?.date || b?.Date || b?.transactionDate || b?.timestamp || b?.Timestamp).getTime()
+    - parseDate(a?.date || a?.Date || a?.transactionDate || a?.timestamp || a?.Timestamp).getTime();
+  if (dateDiff !== 0) return dateDiff;
+  return String(b?.timestamp || b?.Timestamp || b?.entryId || b?.ENTRY_ID || b?.id || '')
+    .localeCompare(String(a?.timestamp || a?.Timestamp || a?.entryId || a?.ENTRY_ID || a?.id || ''));
+});
+
 const toInputDate_ = (dStr) => {
   if (!dStr) return '';
   if (dStr instanceof Date) {
@@ -222,114 +231,152 @@ const gasRun = async (fnName, ...args) => {
 const downloadCsv = async (csv, filename) => {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const file = new File([blob], filename, { type: 'text/csv' });
-  
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [file],
-        title: filename,
-        text: 'Budget Bharat Export'
-      });
-      return;
+      await navigator.share({ files: [file], title: filename, text: 'Budget Bharat Export' });
+      return true;
     } catch (e) {
-      if (e.name === 'AbortError') return;
+      if (e && e.name === 'AbortError') return false;
+      throw e;
     }
   }
-
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 };
 
 const shareReceiptToWhatsApp = async (ref, filename, captionText) => {
   let target = ref && ref.current ? ref.current : (typeof ref === 'string' ? document.getElementById(ref) : ref);
-  if (!target) {
-    throw new Error("Target render reference not found");
-  }
+  if (!target) throw new Error('Target render reference not found');
+  if (target instanceof HTMLElement === false && target.nodeType !== 1) target = target.current || target;
 
-  if (target instanceof HTMLElement === false && target.nodeType !== 1) {
-    target = target.current || target;
-  }
-
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (e) { /* non-fatal */ }
-  }
-
-  const targetWidth = parseInt(target && target.style ? target.style.width : 0, 10) || Math.ceil((target && target.getBoundingClientRect ? target.getBoundingClientRect().width : 0) || target.offsetWidth) || 640;
-  const targetHeight = Math.ceil((target && target.getBoundingClientRect ? target.getBoundingClientRect().height : 0) || target.offsetHeight || target.scrollHeight);
-
-  const dynamicScale = targetHeight > 2500 ? 1.2 : targetHeight > 1500 ? 1.5 : 2;
-
-  let canvas;
-  try {
-    canvas = await html2canvas(target, { 
-      backgroundColor: '#ffffff', 
-      scale: dynamicScale, 
-      logging: false, 
-      useCORS: true, 
-      allowTaint: true,
-      foreignObjectRendering: true,
-      letterRendering: false,
-      width: targetWidth,
-      height: targetHeight,
-      windowWidth: targetWidth,
-      windowHeight: targetHeight,
-      scrollY: 0,
-      scrollX: 0
-    });
-  } catch (canvasErr) {
-    throw new Error("Statement is too long to export as a single image on this device.");
-  }
-
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((b) => {
-      if (b) resolve(b);
-      else reject(new Error("Canvas blob generation failed"));
-    }, 'image/jpeg', 0.85);
+  const result = await exportDomAsJpeg(target, {
+    filename: `${filename}.jpg`,
+    title: filename,
+    text: captionText,
+    quality: 0.9,
+    backgroundColor: '#FFFFFF'
   });
 
-  if (!blob) throw new Error("Empty image blob created");
-
-  const file = new File([blob], `${filename}.jpg`, { type: 'image/jpeg' });
-
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: filename,
-        text: captionText
-      });
-      return true;
-    } catch (err) {
-      if (err.name === 'AbortError') return true;
-      if (err.name === 'NotAllowedError') {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${filename}.jpg`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        return true;
-      }
-      throw err;
-    }
-  } else {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}.jpg`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    return true;
+  if (result.status === EXPORT_STATUS.CANCELLED) return false;
+  if (result.status === EXPORT_STATUS.FAILED) {
+    throw result.error || new Error('Statement image generation failed.');
   }
+  return true;
 };
 
 const waitForPaint = () => new Promise(resolve => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
 });
+
+const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
+  const width = 900, height = 620;
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas is not available on this device.');
+
+  const roundRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+
+  ctx.fillStyle = '#F4F3F8';
+  ctx.fillRect(0, 0, width, height);
+
+  const ticketX = 48, ticketY = 34, ticketW = width - 96, ticketH = height - 68;
+  ctx.save();
+  roundRect(ticketX, ticketY, ticketW, ticketH, 28);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.62, 24, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#D8D3E0';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([9, 10]);
+  ctx.beginPath();
+  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.62);
+  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.62);
+  ctx.stroke();
+  ctx.restore();
+
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) await new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 330, maxH = 150;
+      const scale = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.save();
+      ctx.globalAlpha = 0.055;
+      ctx.drawImage(img, (width - w) / 2, ticketY + 118, w, h);
+      ctx.restore();
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = logoSrc;
+  });
+
+  const centerX = width / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 34px sans-serif';
+  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 95);
+
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 25px sans-serif';
+  ctx.fillText('Payment reminder for', centerX, 140);
+
+  roundRect(205, 166, 490, 86, 22);
+  ctx.fillStyle = '#F1EAF4'; ctx.fill();
+  ctx.fillStyle = '#7B2B8C';
+  ctx.font = '900 58px sans-serif';
+  ctx.fillText(formatMoney(amount), centerX, 211);
+
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '800 25px sans-serif';
+  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 285);
+
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 23px sans-serif';
+  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 322);
+
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '800 21px sans-serif';
+  ctx.fillText(`Sent by ${admin?.name || 'Bharat Rasve'}`, centerX, 430);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 19px sans-serif';
+  ctx.fillText(admin?.contact || '7218838122', centerX, 462);
+
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '700 16px sans-serif';
+  ctx.fillText('Budget Bharat • Personal Finance', centerX, 530);
+
+  const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
+  return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
+};
 
 const AppContext = createContext();
 
@@ -573,11 +620,17 @@ const AppProvider = ({ children }) => {
       .catch((err) => { showFeedback('Save failed: ' + err.message); throw err; });
   };
 
-  const exportCsv = (rpcFn, filename) => {
+  const exportCsv = async (rpcFn, filename) => {
     showFeedback('Preparing export...');
-    gasRun(rpcFn)
-      .then((csv) => { downloadCsv(csv, filename); showFeedback('Exported ' + filename); })
-      .catch((err) => showFeedback('Export failed: ' + err.message));
+    try {
+      const csv = await gasRun(rpcFn);
+      const exported = await downloadCsv(csv, filename);
+      showFeedback(exported ? 'Exported ' + filename : 'Export canceled');
+      return exported;
+    } catch (err) {
+      showFeedback('Export failed: ' + (err.message || String(err)));
+      return false;
+    }
   };
 
   const csvEscape = (v) => {
@@ -588,7 +641,7 @@ const AppProvider = ({ children }) => {
     .concat(rows.map(r => headers.map(h => csvEscape(r[h])).join(',')))
     .join('\n');
 
-  const exportFullBackupCsv = () => {
+  const exportFullBackupCsv = async () => {
     showFeedback('Preparing full backup...');
     try {
       const lines = [];
@@ -610,8 +663,9 @@ const AppProvider = ({ children }) => {
       lines.push('##SECTION:admin');
       lines.push(csvSection(['name', 'contact', 'email', 'headerNote', 'footerNote'], [admin || {}]));
 
-      downloadCsv(lines.join('\n'), `budget_bharat_full_backup_${Date.now()}.csv`);
-      showFeedback('Full backup exported');
+      const exported = await downloadCsv(lines.join('\n'), `budget_bharat_full_backup_${Date.now()}.csv`);
+      showFeedback(exported ? 'Full backup exported' : 'Backup export canceled');
+      return exported;
     } catch (err) {
       showFeedback('Backup export failed: ' + err.message);
     }
@@ -924,7 +978,8 @@ const PeriodSelector = () => {
 
 const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSelectTransaction, embedded = false }) => {
   const [expanded, setExpanded] = useState(false);
-  const displayTxs = expanded ? transactions : transactions.slice(0, maxRows);
+  const sortedTransactions = sortTransactionsByDateDesc(transactions);
+  const displayTxs = expanded ? sortedTransactions : sortedTransactions.slice(0, maxRows);
 
   if (transactions.length === 0) return <p className="text-xs text-theme-dark/60 font-semibold px-3 py-3">No records found.</p>;
 
@@ -1166,22 +1221,7 @@ const SideMenuBranding = () => (
     <p className="text-[9px] font-bold text-[#8A8596]">Developed by - Bharat Rasve © 2026</p>
   </div>
 );
-
-const LoadingScreen = () => (
-  <div className="flex-1 min-h-screen bg-[#07d9d6] flex flex-col items-center justify-center p-6 select-none animate-fade-in">
-    <div className="flex flex-col items-center justify-center space-y-4">
-      <img
-        src={APP_LOGO_COLORED}
-        alt="Budget Bharat"
-        className="w-56 max-w-xs object-contain drop-shadow-2xl animate-pulse"
-      />
-      <div className="flex items-center gap-2 text-[#1E104B]/80 text-xs font-black tracking-widest uppercase mt-4">
-        <i className="fa-solid fa-circle-notch animate-spin text-sm text-[#1E104B]"></i>
-        <span>Loading Records...</span>
-      </div>
-    </div>
-  </div>
-);// --- START OF src/main.jsx (PART 3) ---
+// --- START OF src/main.jsx (PART 3) ---
 
 const SideMenu = () => {
   const {
@@ -1196,7 +1236,14 @@ const SideMenu = () => {
 
   const [formData, setFormData] = useState({});
   const [editItem, setEditItem] = useState(null);
-  const [catType, setCatType] = useState('expense');
+  const [catType, setCatType] = useState(() => window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ || 'expense');
+
+  useEffect(() => {
+    if (menuView === 'addCategory' && window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__) {
+      setCatType(window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__);
+      delete window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__;
+    }
+  }, [menuView]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
@@ -1245,10 +1292,13 @@ const SideMenu = () => {
         });
       }
 
+      const keepAddFormOpen = menuView === 'addPerson' || menuView === 'addCategory';
       setFormData({});
       setEditItem(null);
-      setMenuView('menu');
-      setIsMenuOpen(false);
+      if (!keepAddFormOpen) {
+        setMenuView('menu');
+        setIsMenuOpen(false);
+      }
     } catch (err) {
       console.error("Admin config save error:", err);
     } finally {
@@ -1442,6 +1492,12 @@ const SideMenu = () => {
             <p className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4">
               {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}
             </p>
+            {menuView === 'addCategory' && (
+              <div className="flex gap-2 mb-4">
+                <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>
+                <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>
+              </div>
+            )}
             <form onSubmit={handleFormSubmit} className="space-y-4 pb-12">
               <div className="space-y-4">
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
@@ -2087,7 +2143,7 @@ const PersonsView = ({ onSelectPerson }) => {
                 <img
                   src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
                   alt="Logo"
-                  className="w-[104px] h-[104px] object-contain select-none"
+                  className="w-[104px] h-[32px] object-contain select-none flex-none"
                 />
               </div>
 
@@ -3017,24 +3073,30 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     }
   };
 
-  const handleSendWhatsAppReminder = () => {
+  const handleSendWhatsAppReminder = async () => {
     if (!currentLoan) return;
     const nextPending = currentLoan.schedule.find(s => !s.paid);
     if (!nextPending) {
       showFeedback('All EMIs for this loan are cleared!');
       return;
     }
-    const phoneRaw = borrowerPersonObj ? borrowerPersonObj.phone : '';
-    let phone = String(phoneRaw || '').replace(/\D/g, '');
-    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
-    if (phone.length === 10) phone = '91' + phone;
-
     const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
-
-    const waUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(textMsg)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    try {
+      const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Budget Bharat Payment Reminder', text: textMsg });
+        showFeedback('Reminder ready to share');
+      } else {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        showFeedback('Reminder image saved; share it in WhatsApp');
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') { showFeedback('Reminder share canceled'); return; }
+      console.error('Payment reminder image error:', err);
+      showFeedback('Reminder failed: ' + (err && err.message ? err.message : 'image generation failed'));
+    }
   };
 
   const handleShareLoanSchedule = async () => {
@@ -3344,7 +3406,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
                 <img
                   src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
                   alt="Logo"
-                  className="w-[104px] h-[104px] object-contain select-none"
+                  className="w-[104px] h-[32px] object-contain select-none flex-none"
                 />
               </div>
 
@@ -4211,7 +4273,7 @@ return (
                   <tbody className="bg-transparent">
                     {currentLoan.schedule.map((row) => (
                       <tr key={row.emiNo} className={row.paid ? 'bg-amber-50/50' : ''}>
-                        <td className="py-2 px-2 border">{formatDisplayDate(row.date)}</td>
+                        <td className="py-2 px-2 border align-middle leading-normal whitespace-nowrap">{formatDisplayDate(row.date)}</td>
                         <td className="py-2 px-2 border text-right font-bold">{formatMoney(row.emiAmount)}</td>
                         <td className="py-2 px-2 border text-right font-bold">{formatMoney(row.outstandingBal)}</td>
                         <td className="py-2 px-2 border text-center font-bold">
@@ -4238,7 +4300,7 @@ return (
                     <img
                       src={Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED}
                       alt="Logo"
-                      className="w-32 h-auto max-h-12 object-contain select-none"
+                      className="w-[104px] h-[32px] object-contain select-none flex-none"
                     />
                   </div>
 
@@ -4281,7 +4343,8 @@ const RecordsView = ({ onSelectTransaction }) => {
   const Section = ({ title, txs, showType = false }) => {
     const [visibleCount, setVisibleCount] = useState(6);
     const totalAmount = useMemo(() => txs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0), [txs]);
-    const displayTxs = txs.slice(0, visibleCount);
+    const sortedTxs = sortTransactionsByDateDesc(txs);
+    const displayTxs = sortedTxs.slice(0, visibleCount);
 
     return (
       <div className="mb-3.5 bg-white rounded-2xl border border-[#E4E1EA] overflow-hidden shadow-xs">
@@ -4869,8 +4932,11 @@ const InputModal = ({ onClose }) => {
     }
   };
 
-  const openAddMenu = (targetView) => {
+  const openAddMenu = (targetView, categoryType = null) => {
     onClose();
+    if (targetView === 'addCategory' && categoryType) {
+      window.__BUDGET_BHARAT_NEW_CATEGORY_TYPE__ = categoryType;
+    }
     setMenuView(targetView);
     setIsMenuOpen(true);
   };
@@ -4978,7 +5044,7 @@ const InputModal = ({ onClose }) => {
                     options={type === 'INCOME' ? categories.income : categories.expense}
                     placeholder="Category..."
                   />
-                  <button type="button" onClick={() => openAddMenu('addCategory')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
+                  <button type="button" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
                     <i className="fa-solid fa-plus text-sm"></i>
                   </button>
                 </div>
@@ -5093,9 +5159,6 @@ const MainApp = () => {
     }).sort((a, b) => Math.abs(b.remaining) - Math.abs(a.remaining));
   }, [persons, transactions]);
 
-  if (loading && transactions.length === 0 && persons.length === 0) {
-    return <div className="app-shell"><LoadingScreen /></div>;
-  }
 
   if (loadError) {
     return (
