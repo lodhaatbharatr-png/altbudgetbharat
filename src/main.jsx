@@ -1,6 +1,7 @@
 // --- START OF src/main.jsx (PART 1) ---
 
 import React, { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
+import { Contacts } from '@capacitor-community/contacts';
 import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
@@ -1104,7 +1105,7 @@ const Header = () => {
 };
 
 const SearchView = ({ onSelectPerson }) => {
-  const { searchQuery, transactions, persons, categories } = useContext(AppContext);
+  const { searchQuery, setSearchQuery, transactions, persons, categories } = useContext(AppContext);
   const query = searchQuery.trim().toLowerCase();
 
   const matchedPersons = useMemo(() => {
@@ -1191,9 +1192,9 @@ const SearchView = ({ onSelectPerson }) => {
               <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">Categories</h3>
               <div className="flex flex-wrap gap-1.5">
                 {matchedCategories.map((c, i) => (
-                  <span key={i} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center">
+                  <button key={i} type="button" onClick={() => setSearchQuery(c)} title={`Filter transactions by ${c}`} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center hover:bg-[#7B2B8C] hover:text-white active:scale-95 transition-all">
                     <i className="fa-solid fa-tag mr-1.5 text-[#7B2B8C] text-[10px]"></i>{c}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1247,6 +1248,51 @@ const SideMenu = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const [contactPickerSearch, setContactPickerSearch] = useState('');
+  const [deviceContacts, setDeviceContacts] = useState([]);
+  const [contactPickerLoading, setContactPickerLoading] = useState(false);
+
+  const openDeviceContactPicker = async () => {
+    setContactPickerLoading(true);
+    try {
+      const permission = await Contacts.getPermissions();
+      if (!permission || permission.granted !== true) {
+        showFeedback('Contacts permission is required to select a device contact.');
+        return;
+      }
+      const result = await Contacts.getContacts();
+      const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
+      const usable = contacts
+        .map((contact) => ({
+          ...contact,
+          _name: String(contact.displayName || '').trim(),
+          _phone: String(contact.phoneNumbers?.find(p => p?.number)?.number || '').trim(),
+          _email: String(contact.emails?.find(e => e?.address)?.address || '').trim(),
+        }))
+        .filter(contact => contact._name || contact._phone);
+      setDeviceContacts(usable);
+      setContactPickerSearch('');
+      setContactPickerOpen(true);
+    } catch (err) {
+      console.error('Device contact picker error:', err);
+      showFeedback('Unable to open device contacts. Please allow Contacts permission in Android settings.');
+    } finally {
+      setContactPickerLoading(false);
+    }
+  };
+
+  const selectDeviceContact = (contact) => {
+    setFormData(prev => ({
+      ...prev,
+      name: contact._name || prev.name || '',
+      phone: contact._phone || prev.phone || '',
+      email: contact._email || prev.email || '',
+    }));
+    setContactPickerOpen(false);
+    setContactPickerSearch('');
+    showFeedback('Contact details filled');
+  };
 
   if (!isMenuOpen) return null;
 
@@ -1510,7 +1556,19 @@ const SideMenu = () => {
                 {(menuView === 'addPerson' || menuView === 'editPerson') && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Name *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">Name *</label>
+                        <button
+                          type="button"
+                          onClick={openDeviceContactPicker}
+                          disabled={contactPickerLoading}
+                          title="Select from device contacts"
+                          className="inline-flex items-center gap-1.5 text-[10px] font-black text-[#078A87] hover:text-[#056E6C] active:scale-95 disabled:opacity-50 transition-all"
+                        >
+                          <i className={`fa-solid ${contactPickerLoading ? 'fa-spinner animate-spin' : 'fa-address-book'} text-[11px]`}></i>
+                          <span>{contactPickerLoading ? 'Opening...' : 'Device Contacts'}</span>
+                        </button>
+                      </div>
                       <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
                     </div>
                     <div>
@@ -1632,6 +1690,53 @@ const SideMenu = () => {
           </div>
         </div>
       )}
+      {contactPickerOpen && (
+        <div className="fixed inset-0 z-[70] bg-[#1E104B]/65 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setContactPickerOpen(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[82vh] shadow-2xl overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[#E4E1EA]">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-sm font-black text-[#1E104B]">Select Device Contact</h3>
+                  <p className="text-[9px] text-[#8A8596] font-semibold mt-0.5">Choose a contact to fill name, phone and email.</p>
+                </div>
+                <button type="button" onClick={() => setContactPickerOpen(false)} className="w-8 h-8 rounded-full bg-[#F4F3F8] text-[#625E70] flex items-center justify-center">
+                  <i className="fa-solid fa-xmark text-xs"></i>
+                </button>
+              </div>
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8596] text-xs pointer-events-none"></i>
+                <input type="text" value={contactPickerSearch} onChange={e => setContactPickerSearch(e.target.value)} autoFocus placeholder="Search device contacts..." className="w-full bg-[#F4F3F8] border border-[#E4E1EA] rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold text-[#1E104B] outline-none focus:bg-white focus:border-[#078A87]" />
+              </div>
+            </div>
+            <div className="max-h-[58vh] overflow-y-auto hide-scrollbar p-2">
+              {deviceContacts.filter(contact => {
+                const q = contactPickerSearch.trim().toLowerCase();
+                if (!q) return true;
+                return `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
+              }).map((contact, index) => (
+                <button key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`} type="button" onClick={() => selectDeviceContact(contact)} className="w-full text-left p-3 rounded-xl hover:bg-[#F4F3F8] active:bg-[#EDE9F6] transition-all flex items-center gap-3 border-b border-[#E4E1EA]/60 last:border-b-0">
+                  <span className="w-9 h-9 rounded-full bg-[#078A87]/12 text-[#078A87] flex items-center justify-center font-black text-xs flex-none">{(contact._name || '?').charAt(0).toUpperCase()}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                    <span className="block text-[10px] text-[#625E70] font-semibold truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                  </span>
+                  <i className="fa-solid fa-chevron-right text-[9px] text-[#8A8596]"></i>
+                </button>
+              ))}
+              {deviceContacts.length > 0 && deviceContacts.filter(contact => {
+                const q = contactPickerSearch.trim().toLowerCase();
+                return !q || `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
+              }).length === 0 && (
+                <div className="text-center py-10 px-5"><i className="fa-solid fa-magnifying-glass text-2xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No matching contacts.</p></div>
+              )}
+              {deviceContacts.length === 0 && (
+                <div className="text-center py-10 px-5"><i className="fa-solid fa-address-book text-3xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No usable contacts found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
