@@ -18,7 +18,8 @@
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@capacitor-community/contacts": "^5.1.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^5.7.0",

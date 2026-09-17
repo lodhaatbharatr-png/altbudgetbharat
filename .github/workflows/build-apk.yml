@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - fix/native-exports-backup-sync-ci
+      - feature/search-contact-picker
   pull_request:
     branches:
       - main
@@ -27,8 +28,6 @@ jobs:
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          # pull_request runs use the actual PR head branch; github.ref_name is
-          # the synthetic PR merge ref (for example 1/merge), which is not a branch.
           ref: ${{ inputs.build_branch || (github.event_name == 'pull_request' && github.head_ref) || github.ref_name }}
           fetch-depth: 0
 
@@ -46,16 +45,22 @@ jobs:
       - name: Apply stabilization source fixes
         run: python3 scripts/ci-stabilize.py
 
+      - name: Apply search and contact picker source fixes
+        run: python3 scripts/ci-contact-picker-finalize.py
+
+      - name: Apply contact picker and reminder hotfix
+        run: python3 scripts/ci-contact-picker-hotfix.py
+
       - name: Commit stabilization source fixes
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/native-exports-backup-sync-ci'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/native-exports-backup-sync-ci' || github.ref == 'refs/heads/feature/search-contact-picker')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py index.html assets/icon.png
+          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
-            git commit -m "fix: persist export slips, launcher, and startup polish"
+            git commit -m "fix: make device contacts action responsive and remove reminder watermark"
             git push
           fi
 
@@ -82,6 +87,18 @@ jobs:
 
       - name: Sync Capacitor Android project
         run: npx cap sync android
+
+      - name: Ensure Android contacts read permission
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "AndroidManifest.xml not found at $MANIFEST"
+            exit 1
+          fi
+          grep -q 'android.permission.READ_CONTACTS' "$MANIFEST" || \
+            sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.READ_CONTACTS" />' "$MANIFEST"
+          grep -q 'android.permission.READ_CONTACTS' "$MANIFEST"
+          echo "READ_CONTACTS permission is present in the Android manifest."
 
       - name: Generate Android launcher icon
         run: |
