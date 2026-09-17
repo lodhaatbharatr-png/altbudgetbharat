@@ -40,10 +40,15 @@ if 'const [contactPickerOpen, setContactPickerOpen]' not in text:
 
   const openDeviceContactPicker = async () => {
     setContactPickerLoading(true);
+    showFeedback('Opening device contacts…');
     try {
       const permission = await Contacts.getPermissions();
-      if (!permission || permission.granted !== true) {
-        showFeedback('Contacts permission is required to select a device contact.');
+      const permissionGranted =
+        permission?.granted === true ||
+        permission?.readContacts === 'granted' ||
+        permission?.contacts === 'granted';
+      if (!permissionGranted) {
+        showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
         return;
       }
       const result = await Contacts.getContacts();
@@ -83,11 +88,14 @@ if 'const [contactPickerOpen, setContactPickerOpen]' not in text:
         raise SystemExit('SideMenu state marker not found')
     text = text.replace(state_marker, state_block, 1)
 
-old_name = '''                    <div>\n                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Name *</label>\n                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />\n                    </div>'''
-new_name = '''                    <div>\n                      <div className="flex items-center justify-between mb-1">\n                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">Name *</label>\n                        <button\n                          type="button"\n                          onClick={openDeviceContactPicker}\n                          disabled={contactPickerLoading}\n                          title="Select from device contacts"\n                          className="inline-flex items-center gap-1.5 text-[10px] font-black text-[#078A87] hover:text-[#056E6C] active:scale-95 disabled:opacity-50 transition-all"\n                        >\n                          <i className={`fa-solid ${contactPickerLoading ? 'fa-spinner animate-spin' : 'fa-address-book'} text-[11px]`}></i>\n                          <span>{contactPickerLoading ? 'Opening...' : 'Device Contacts'}</span>\n                        </button>\n                      </div>\n                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />\n                    </div>'''
-if old_name not in text:
-    raise SystemExit('Add Person name field marker not found')
-text = text.replace(old_name, new_name, 1)
+# Add Person name field. This patch must be idempotent because CI can run it against
+# a branch where the source change has already been committed.
+if 'Select from device contacts' not in text and 'Device Contacts' not in text:
+    old_name = '''                    <div>\n                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Name *</label>\n                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />\n                    </div>'''
+    new_name = '''                    <div>\n                      <div className="flex items-center justify-between mb-1">\n                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">Name *</label>\n                        <button\n                          type="button"\n                          onClick={openDeviceContactPicker}\n                          disabled={contactPickerLoading}\n                          title="Select from device contacts"\n                          className="inline-flex items-center gap-1.5 text-[10px] font-black text-[#078A87] hover:text-[#056E6C] active:scale-95 disabled:opacity-50 transition-all"\n                        >\n                          <i className={`fa-solid ${contactPickerLoading ? 'fa-spinner animate-spin' : 'fa-address-book'} text-[11px]`}></i>\n                          <span>{contactPickerLoading ? 'Opening...' : 'Device Contacts'}</span>\n                        </button>\n                      </div>\n                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />\n                    </div>'''
+    if old_name not in text:
+        raise SystemExit('Add Person name field marker not found')
+    text = text.replace(old_name, new_name, 1)
 
 # Insert the contact picker immediately before SideMenu's closing JSX, not inside a delete-confirm branch.
 if 'Select Device Contact' not in text:
