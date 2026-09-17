@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - fix/native-exports-backup-sync-ci
+      - feature/search-contact-picker
   pull_request:
     branches:
       - main
@@ -46,16 +47,19 @@ jobs:
       - name: Apply stabilization source fixes
         run: python3 scripts/ci-stabilize.py
 
+      - name: Apply search and contact picker source fixes
+        run: python3 scripts/ci-contact-picker-finalize.py
+
       - name: Commit stabilization source fixes
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/native-exports-backup-sync-ci'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/native-exports-backup-sync-ci' || github.ref == 'refs/heads/feature/search-contact-picker')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py index.html assets/icon.png
+          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py scripts/ci-contact-picker.py scripts/ci-contact-picker-finalize.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
-            git commit -m "fix: persist export slips, launcher, and startup polish"
+            git commit -m "feat: searchable category filters and device contact picker"
             git push
           fi
 
