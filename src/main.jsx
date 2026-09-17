@@ -322,23 +322,6 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.stroke();
   ctx.restore();
 
-  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
-  if (logoSrc) await new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 330, maxH = 150;
-      const scale = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * scale, h = img.height * scale;
-      ctx.save();
-      ctx.globalAlpha = 0.055;
-      ctx.drawImage(img, (width - w) / 2, ticketY + 118, w, h);
-      ctx.restore();
-      resolve();
-    };
-    img.onerror = resolve;
-    img.src = logoSrc;
-  });
-
   const centerX = width / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1254,11 +1237,14 @@ const SideMenu = () => {
   const [contactPickerLoading, setContactPickerLoading] = useState(false);
 
   const openDeviceContactPicker = async () => {
+    if (contactPickerLoading) return;
     setContactPickerLoading(true);
+    showFeedback('Opening device contacts…');
     try {
       const permission = await Contacts.getPermissions();
-      if (!permission || permission.granted !== true) {
-        showFeedback('Contacts permission is required to select a device contact.');
+      const permissionGranted = permission?.granted === true || permission?.readContacts === 'granted' || permission?.contacts === 'granted';
+      if (!permissionGranted) {
+        showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
         return;
       }
       const result = await Contacts.getContacts();
