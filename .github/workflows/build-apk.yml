@@ -56,7 +56,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py scripts/ci-contact-picker.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
+          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
