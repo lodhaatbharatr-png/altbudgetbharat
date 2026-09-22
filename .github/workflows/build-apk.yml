@@ -51,16 +51,19 @@ jobs:
       - name: Apply contact picker and reminder hotfix
         run: python3 scripts/ci-contact-picker-hotfix.py
 
+      - name: Apply Phase 1 final polish
+        run: python3 scripts/ci-phase1-final-polish.py
+
       - name: Commit stabilization source fixes
         if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/native-exports-backup-sync-ci' || github.ref == 'refs/heads/feature/search-contact-picker')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js src/export/exportService.js scripts/ci-stabilize.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
+          git add src/main.jsx src/googleSync.js src/export/exportService.js scripts/ci-stabilize.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py scripts/ci-phase1-final-polish.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
-            git commit -m "fix: make device contacts action responsive and remove reminder watermark"
+            git commit -m "fix: finish phase1 contact search and export polish"
             git push
           fi
 
@@ -97,8 +100,11 @@ jobs:
           fi
           grep -q 'android.permission.READ_CONTACTS' "$MANIFEST" || \
             sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.READ_CONTACTS" />' "$MANIFEST"
+          grep -q 'android.permission.WRITE_CONTACTS' "$MANIFEST" || \
+            sed -i '/<manifest[^>]*>/a\    <uses-permission android:name="android.permission.WRITE_CONTACTS" />' "$MANIFEST"
           grep -q 'android.permission.READ_CONTACTS' "$MANIFEST"
-          echo "READ_CONTACTS permission is present in the Android manifest."
+          grep -q 'android.permission.WRITE_CONTACTS' "$MANIFEST"
+          echo "Contacts permissions are present in the Android manifest."
 
       - name: Generate Android launcher icon
         run: |
