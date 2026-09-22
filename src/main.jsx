@@ -280,9 +280,10 @@ const waitForPaint = () => new Promise(resolve => {
 });
 
 const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
-  const width = 900, height = 620;
+  const width = 900, height = 650;
   const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available on this device.');
 
@@ -299,17 +300,23 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.fillStyle = '#F4F3F8';
   ctx.fillRect(0, 0, width, height);
 
-  const ticketX = 48, ticketY = 34, ticketW = width - 96, ticketH = height - 68;
+  // Ticket body with generous top breathing room.
+  const ticketX = 48, ticketY = 30, ticketW = width - 96, ticketH = height - 60;
   ctx.save();
   roundRect(ticketX, ticketY, ticketW, ticketH, 28);
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
   ctx.restore();
 
+  // Ticket perforation.
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.62, 24, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ticketX, ticketY + ticketH * 0.61, 24, -Math.PI / 2, Math.PI / 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.61, 24, Math.PI / 2, Math.PI * 1.5);
+  ctx.fill();
   ctx.restore();
 
   ctx.save();
@@ -317,48 +324,86 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.lineWidth = 2;
   ctx.setLineDash([9, 10]);
   ctx.beginPath();
-  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.62);
-  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.62);
+  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.61);
+  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.61);
   ctx.stroke();
   ctx.restore();
 
   const centerX = width / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 34px sans-serif';
-  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 95);
+  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 100);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText('Payment reminder for', centerX, 140);
+  ctx.fillText('Payment reminder for', centerX, 145);
 
-  roundRect(205, 166, 490, 86, 22);
-  ctx.fillStyle = '#F1EAF4'; ctx.fill();
+  roundRect(205, 172, 490, 86, 22);
+  ctx.fillStyle = '#F1EAF4';
+  ctx.fill();
   ctx.fillStyle = '#7B2B8C';
   ctx.font = '900 58px sans-serif';
-  ctx.fillText(formatMoney(amount), centerX, 211);
+  ctx.fillText(formatMoney(amount), centerX, 216);
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 285);
+  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
-  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 322);
+  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
+  // Footer: logo left + sender details right, horizontally aligned.
+  const footerX = ticketX + 55;
+  const footerY = ticketY + ticketH * 0.61 + 48;
+  const footerW = ticketW - 110;
+  const footerH = 88;
+  roundRect(footerX, footerY, footerW, footerH, 18);
+  ctx.fillStyle = '#F4F3F8';
+  ctx.fill();
+
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) {
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxLogoW = 180;
+        const maxLogoH = 58;
+        const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
+        const logoW = Math.max(1, img.width * scale);
+        const logoH = Math.max(1, img.height * scale);
+        const logoX = footerX + 18 + (maxLogoW - logoW) / 2;
+        const logoY = footerY + (footerH - logoH) / 2;
+        ctx.drawImage(img, logoX, logoY, logoW, logoH);
+        resolve();
+      };
+      img.onerror = resolve;
+      img.src = logoSrc;
+    });
+  }
+
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#1E104B';
-  ctx.font = '800 21px sans-serif';
-  ctx.fillText(`Sent by ${admin?.name || 'Bharat Rasve'}`, centerX, 430);
+  ctx.font = '900 20px sans-serif';
+  ctx.fillText(`Sent by ${admin?.name || 'BHARAT RASVE'}`, footerX + 225, footerY + 27);
   ctx.fillStyle = '#625E70';
-  ctx.font = '700 19px sans-serif';
-  ctx.fillText(admin?.contact || '7218838122', centerX, 462);
-
-  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 18px sans-serif';
+  ctx.fillText(String(admin?.contact || '7218838122'), footerX + 225, footerY + 53);
+  ctx.fillStyle = '#625E70';
   ctx.font = '700 16px sans-serif';
-  ctx.fillText('Budget Bharat • Personal Finance', centerX, 530);
+  ctx.fillText('Budget Bharat Personal Finance App', footerX + 225, footerY + 75);
 
-  const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '700 15px sans-serif';
+  ctx.fillText('Payment reminder', centerX, height - 18);
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
+  });
   return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
 };
 
@@ -1087,7 +1132,7 @@ const Header = () => {
   );
 };
 
-const SearchView = ({ onSelectPerson }) => {
+const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
   const { searchQuery, setSearchQuery, transactions, persons, categories } = useContext(AppContext);
   const query = searchQuery.trim().toLowerCase();
 
@@ -1103,7 +1148,7 @@ const SearchView = ({ onSelectPerson }) => {
     if (!query) return [];
     return transactions.filter(t =>
       (t.note && t.note.toLowerCase().includes(query)) ||
-      (t.category && t.category.toLowerCase().includes(query)) ||
+      (t.category && String(t.category).trim().toLowerCase().includes(query)) ||
       (t.person && t.person.toLowerCase().includes(query)) ||
       (t.ref && t.ref.toLowerCase().includes(query))
     );
@@ -1186,7 +1231,7 @@ const SearchView = ({ onSelectPerson }) => {
           {matchedTransactions.length > 0 && (
             <div>
               <h3 className="text-[10px] font-bold text-theme-dark uppercase tracking-wider mb-2 px-1">Transactions ({matchedTransactions.length})</h3>
-              <TransactionTable transactions={matchedTransactions} maxRows={100} showViewAll={false} />
+              <TransactionTable transactions={matchedTransactions} maxRows={100} showViewAll={false} onSelectTransaction={onSelectTransaction} />
             </div>
           )}
         </>
@@ -1239,30 +1284,48 @@ const SideMenu = () => {
   const openDeviceContactPicker = async () => {
     if (contactPickerLoading) return;
     setContactPickerLoading(true);
-    showFeedback('Opening device contacts…');
+    showFeedback('Requesting Contacts permission…');
     try {
-      const permission = await Contacts.getPermissions();
-      const permissionGranted = permission?.granted === true || permission?.readContacts === 'granted' || permission?.contacts === 'granted';
+      let permission = null;
+      try {
+        if (typeof Contacts.requestPermissions === 'function') {
+          permission = await Contacts.requestPermissions();
+        } else if (typeof Contacts.getPermissions === 'function') {
+          permission = await Contacts.getPermissions();
+        }
+      } catch (permissionError) {
+        console.error('Contacts permission request failed:', permissionError);
+      }
+
+      const permissionGranted =
+        permission?.granted === true ||
+        permission?.readContacts === 'granted' ||
+        permission?.contacts === 'granted';
+
       if (!permissionGranted) {
-        showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
+        showFeedback('Contacts permission was not granted. Allow Contacts access in Android settings and try again.');
         return;
       }
+
+      showFeedback('Loading device contacts…');
       const result = await Contacts.getContacts();
       const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
       const usable = contacts
         .map((contact) => ({
           ...contact,
-          _name: String(contact.displayName || '').trim(),
+          _name: String(contact.displayName || contact.name?.display || '').trim(),
           _phone: String(contact.phoneNumbers?.find(p => p?.number)?.number || '').trim(),
           _email: String(contact.emails?.find(e => e?.address)?.address || '').trim(),
         }))
-        .filter(contact => contact._name || contact._phone);
+        .filter(contact => contact._name || contact._phone || contact._email);
+
       setDeviceContacts(usable);
       setContactPickerSearch('');
       setContactPickerOpen(true);
+      showFeedback(`${usable.length} device contacts loaded`);
     } catch (err) {
       console.error('Device contact picker error:', err);
-      showFeedback('Unable to open device contacts. Please allow Contacts permission in Android settings.');
+      showFeedback('Unable to open device contacts. Please allow Contacts permission and try again.');
     } finally {
       setContactPickerLoading(false);
     }
