@@ -12,9 +12,35 @@ text = MAIN.read_text(encoding='utf-8')
 def replace_once(label, pattern, replacement, flags=re.S):
     global text
     updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
-    if count != 1:
-        raise SystemExit(f'{label}: expected exactly one match, found {count}')
-    text = updated
+    if count == 1:
+        text = updated
+        return
+
+    # Already-applied transformations are valid. Treat them as success when
+    # the desired Phase-2 marker is already present.
+    already_applied = {
+        'Data Exports grouped menu': 'exportGroup',
+        'header sync icon': 'fa-cloud-arrow-up',
+    }
+    marker = already_applied.get(label)
+    if marker and marker in text:
+        return
+
+    # The Add Person name input has changed shape across the previous UX passes.
+    # Use a structural string fallback instead of another brittle JSX regex:
+    # locate the input containing value={formData.name...} and replace only that
+    # input element with the suggestion-enabled wrapper.
+    if label == 'Add Person name suggestions':
+        needle = 'value={formData.name'
+        value_pos = text.find(needle)
+        if value_pos >= 0:
+            input_start = text.rfind('<input', 0, value_pos)
+            input_end = text.find('/>', value_pos)
+            if input_start >= 0 and input_end >= 0:
+                text = text[:input_start] + replacement + text[input_end + 2:]
+                return
+
+    raise SystemExit(f'{label}: expected exactly one match, found {count}')
 
 # ------------------------------------------------------------
 # 1) Contacts: use the dynamically loaded Capacitor 5 plugin so
