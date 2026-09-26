@@ -1,7 +1,6 @@
 // --- START OF src/main.jsx (PART 1) ---
 
 import React, { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
-import { Contacts } from '@capacitor-community/contacts';
 import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
@@ -20,6 +19,43 @@ import { initDB, BackendBridge } from './db.js';
 import { GoogleDriveSync } from './googleSync.js';
 import { exportDomAsJpeg, EXPORT_STATUS } from './export/exportService.js';
 import './index.css';
+
+const loadContactsPlugin = async () => {
+  try {
+    const mod = await import('@capacitor-community/contacts');
+    return mod.Contacts;
+  } catch (err) {
+    console.error('Contacts plugin unavailable:', err);
+    return null;
+  }
+};
+
+const DEVICE_CONTACTS_CACHE_KEY = 'budget_bharat_device_contacts_v1';
+const normalizeDeviceContact = (contact) => ({
+  contactId: contact?.contactId || contact?.id || '',
+  _name: String(contact?.displayName || contact?.name?.display || contact?.name || '').trim(),
+  _phone: String(contact?.phoneNumbers?.find(p => p?.number)?.number || contact?.phones?.find(p => p?.number)?.number || '').trim(),
+  _email: String(contact?.emails?.find(e => e?.address)?.address || contact?.emails?.find(e => e?.email)?.email || '').trim(),
+  _address: String(contact?.postalAddresses?.find(a => a?.street || a?.formatted)?.formatted || contact?.address || '').trim(),
+});
+
+const readCachedDeviceContacts = () => {
+  try {
+    const raw = localStorage.getItem(DEVICE_CONTACTS_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+};
+
+const cacheDeviceContacts = (contacts) => {
+  try {
+    localStorage.setItem(DEVICE_CONTACTS_CACHE_KEY, JSON.stringify(contacts || []));
+  } catch (err) {
+    console.warn('Unable to cache device contacts:', err);
+  }
+};
 
 const SafePortal = ({ children }) => {
   const [mounted, setMounted] = useState(false);
@@ -280,7 +316,7 @@ const waitForPaint = () => new Promise(resolve => {
 });
 
 const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
-  const width = 900, height = 650;
+  const width = 900, height = 700;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -356,14 +392,36 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.font = '700 23px sans-serif';
   ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
-  // Footer: logo left + sender details right, horizontally aligned.
-  const footerX = ticketX + 55;
-  const footerY = ticketY + ticketH * 0.61 + 48;
-  const footerW = ticketW - 110;
-  const footerH = 88;
-  roundRect(footerX, footerY, footerW, footerH, 18);
-  ctx.fillStyle = '#F4F3F8';
-  ctx.fill();
+  // Footer: two clean horizontal branding areas; no enclosing footer container.
+  const footerTop = 405;
+  const footerBottom = height - 46;
+  const dividerX = width / 2;
+
+  ctx.save();
+  ctx.strokeStyle = '#D8D3E0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(dividerX, footerTop + 8);
+  ctx.lineTo(dividerX, footerBottom - 8);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 16px sans-serif';
+  ctx.fillText('Sent by', 70, footerTop + 24);
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 22px sans-serif';
+  ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 18px sans-serif';
+  ctx.fillText(String(admin?.contact || '7218838122'), 70, footerTop + 82);
+
+  const brandingCenterX = dividerX + (width - dividerX) / 2;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 15px sans-serif';
+  ctx.fillText('Using', brandingCenterX, footerTop + 18);
 
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) {
@@ -371,13 +429,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
       const img = new Image();
       img.onload = () => {
         const maxLogoW = 180;
-        const maxLogoH = 58;
+        const maxLogoH = 54;
         const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
         const logoW = Math.max(1, img.width * scale);
         const logoH = Math.max(1, img.height * scale);
-        const logoX = footerX + 18 + (maxLogoW - logoW) / 2;
-        const logoY = footerY + (footerH - logoH) / 2;
-        ctx.drawImage(img, logoX, logoY, logoW, logoH);
+        ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 31 + (maxLogoH - logoH) / 2, logoW, logoH);
         resolve();
       };
       img.onerror = resolve;
@@ -385,16 +441,12 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
     });
   }
 
-  ctx.textAlign = 'left';
   ctx.fillStyle = '#1E104B';
-  ctx.font = '900 20px sans-serif';
-  ctx.fillText(`Sent by ${admin?.name || 'BHARAT RASVE'}`, footerX + 225, footerY + 27);
+  ctx.font = '900 17px sans-serif';
+  ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 103);
   ctx.fillStyle = '#625E70';
-  ctx.font = '800 18px sans-serif';
-  ctx.fillText(String(admin?.contact || '7218838122'), footerX + 225, footerY + 53);
-  ctx.fillStyle = '#625E70';
-  ctx.font = '700 16px sans-serif';
-  ctx.fillText('Budget Bharat Personal Finance App', footerX + 225, footerY + 75);
+  ctx.font = '700 15px sans-serif';
+  ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 127);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#8A8596';
@@ -432,6 +484,29 @@ const AppProvider = ({ children }) => {
   const [directoryFilter, setDirectoryFilter] = useState('ALL');
 
   const [googleUser, setGoogleUser] = useState(null);
+
+  // DEVICE_CONTACTS_PRELOAD_PHASE2
+  useEffect(() => {
+    let cancelled = false;
+    const preloadContacts = async () => {
+      try {
+        const cached = readCachedDeviceContacts();
+        if (cached.length) return;
+        const Contacts = await loadContactsPlugin();
+        if (!Contacts || cancelled) return;
+        const permission = await Contacts.getPermissions();
+        if (!permission?.granted || cancelled) return;
+        const result = await Contacts.getContacts();
+        const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
+        const usable = contacts.map(normalizeDeviceContact).filter(contact => contact._name || contact._phone);
+        if (!cancelled) cacheDeviceContacts(usable);
+      } catch (err) {
+        console.warn('Background contact preload skipped:', err);
+      }
+    };
+    const timer = setTimeout(preloadContacts, 1200);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, []);
 
   const showFeedback = (msg) => {
     setToast({ show: true, msg });
@@ -1124,7 +1199,7 @@ const Header = () => {
         onClick={uploadBackupToCloud}
         disabled={isSyncing}
         className={`sync-header-btn ${isSyncing ? 'is-syncing' : ''} ${isError ? 'is-error' : ''}`}
-        title={isSyncing ? 'Syncing...' : isError ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+        title={isSyncing ? 'Uploading backup...' : isError ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
       >
         <i className={`fa-solid fa-rotate text-sm ${isSyncing ? 'animate-spin' : ''}`}></i>
       </button>
@@ -1293,6 +1368,7 @@ const SideMenu = () => {
   const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactPickerLoading, setContactPickerLoading] = useState(false);
+  const [exportGroup, setExportGroup] = useState('');
 
   const openDeviceContactPicker = async () => {
     if (contactPickerLoading) return;
@@ -1333,6 +1409,7 @@ const SideMenu = () => {
       name: contact._name || prev.name || '',
       phone: contact._phone || prev.phone || '',
       email: contact._email || prev.email || '',
+      address: contact._address || prev.address || '',
     }));
     setContactPickerOpen(false);
     setContactPickerSearch('');
@@ -1437,7 +1514,7 @@ const SideMenu = () => {
             />
             <div>
               <h2 className="text-lg font-black tracking-tight text-white">Budget Bharat</h2>
-              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">Console Setup & Master Config</p>
+              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">Your Personal Finance Manager</p>
             </div>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white flex-none">
@@ -1447,7 +1524,7 @@ const SideMenu = () => {
 
         {menuView === 'menu' && (
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
-            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Backend Management</div>
+            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Record Setup</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
               <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> Manage Persons ({persons.length})</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
@@ -1465,7 +1542,7 @@ const SideMenu = () => {
             <button onClick={() => openSubView('addPerson')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-user-plus w-7 text-[#078A87]"></i> Add Person</button>
             <button onClick={() => openSubView('addCategory')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-tag w-7 text-[#078A87]"></i> Add Category</button>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Google Drive Backup</div>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Data Backup & Restore</div>
             {googleUser ? (
               <>
                 <div className="px-6 py-2 bg-[#F4F3F8] rounded-xl mx-4 my-1 border border-[#E4E1EA]">
@@ -1489,7 +1566,7 @@ const SideMenu = () => {
             )}
 
             <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] mt-2">
-              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> Full Data Backup (CSV)
+              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> Export Backup File
             </button>
             <label className="w-full flex items-center px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] cursor-pointer">
               <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> Restore from Backup
@@ -1508,7 +1585,7 @@ const SideMenu = () => {
               />
             </label>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Export CSV</div>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Data Exports</div>
             <button onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> Active Loans Summary</button>
             <button onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-table-list w-7 text-[#7B2B8C]"></i> All Loan EMI Records</button>
             <button onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-export w-7 text-[#625E70]"></i> All Transactions</button>
@@ -2580,9 +2657,9 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
             onClick={uploadBackupToCloud}
             disabled={syncStatus === 'syncing'}
             className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
-            title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+            title={syncStatus === 'syncing' ? 'Uploading backup...' : syncStatus === 'restoring' ? 'Restoring backup...' : syncStatus === 'success' ? 'Backup synced' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
           >
-            <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+            <i className={`fa-solid ${syncStatus === 'syncing' ? 'fa-cloud-arrow-up animate-pulse' : syncStatus === 'restoring' ? 'fa-cloud-arrow-down animate-pulse' : syncStatus === 'success' ? 'fa-cloud-check' : 'fa-cloud-arrow-up'} text-sm`}></i>
           </button>
         </div>
       </div>
@@ -3712,9 +3789,9 @@ return (
           onClick={uploadBackupToCloud}
           disabled={syncStatus === 'syncing'}
           className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
-          title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+          title={syncStatus === 'syncing' ? 'Uploading backup...' : syncStatus === 'restoring' ? 'Restoring backup...' : syncStatus === 'success' ? 'Backup synced' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
         >
-          <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+          <i className={`fa-solid ${syncStatus === 'syncing' ? 'fa-cloud-arrow-up animate-pulse' : syncStatus === 'restoring' ? 'fa-cloud-arrow-down animate-pulse' : syncStatus === 'success' ? 'fa-cloud-check' : 'fa-cloud-arrow-up'} text-sm`}></i>
         </button>
       </div>
     </div>

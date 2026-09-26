@@ -11,9 +11,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>#budget-bharat-boot-splash{position:fixed;inset:0;z-index:99999;background:#1E104B;display:flex;align-items:center;justify-content:center;transition:opacity .18s ease}.bb-boot-logo{width:min(62vw,260px);height:auto;object-fit:contain}.bb-boot-hidden{opacity:0;pointer-events:none}</style>
 </head>
 <body style="margin:0;background:#1E104B;">
+  <div id="budget-bharat-boot-splash"><img class="bb-boot-logo" src="/assets/icon.png" alt="Budget Bharat" /></div>
   <div id="root" style="min-height:100vh;background:#F4F3F8;"></div>
+  <script>window.setTimeout(function(){var s=document.getElementById("budget-bharat-boot-splash");var r=document.getElementById("root");if(s&&r&&r.childElementCount){s.classList.add("bb-boot-hidden");setTimeout(function(){s.remove()},220)}},250);</script>
   <script type="module" src="/src/nativeExportBridge.js"></script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
