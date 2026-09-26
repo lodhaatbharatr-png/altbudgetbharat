@@ -59,7 +59,9 @@ export const renderDomToJpeg = async (element, options = {}) => {
 
   const rect = element.getBoundingClientRect?.() || {};
   const width = Math.ceil(rect.width || element.offsetWidth || 720);
-  const height = Math.ceil(rect.height || element.offsetHeight || element.scrollHeight || 800);
+  const baseHeight = Math.ceil(rect.height || element.offsetHeight || element.scrollHeight || 800);
+  const topPadding = Math.max(0, Number.parseInt(options.topPadding || '18', 10) || 18);
+  const height = baseHeight + topPadding;
   const scale = options.scale || (height > 2500 ? 1.2 : height > 1500 ? 1.5 : 2);
 
   return toJpeg(element, {
@@ -72,7 +74,11 @@ export const renderDomToJpeg = async (element, options = {}) => {
     canvasWidth: Math.round(width * scale),
     canvasHeight: Math.round(height * scale),
     skipFonts: false,
-    style: options.style || undefined
+    style: {
+      boxSizing: 'border-box',
+      paddingTop: options.topPadding || '18px',
+      ...(options.style || {})
+    }
   });
 };
 

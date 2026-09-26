@@ -20,6 +20,56 @@ import { GoogleDriveSync } from './googleSync.js';
 import { exportDomAsJpeg, EXPORT_STATUS } from './export/exportService.js';
 import './index.css';
 
+const loadContactsPlugin = async () => {
+  try {
+    const mod = await import('@capacitor/contacts');
+    return mod.Contacts;
+  } catch (err) {
+    console.error('Contacts plugin unavailable:', err);
+    return null;
+  }
+};
+
+const DEVICE_CONTACTS_CACHE_KEY = 'budget_bharat_device_contacts_v1';
+const normalizeDeviceContact = (contact) => ({
+  contactId: contact?.id || contact?.rawId || '',
+  _name: String(
+    contact?.displayName ||
+    [contact?.name?.givenName, contact?.name?.middleName, contact?.name?.familyName]
+      .filter(Boolean).join(' ') ||
+    ''
+  ).trim(),
+  _phone: String(
+    contact?.phoneNumbers?.find(p => p?.value)?.value || ''
+  ).trim(),
+  _email: String(
+    contact?.emails?.find(e => e?.value)?.value || ''
+  ).trim(),
+  _address: String(
+    contact?.addresses?.find(a => a?.formatted || a?.street)?.formatted ||
+    contact?.addresses?.find(a => a?.formatted || a?.street)?.street ||
+    ''
+  ).trim(),
+});
+
+const readCachedDeviceContacts = () => {
+  try {
+    const raw = localStorage.getItem(DEVICE_CONTACTS_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+};
+
+const cacheDeviceContacts = (contacts) => {
+  try {
+    localStorage.setItem(DEVICE_CONTACTS_CACHE_KEY, JSON.stringify(contacts || []));
+  } catch (err) {
+    console.warn('Unable to cache device contacts:', err);
+  }
+};
+
 const SafePortal = ({ children }) => {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -279,9 +329,10 @@ const waitForPaint = () => new Promise(resolve => {
 });
 
 const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
-  const width = 900, height = 620;
+  const width = 900, height = 650;
   const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available on this device.');
 
@@ -298,17 +349,23 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.fillStyle = '#F4F3F8';
   ctx.fillRect(0, 0, width, height);
 
-  const ticketX = 48, ticketY = 34, ticketW = width - 96, ticketH = height - 68;
+  const ticketX = 48, ticketY = 28, ticketW = width - 96, ticketH = height - 46;
   ctx.save();
   roundRect(ticketX, ticketY, ticketW, ticketH, 28);
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
   ctx.restore();
 
+  // Ticket cut-outs at the footer separator.
+  const separatorY = 414;
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.62, 24, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ticketX, separatorY, 24, -Math.PI / 2, Math.PI / 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ticketX + ticketW, separatorY, 24, Math.PI / 2, Math.PI * 1.5);
+  ctx.fill();
   ctx.restore();
 
   ctx.save();
@@ -316,65 +373,96 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.lineWidth = 2;
   ctx.setLineDash([9, 10]);
   ctx.beginPath();
-  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.62);
-  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.62);
+  ctx.moveTo(ticketX + 34, separatorY);
+  ctx.lineTo(ticketX + ticketW - 34, separatorY);
   ctx.stroke();
   ctx.restore();
-
-  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
-  if (logoSrc) await new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 330, maxH = 150;
-      const scale = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * scale, h = img.height * scale;
-      ctx.save();
-      ctx.globalAlpha = 0.055;
-      ctx.drawImage(img, (width - w) / 2, ticketY + 118, w, h);
-      ctx.restore();
-      resolve();
-    };
-    img.onerror = resolve;
-    img.src = logoSrc;
-  });
 
   const centerX = width / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 34px sans-serif';
-  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 95);
+  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 100);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText('Payment reminder for', centerX, 140);
+  ctx.fillText('Payment reminder for', centerX, 145);
 
-  roundRect(205, 166, 490, 86, 22);
-  ctx.fillStyle = '#F1EAF4'; ctx.fill();
+  roundRect(205, 172, 490, 86, 22);
+  ctx.fillStyle = '#F1EAF4';
+  ctx.fill();
   ctx.fillStyle = '#7B2B8C';
   ctx.font = '900 58px sans-serif';
-  ctx.fillText(formatMoney(amount), centerX, 211);
+  ctx.fillText(formatMoney(amount), centerX, 216);
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 285);
+  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
-  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 322);
+  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
+
+  // Footer is deliberately outside any background container.
+  const footerTop = separatorY + 24;
+  const dividerX = width / 2;
+
+  ctx.save();
+  ctx.strokeStyle = '#D8D3E0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(dividerX, footerTop + 8);
+  ctx.lineTo(dividerX, height - 28);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 16px sans-serif';
+  ctx.fillText('Sent by', 70, footerTop + 24);
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 22px sans-serif';
+  ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 18px sans-serif';
+  ctx.fillText(String(admin?.contact || '7218838122'), 70, footerTop + 82);
+
+  const brandingCenterX = dividerX + (width - dividerX) / 2;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 15px sans-serif';
+  ctx.fillText('Using', brandingCenterX, footerTop + 18);
+
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) {
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxLogoW = 170;
+        const maxLogoH = 46;
+        const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
+        const logoW = Math.max(1, img.width * scale);
+        const logoH = Math.max(1, img.height * scale);
+        ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 28 + (maxLogoH - logoH) / 2, logoW, logoH);
+        resolve();
+      };
+      img.onerror = resolve;
+      img.src = logoSrc;
+    });
+  }
 
   ctx.fillStyle = '#1E104B';
-  ctx.font = '800 21px sans-serif';
-  ctx.fillText(`Sent by ${admin?.name || 'Bharat Rasve'}`, centerX, 430);
+  ctx.font = '900 17px sans-serif';
+  ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 88);
   ctx.fillStyle = '#625E70';
-  ctx.font = '700 19px sans-serif';
-  ctx.fillText(admin?.contact || '7218838122', centerX, 462);
+  ctx.font = '700 15px sans-serif';
+  ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 112);
 
-  ctx.fillStyle = '#8A8596';
-  ctx.font = '700 16px sans-serif';
-  ctx.fillText('Budget Bharat • Personal Finance', centerX, 530);
-
-  const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
+  });
   return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
 };
 
@@ -403,6 +491,18 @@ const AppProvider = ({ children }) => {
   const [directoryFilter, setDirectoryFilter] = useState('ALL');
 
   const [googleUser, setGoogleUser] = useState(null);
+
+  // DEVICE_CONTACTS_PRELOAD_PHASE2
+  useEffect(() => {
+    // Restore only previously cached suggestions. Do not touch the native
+    // Contacts API during startup; the native picker owns the permission flow.
+    try {
+      const cached = readCachedDeviceContacts();
+      if (cached.length) setDeviceContacts(cached);
+    } catch (err) {
+      console.warn('Cached contact preload skipped:', err);
+    }
+  }, []);
 
   const showFeedback = (msg) => {
     setToast({ show: true, msg });
@@ -480,11 +580,15 @@ const AppProvider = ({ children }) => {
     try {
       const currentLocalData = { transactions, persons, categories, loans, admin };
       await GoogleDriveSync.pushToCloud(currentLocalData);
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
     } finally {
-      setSyncStatus('idle');
+      setTimeout(() => setSyncStatus(prev => prev === 'success' ? 'idle' : prev), 1400);
     }
   };
 
@@ -502,7 +606,7 @@ const AppProvider = ({ children }) => {
       if (!confirmRestore) return;
     }
 
-    setSyncStatus('syncing');
+    setSyncStatus('restoring');
     showFeedback('Retrieving cloud backup...');
     try {
       const cloudData = await GoogleDriveSync.pullFromCloud();
@@ -512,11 +616,15 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup restored from Google Drive');
     } catch (err) {
       showFeedback('Restore failed: ' + (err.message || 'Error occurred'));
     } finally {
-      setSyncStatus('idle');
+      setTimeout(() => setSyncStatus(prev => prev === 'success' ? 'idle' : prev), 1400);
     }
   };
 
@@ -1042,6 +1150,8 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
 const Header = () => {
   const { searchQuery, setSearchQuery, setIsMenuOpen, setMenuView, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
   const isSyncing = syncStatus === 'syncing';
+  const isRestoring = syncStatus === 'restoring';
+  const isSuccess = syncStatus === 'success';
   const isError = loadError !== '';
   const [isFocused, setIsFocused] = useState(false);
 
@@ -1095,16 +1205,16 @@ const Header = () => {
         onClick={uploadBackupToCloud}
         disabled={isSyncing}
         className={`sync-header-btn ${isSyncing ? 'is-syncing' : ''} ${isError ? 'is-error' : ''}`}
-        title={isSyncing ? 'Syncing...' : isError ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+        title={isSyncing ? 'Uploading backup...' : isError ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
       >
-        <i className={`fa-solid fa-rotate text-sm ${isSyncing ? 'animate-spin' : ''}`}></i>
+        <i className={`fa-solid ${isSyncing ? 'fa-cloud-arrow-up animate-pulse' : isRestoring ? 'fa-cloud-arrow-down animate-pulse' : isSuccess ? 'fa-cloud-check' : 'fa-cloud'} text-sm`}></i>
       </button>
     </div>
   );
 };
 
-const SearchView = ({ onSelectPerson }) => {
-  const { searchQuery, transactions, persons, categories } = useContext(AppContext);
+const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
+  const { searchQuery, setSearchQuery, transactions, persons, categories } = useContext(AppContext);
   const query = searchQuery.trim().toLowerCase();
 
   const matchedPersons = useMemo(() => {
@@ -1117,18 +1227,31 @@ const SearchView = ({ onSelectPerson }) => {
 
   const matchedTransactions = useMemo(() => {
     if (!query) return [];
-    return transactions.filter(t =>
-      (t.note && t.note.toLowerCase().includes(query)) ||
-      (t.category && t.category.toLowerCase().includes(query)) ||
-      (t.person && t.person.toLowerCase().includes(query)) ||
-      (t.ref && t.ref.toLowerCase().includes(query))
-    );
+    return transactions.filter(t => {
+      const amount = String(t.amount ?? '').replace(/,/g, '');
+      const amountFormatted = formatTableNum(t.amount).replace(/,/g, '');
+      const note = String(t.note || '').toLowerCase();
+      const category = String(t.category || '').trim().toLowerCase();
+      const person = String(t.person || '').toLowerCase();
+      const ref = String(t.ref || '').toLowerCase();
+      return (
+        note.includes(query) ||
+        category.includes(query) ||
+        person.includes(query) ||
+        ref.includes(query) ||
+        amount.includes(query) ||
+        amountFormatted.includes(query)
+      );
+    });
   }, [transactions, query]);
 
   const matchedCategories = useMemo(() => {
     if (!query) return [];
-    const allCats = [...categories.expense, ...categories.income];
-    return allCats.filter(c => c.toLowerCase().includes(query));
+    const allCats = [...(categories.expense || []), ...(categories.income || [])]
+      .map(c => typeof c === 'string' ? c : String(c?.name || c?.label || ''))
+      .map(c => c.trim())
+      .filter(Boolean);
+    return [...new Set(allCats)].filter(c => c.toLowerCase().includes(query));
   }, [categories, query]);
 
   const hasResults = matchedPersons.length > 0 || matchedTransactions.length > 0 || matchedCategories.length > 0;
@@ -1191,9 +1314,9 @@ const SearchView = ({ onSelectPerson }) => {
               <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">Categories</h3>
               <div className="flex flex-wrap gap-1.5">
                 {matchedCategories.map((c, i) => (
-                  <span key={i} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center">
+                  <button key={i} type="button" onClick={() => setSearchQuery(String(c).trim())} title={`Filter transactions by ${c}`} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center hover:bg-[#7B2B8C] hover:text-white active:scale-95 transition-all">
                     <i className="fa-solid fa-tag mr-1.5 text-[#7B2B8C] text-[10px]"></i>{c}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1202,7 +1325,7 @@ const SearchView = ({ onSelectPerson }) => {
           {matchedTransactions.length > 0 && (
             <div>
               <h3 className="text-[10px] font-bold text-theme-dark uppercase tracking-wider mb-2 px-1">Transactions ({matchedTransactions.length})</h3>
-              <TransactionTable transactions={matchedTransactions} maxRows={100} showViewAll={false} />
+              <TransactionTable transactions={matchedTransactions} maxRows={100} showViewAll={false} onSelectTransaction={onSelectTransaction} />
             </div>
           )}
         </>
@@ -1247,6 +1370,70 @@ const SideMenu = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
+  const [contactPickerSearch, setContactPickerSearch] = useState('');
+  const [deviceContacts, setDeviceContacts] = useState([]);
+  const [contactPickerLoading, setContactPickerLoading] = useState(false);
+  const [exportGroup, setExportGroup] = useState('');
+
+  const openDeviceContactPicker = async () => {
+    if (contactPickerLoading) return;
+    setContactPickerLoading(true);
+    showFeedback('Opening Contacts…');
+    try {
+      const Contacts = await loadContactsPlugin();
+      if (!Contacts || typeof Contacts.pickContact !== 'function') {
+        showFeedback('Device Contacts are unavailable in this APK.');
+        return;
+      }
+
+      const picked = await Contacts.pickContact();
+      if (!picked) {
+        showFeedback('No contact selected.');
+        return;
+      }
+
+      const normalized = normalizeDeviceContact(picked);
+      if (!normalized._name && !normalized._phone && !normalized._email) {
+        showFeedback('Selected contact has no usable details.');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        name: normalized._name || prev.name || '',
+        phone: normalized._phone || prev.phone || '',
+        email: normalized._email || prev.email || '',
+        address: normalized._address || prev.address || '',
+      }));
+      showFeedback(`${normalized._name || 'Contact'} loaded`);
+    } catch (err) {
+      console.error('Device contact picker error:', err);
+      const code = err?.code || '';
+      if (code === 'OS-PLUG-CONT-0006') {
+        showFeedback('Contact picker canceled.');
+      } else if (code === 'OS-PLUG-CONT-0020') {
+        showFeedback('Contacts permission was denied. Allow Contacts access in Android Settings and try again.');
+      } else {
+        showFeedback(`Unable to open contacts: ${err?.message || 'Please try again.'}`);
+      }
+    } finally {
+      setContactPickerLoading(false);
+    }
+  };
+
+  const selectDeviceContact = (contact) => {
+    setFormData(prev => ({
+      ...prev,
+      name: contact._name || prev.name || '',
+      phone: contact._phone || prev.phone || '',
+      email: contact._email || prev.email || '',
+      address: contact._address || prev.address || '',
+    }));
+    setContactPickerOpen(false);
+    setContactPickerSearch('');
+    showFeedback('Contact details filled');
+  };
 
   if (!isMenuOpen) return null;
 
@@ -1346,7 +1533,7 @@ const SideMenu = () => {
             />
             <div>
               <h2 className="text-lg font-black tracking-tight text-white">Budget Bharat</h2>
-              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">Console Setup & Master Config</p>
+              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">Your Personal Finance Manager</p>
             </div>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white flex-none">
@@ -1356,7 +1543,7 @@ const SideMenu = () => {
 
         {menuView === 'menu' && (
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
-            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Backend Management</div>
+            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Record Setup</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
               <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> Manage Persons ({persons.length})</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
@@ -1374,7 +1561,7 @@ const SideMenu = () => {
             <button onClick={() => openSubView('addPerson')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-user-plus w-7 text-[#078A87]"></i> Add Person</button>
             <button onClick={() => openSubView('addCategory')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-tag w-7 text-[#078A87]"></i> Add Category</button>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Google Drive Backup</div>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Data Backup & Restore</div>
             {googleUser ? (
               <>
                 <div className="px-6 py-2 bg-[#F4F3F8] rounded-xl mx-4 my-1 border border-[#E4E1EA]">
@@ -1398,7 +1585,7 @@ const SideMenu = () => {
             )}
 
             <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] mt-2">
-              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> Full Data Backup (CSV)
+              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> Export Backup File
             </button>
             <label className="w-full flex items-center px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] cursor-pointer">
               <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> Restore from Backup
@@ -1417,17 +1604,44 @@ const SideMenu = () => {
               />
             </label>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Export CSV</div>
-            <button onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> Active Loans Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-table-list w-7 text-[#7B2B8C]"></i> All Loan EMI Records</button>
-            <button onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-export w-7 text-[#625E70]"></i> All Transactions</button>
-            <button onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-arrow-trend-up w-7 text-[#078A87]"></i> Income Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-arrow-trend-down w-7 text-[#D6455D]"></i> Expense Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-users-viewfinder w-7 text-[#625E70]"></i> Persons Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-receipt w-7 text-[#D6455D]"></i> All Expenses</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-money-bill-trend-up w-7 text-[#078A87]"></i> All Incomes</button>
-            <button onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> All Receivables</button>
-            <button onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-invoice-dollar w-7 text-[#D6455D]"></i> All Payables</button>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Data Exports</div>
+            <div className="px-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setExportGroup(exportGroup === 'summaries' ? '' : 'summaries')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
+              >
+                <span><i className="fa-solid fa-chart-pie w-7 text-[#078A87]"></i>Summaries</span>
+                <i className={`fa-solid fa-chevron-${exportGroup === 'summaries' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
+              </button>
+              {exportGroup === 'summaries' && (
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Income</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Expenses</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Active Loans</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Persons</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Receivables</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Payables</button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setExportGroup(exportGroup === 'transactions' ? '' : 'transactions')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
+              >
+                <span><i className="fa-solid fa-list-check w-7 text-[#7B2B8C]"></i>Transactions</span>
+                <i className={`fa-solid fa-chevron-${exportGroup === 'transactions' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
+              </button>
+              {exportGroup === 'transactions' && (
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Loans EMI Records</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">All Transactions</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Incomes</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Expenses</button>
+                </div>
+              )}
+            </div>
 
             <SideMenuBranding />
           </div>
@@ -1503,15 +1717,133 @@ const SideMenu = () => {
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
                   <div>
                     <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Category Name *</label>
-                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
+                    <div className="relative">
+                        <div className="relative">
+                        <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={formData.name || ''}
+                          autoComplete="off"
+                          onFocus={() => {
+                            const cached = readCachedDeviceContacts();
+                            if (cached.length && !deviceContacts.length) setDeviceContacts(cached);
+                          }}
+                          onChange={e => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                        />
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                   </div>
                 )}
 
                 {(menuView === 'addPerson' || menuView === 'editPerson') && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Name *</label>
-                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">Name *</label>
+                        <button
+                          type="button"
+                          onClick={openDeviceContactPicker}
+                          disabled={contactPickerLoading}
+                          title="Select from device contacts"
+                          className="inline-flex items-center gap-1.5 text-[10px] font-black text-[#078A87] hover:text-[#056E6C] active:scale-95 disabled:opacity-50 transition-all"
+                        >
+                          <i className={`fa-solid ${contactPickerLoading ? 'fa-spinner animate-spin' : 'fa-address-book'} text-[11px]`}></i>
+                          <span>{contactPickerLoading ? 'Opening...' : 'Device Contacts'}</span>
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={formData.name || ''}
+                          autoComplete="off"
+                          onFocus={() => {
+                            const cached = readCachedDeviceContacts();
+                            if (cached.length && !deviceContacts.length) setDeviceContacts(cached);
+                          }}
+                          onChange={e => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                        />
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Phone</label>
@@ -1632,6 +1964,53 @@ const SideMenu = () => {
           </div>
         </div>
       )}
+      {contactPickerOpen && (
+        <div className="fixed inset-0 z-[70] bg-[#1E104B]/65 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setContactPickerOpen(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[82vh] shadow-2xl overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[#E4E1EA]">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-sm font-black text-[#1E104B]">Select Device Contact</h3>
+                  <p className="text-[9px] text-[#8A8596] font-semibold mt-0.5">Choose a contact to fill name, phone and email.</p>
+                </div>
+                <button type="button" onClick={() => setContactPickerOpen(false)} className="w-8 h-8 rounded-full bg-[#F4F3F8] text-[#625E70] flex items-center justify-center">
+                  <i className="fa-solid fa-xmark text-xs"></i>
+                </button>
+              </div>
+              <div className="relative">
+                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8596] text-xs pointer-events-none"></i>
+                <input type="text" value={contactPickerSearch} onChange={e => setContactPickerSearch(e.target.value)} autoFocus placeholder="Search device contacts..." className="w-full bg-[#F4F3F8] border border-[#E4E1EA] rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold text-[#1E104B] outline-none focus:bg-white focus:border-[#078A87]" />
+              </div>
+            </div>
+            <div className="max-h-[58vh] overflow-y-auto hide-scrollbar p-2">
+              {deviceContacts.filter(contact => {
+                const q = contactPickerSearch.trim().toLowerCase();
+                if (!q) return true;
+                return `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
+              }).map((contact, index) => (
+                <button key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`} type="button" onClick={() => selectDeviceContact(contact)} className="w-full text-left p-3 rounded-xl hover:bg-[#F4F3F8] active:bg-[#EDE9F6] transition-all flex items-center gap-3 border-b border-[#E4E1EA]/60 last:border-b-0">
+                  <span className="w-9 h-9 rounded-full bg-[#078A87]/12 text-[#078A87] flex items-center justify-center font-black text-xs flex-none">{(contact._name || '?').charAt(0).toUpperCase()}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                    <span className="block text-[10px] text-[#625E70] font-semibold truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                  </span>
+                  <i className="fa-solid fa-chevron-right text-[9px] text-[#8A8596]"></i>
+                </button>
+              ))}
+              {deviceContacts.length > 0 && deviceContacts.filter(contact => {
+                const q = contactPickerSearch.trim().toLowerCase();
+                return !q || `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
+              }).length === 0 && (
+                <div className="text-center py-10 px-5"><i className="fa-solid fa-magnifying-glass text-2xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No matching contacts.</p></div>
+              )}
+              {deviceContacts.length === 0 && (
+                <div className="text-center py-10 px-5"><i className="fa-solid fa-address-book text-3xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No usable contacts found.</p></div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -2430,9 +2809,9 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
             onClick={uploadBackupToCloud}
             disabled={syncStatus === 'syncing'}
             className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
-            title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+            title={syncStatus === 'syncing' ? 'Uploading backup...' : syncStatus === 'restoring' ? 'Restoring backup...' : syncStatus === 'success' ? 'Backup synced' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
           >
-            <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+            <i className={`fa-solid ${syncStatus === 'syncing' ? 'fa-cloud-arrow-up animate-pulse' : syncStatus === 'restoring' ? 'fa-cloud-arrow-down animate-pulse' : syncStatus === 'success' ? 'fa-cloud-check' : 'fa-cloud-arrow-up'} text-sm`}></i>
           </button>
         </div>
       </div>
@@ -3562,9 +3941,9 @@ return (
           onClick={uploadBackupToCloud}
           disabled={syncStatus === 'syncing'}
           className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
-          title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+          title={syncStatus === 'syncing' ? 'Uploading backup...' : syncStatus === 'restoring' ? 'Restoring backup...' : syncStatus === 'success' ? 'Backup synced' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
         >
-          <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+          <i className={`fa-solid ${syncStatus === 'syncing' ? 'fa-cloud-arrow-up animate-pulse' : syncStatus === 'restoring' ? 'fa-cloud-arrow-down animate-pulse' : syncStatus === 'success' ? 'fa-cloud-check' : 'fa-cloud-arrow-up'} text-sm`}></i>
         </button>
       </div>
     </div>
