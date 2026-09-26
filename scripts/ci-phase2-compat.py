@@ -10,13 +10,6 @@ text = SCRIPT.read_text(encoding='utf-8')
 old_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
     global text
     updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
-    if count != 1:
-        raise SystemExit(f'{label}: expected exactly one match, found {count}')
-    text = updated
-'''
-new_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
-    global text
-    updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
     if count == 1:
         text = updated
         return
@@ -49,15 +42,46 @@ new_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
 
     raise SystemExit(f'{label}: expected exactly one match, found {count}')
 '''
+new_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
+    global text
+    updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+    if count == 1:
+        text = updated
+        return
+
+    # Already-applied transformations are valid. Treat them as success when
+    # the desired Phase-2 marker is already present.
+    already_applied = {
+        'Data Exports grouped menu': 'exportGroup',
+        'header sync icon': 'fa-cloud-arrow-up',
+    }
+    marker = already_applied.get(label)
+    if marker and marker in text:
+        return
+
+    # The Add Person name input has changed shape across the previous UX passes.
+    # Use a structural string fallback instead of another brittle JSX regex:
+    # locate the input containing value={formData.name...} and replace only that
+    # input element with the suggestion-enabled wrapper.
+    if label == 'Add Person name suggestions':
+        needle = 'value={formData.name'
+        value_pos = text.find(needle)
+        if value_pos >= 0:
+            input_start = text.rfind('<input', 0, value_pos)
+            input_end = text.find('/>', value_pos)
+            if input_start >= 0 and input_end >= 0:
+                text = text[:input_start] + replacement + text[input_end + 2:]
+                return
+
+    raise SystemExit(f'{label}: expected exactly one match, found {count}')
+'''
 if old_replace in text:
     text = text.replace(old_replace, new_replace, 1)
 else:
-    # Do not silently continue if the finalizer's helper changed unexpectedly.
     if 'already_applied = {' not in text:
         raise SystemExit('Phase2 replace_once helper marker not found')
 
 # The Phase-2 UX pass already creates the grouped Data Exports menu.
-# Keep the legacy replacement guarded as an additional safety net.
 old = "replace_once('Data Exports grouped menu', exports_pattern, exports_replacement)"
 new = """if 'exportGroup' not in text:
     replace_once('Data Exports grouped menu', exports_pattern, exports_replacement)"""
@@ -87,8 +111,7 @@ if 'address: contact._address || prev.address ||' not in text:
 text = text[:start] + replacement + text[end:]
 
 # The sync icon is owned by the newer UX pass. The generic idempotence guard
-# above handles the already-polished icon; retain this explicit guard too for
-# clarity and for future revisions of the finalizer.
+# above handles the already-polished icon; retain an explicit guard too.
 text = text.replace(
     "replace_once(\n    'header sync icon',",
     "if 'fa-cloud-arrow-up' not in text:\n    replace_once(\n    'header sync icon',",
@@ -96,4 +119,4 @@ text = text.replace(
 )
 
 SCRIPT.write_text(text, encoding='utf-8')
-print('Phase2 finalization guards normalized: idempotent transforms + grouped exports + address mapping + header sync.')
+print('Phase2 finalization guards normalized: structural Add Person fallback + idempotent transforms + grouped exports + address mapping + header sync.')
