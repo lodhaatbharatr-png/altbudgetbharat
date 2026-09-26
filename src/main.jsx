@@ -22,7 +22,7 @@ import './index.css';
 
 const loadContactsPlugin = async () => {
   try {
-    const mod = await import('@capacitor-community/contacts');
+    const mod = await import('@capacitor/contacts');
     return mod.Contacts;
   } catch (err) {
     console.error('Contacts plugin unavailable:', err);
@@ -32,28 +32,22 @@ const loadContactsPlugin = async () => {
 
 const DEVICE_CONTACTS_CACHE_KEY = 'budget_bharat_device_contacts_v1';
 const normalizeDeviceContact = (contact) => ({
-  contactId: contact?.contactId || contact?.id || '',
+  contactId: contact?.id || contact?.rawId || '',
   _name: String(
     contact?.displayName ||
-    contact?.name?.display ||
-    [contact?.name?.given, contact?.name?.family].filter(Boolean).join(' ') ||
-    contact?.name ||
+    [contact?.name?.givenName, contact?.name?.middleName, contact?.name?.familyName]
+      .filter(Boolean).join(' ') ||
     ''
   ).trim(),
   _phone: String(
-    contact?.phoneNumbers?.find(p => p?.number)?.number ||
-    contact?.phones?.find(p => p?.number)?.number ||
-    ''
+    contact?.phoneNumbers?.find(p => p?.value)?.value || ''
   ).trim(),
   _email: String(
-    contact?.emails?.find(e => e?.address)?.address ||
-    contact?.emails?.find(e => e?.email)?.email ||
-    ''
+    contact?.emails?.find(e => e?.value)?.value || ''
   ).trim(),
   _address: String(
-    contact?.postalAddresses?.find(a => a?.formatted || a?.street)?.formatted ||
-    contact?.postalAddresses?.find(a => a?.formatted || a?.street)?.street ||
-    contact?.address ||
+    contact?.addresses?.find(a => a?.formatted || a?.street)?.formatted ||
+    contact?.addresses?.find(a => a?.formatted || a?.street)?.street ||
     ''
   ).trim(),
 });
@@ -500,60 +494,14 @@ const AppProvider = ({ children }) => {
 
   // DEVICE_CONTACTS_PRELOAD_PHASE2
   useEffect(() => {
-    let cancelled = false;
-    const preloadContacts = async () => {
-      try {
-        const Contacts = await loadContactsPlugin();
-        if (!Contacts || cancelled) return;
-
-        const requestNativeContactsPermission = async () => {
-          if (typeof Contacts.requestPermissions === 'function') {
-            return await Contacts.requestPermissions();
-          }
-          if (typeof Contacts.getPermissions === 'function') {
-            return await Contacts.getPermissions();
-          }
-          return null;
-        };
-
-        const permission = await Promise.race([
-          requestNativeContactsPermission(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Contacts permission request timed out.')), 15000)),
-        ]);
-        const granted = permission?.contacts === 'granted' || permission?.granted === true || permission?.readContacts === 'granted';
-        if (!granted || cancelled) return;
-
-        const result = await Promise.race([
-          Contacts.getContacts({
-            projection: {
-              name: true,
-              phones: true,
-              emails: true,
-              postalAddresses: true,
-            },
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Device contacts read timed out.')), 20000)),
-        ]);
-        const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-        const usable = contacts
-          .map(normalizeDeviceContact)
-          .filter(contact => contact._name || contact._phone || contact._email)
-          .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
-
-        if (!cancelled) {
-          cacheDeviceContacts(usable);
-          setDeviceContacts(usable);
-        }
-      } catch (err) {
-        console.warn('Startup contact permission/cache pass skipped:', err);
-      }
-    };
-
-    const timer = setTimeout(preloadContacts, 1400);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    // Restore only previously cached suggestions. Do not touch the native
+    // Contacts API during startup; the native picker owns the permission flow.
+    try {
+      const cached = readCachedDeviceContacts();
+      if (cached.length) setDeviceContacts(cached);
+    } catch (err) {
+      console.warn('Cached contact preload skipped:', err);
+    }
   }, []);
 
   const showFeedback = (msg) => {
@@ -635,6 +583,7 @@ const AppProvider = ({ children }) => {
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
@@ -667,6 +616,7 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
@@ -1429,63 +1379,44 @@ const SideMenu = () => {
   const openDeviceContactPicker = async () => {
     if (contactPickerLoading) return;
     setContactPickerLoading(true);
-    showFeedback('Requesting Contacts permission…');
+    showFeedback('Opening Contacts…');
     try {
       const Contacts = await loadContactsPlugin();
-      if (!Contacts) {
+      if (!Contacts || typeof Contacts.pickContact !== 'function') {
         showFeedback('Device Contacts are unavailable in this APK.');
         return;
       }
 
-      const requestNativeContactsPermission = async () => {
-        // Capacitor Plugin permission API. Community Contacts v5 declares the
-        // "contacts" permission alias, so requestPermissions() opens Android's
-        // native runtime dialog when access has not yet been granted.
-        if (typeof Contacts.requestPermissions === 'function') {
-          return await Contacts.requestPermissions();
-        }
-        if (typeof Contacts.getPermissions === 'function') {
-          return await Contacts.getPermissions();
-        }
-        return null;
-      };
-
-      const permission = await Promise.race([
-        requestNativeContactsPermission(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Contacts permission request timed out.')), 15000)),
-      ]);
-      const granted = permission?.contacts === 'granted' || permission?.granted === true || permission?.readContacts === 'granted';
-      if (!granted) {
-        showFeedback('Contacts permission was not granted. Please allow Contacts access in Android Settings and try again.');
+      const picked = await Contacts.pickContact();
+      if (!picked) {
+        showFeedback('No contact selected.');
         return;
       }
 
-      showFeedback('Loading device contacts…');
-      const result = await Promise.race([
-        Contacts.getContacts({
-          projection: {
-            name: true,
-            phones: true,
-            emails: true,
-            postalAddresses: true,
-          },
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Device contacts read timed out.')), 20000)),
-      ]);
-      const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-      const usable = contacts
-        .map(normalizeDeviceContact)
-        .filter(contact => contact._name || contact._phone || contact._email)
-        .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
+      const normalized = normalizeDeviceContact(picked);
+      if (!normalized._name && !normalized._phone && !normalized._email) {
+        showFeedback('Selected contact has no usable details.');
+        return;
+      }
 
-      cacheDeviceContacts(usable);
-      setDeviceContacts(usable);
-      setContactPickerSearch('');
-      setContactPickerOpen(true);
-      showFeedback(`${usable.length} device contacts loaded`);
+      setFormData(prev => ({
+        ...prev,
+        name: normalized._name || prev.name || '',
+        phone: normalized._phone || prev.phone || '',
+        email: normalized._email || prev.email || '',
+        address: normalized._address || prev.address || '',
+      }));
+      showFeedback(`${normalized._name || 'Contact'} loaded`);
     } catch (err) {
       console.error('Device contact picker error:', err);
-      showFeedback(`Unable to load device contacts: ${err?.message || 'check Contacts permission in Android settings'}`);
+      const code = err?.code || '';
+      if (code === 'OS-PLUG-CONT-0006') {
+        showFeedback('Contact picker canceled.');
+      } else if (code === 'OS-PLUG-CONT-0020') {
+        showFeedback('Contacts permission was denied. Allow Contacts access in Android Settings and try again.');
+      } else {
+        showFeedback(`Unable to open contacts: ${err?.message || 'Please try again.'}`);
+      }
     } finally {
       setContactPickerLoading(false);
     }
@@ -1788,6 +1719,7 @@ const SideMenu = () => {
                     <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Category Name *</label>
                     <div className="relative">
                         <div className="relative">
+                        <div className="relative">
                         <input
                           type="text"
                           required
@@ -1800,6 +1732,26 @@ const SideMenu = () => {
                           onChange={e => setFormData({ ...formData, name: e.target.value })}
                           className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
                         />
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                         {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
                           <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
                             {deviceContacts
