@@ -316,7 +316,7 @@ const waitForPaint = () => new Promise(resolve => {
 });
 
 const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
-  const width = 900, height = 700;
+  const width = 900, height = 650;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -336,22 +336,22 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.fillStyle = '#F4F3F8';
   ctx.fillRect(0, 0, width, height);
 
-  // Ticket body with generous top breathing room.
-  const ticketX = 48, ticketY = 30, ticketW = width - 96, ticketH = height - 60;
+  const ticketX = 48, ticketY = 28, ticketW = width - 96, ticketH = height - 46;
   ctx.save();
   roundRect(ticketX, ticketY, ticketW, ticketH, 28);
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
   ctx.restore();
 
-  // Ticket perforation.
+  // Ticket cut-outs at the footer separator.
+  const separatorY = 414;
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
   ctx.beginPath();
-  ctx.arc(ticketX, ticketY + ticketH * 0.61, 24, -Math.PI / 2, Math.PI / 2);
+  ctx.arc(ticketX, separatorY, 24, -Math.PI / 2, Math.PI / 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.61, 24, Math.PI / 2, Math.PI * 1.5);
+  ctx.arc(ticketX + ticketW, separatorY, 24, Math.PI / 2, Math.PI * 1.5);
   ctx.fill();
   ctx.restore();
 
@@ -360,8 +360,8 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.lineWidth = 2;
   ctx.setLineDash([9, 10]);
   ctx.beginPath();
-  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.61);
-  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.61);
+  ctx.moveTo(ticketX + 34, separatorY);
+  ctx.lineTo(ticketX + ticketW - 34, separatorY);
   ctx.stroke();
   ctx.restore();
 
@@ -392,9 +392,8 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.font = '700 23px sans-serif';
   ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
-  // Footer: two clean horizontal branding areas; no enclosing footer container.
-  const footerTop = 405;
-  const footerBottom = height - 46;
+  // Footer is deliberately outside any background container.
+  const footerTop = separatorY + 24;
   const dividerX = width / 2;
 
   ctx.save();
@@ -402,7 +401,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(dividerX, footerTop + 8);
-  ctx.lineTo(dividerX, footerBottom - 8);
+  ctx.lineTo(dividerX, height - 28);
   ctx.stroke();
   ctx.restore();
 
@@ -428,12 +427,12 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
     await new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const maxLogoW = 180;
-        const maxLogoH = 54;
+        const maxLogoW = 170;
+        const maxLogoH = 46;
         const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
         const logoW = Math.max(1, img.width * scale);
         const logoH = Math.max(1, img.height * scale);
-        ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 31 + (maxLogoH - logoH) / 2, logoW, logoH);
+        ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 28 + (maxLogoH - logoH) / 2, logoW, logoH);
         resolve();
       };
       img.onerror = resolve;
@@ -443,15 +442,10 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 17px sans-serif';
-  ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 103);
+  ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 88);
   ctx.fillStyle = '#625E70';
   ctx.font = '700 15px sans-serif';
-  ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 127);
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#8A8596';
-  ctx.font = '700 15px sans-serif';
-  ctx.fillText('Payment reminder', centerX, height - 18);
+  ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 112);
 
   const blob = await new Promise((resolve, reject) => {
     canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
@@ -491,20 +485,34 @@ const AppProvider = ({ children }) => {
     const preloadContacts = async () => {
       try {
         const cached = readCachedDeviceContacts();
-        if (cached.length) return;
+        if (cached.length && !cancelled) setDeviceContacts(prev => prev.length ? prev : cached);
+
         const Contacts = await loadContactsPlugin();
         if (!Contacts || cancelled) return;
-        const permission = await Contacts.getPermissions();
-        if (!permission?.granted || cancelled) return;
+
+        // The Capacitor-community Contacts v5 plugin uses getPermissions()
+        // to request/check Android contacts access before getContacts().
+        const permission = typeof Contacts.getPermissions === 'function'
+          ? await Contacts.getPermissions()
+          : null;
+        const granted = permission?.granted === true || permission?.contacts === 'granted';
+        if (!granted || cancelled) return;
+
         const result = await Contacts.getContacts();
         const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-        const usable = contacts.map(normalizeDeviceContact).filter(contact => contact._name || contact._phone);
-        if (!cancelled) cacheDeviceContacts(usable);
+        const usable = contacts
+          .map(normalizeDeviceContact)
+          .filter(contact => contact._name || contact._phone || contact._email)
+          .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
+        if (!cancelled) {
+          cacheDeviceContacts(usable);
+          setDeviceContacts(usable);
+        }
       } catch (err) {
-        console.warn('Background contact preload skipped:', err);
+        console.warn('Background contact permission/cache pass skipped:', err);
       }
     };
-    const timer = setTimeout(preloadContacts, 1200);
+    const timer = setTimeout(preloadContacts, 900);
     return () => { cancelled = true; clearTimeout(timer); };
   }, []);
 
@@ -584,11 +592,12 @@ const AppProvider = ({ children }) => {
     try {
       const currentLocalData = { transactions, persons, categories, loans, admin };
       await GoogleDriveSync.pushToCloud(currentLocalData);
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
     } finally {
-      setSyncStatus('idle');
+      setTimeout(() => setSyncStatus(prev => prev === 'success' ? 'idle' : prev), 1400);
     }
   };
 
@@ -606,7 +615,7 @@ const AppProvider = ({ children }) => {
       if (!confirmRestore) return;
     }
 
-    setSyncStatus('syncing');
+    setSyncStatus('restoring');
     showFeedback('Retrieving cloud backup...');
     try {
       const cloudData = await GoogleDriveSync.pullFromCloud();
@@ -616,11 +625,12 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
       showFeedback('Backup restored from Google Drive');
     } catch (err) {
       showFeedback('Restore failed: ' + (err.message || 'Error occurred'));
     } finally {
-      setSyncStatus('idle');
+      setTimeout(() => setSyncStatus(prev => prev === 'success' ? 'idle' : prev), 1400);
     }
   };
 
@@ -1146,6 +1156,8 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
 const Header = () => {
   const { searchQuery, setSearchQuery, setIsMenuOpen, setMenuView, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
   const isSyncing = syncStatus === 'syncing';
+  const isRestoring = syncStatus === 'restoring';
+  const isSuccess = syncStatus === 'success';
   const isError = loadError !== '';
   const [isFocused, setIsFocused] = useState(false);
 
@@ -1201,7 +1213,7 @@ const Header = () => {
         className={`sync-header-btn ${isSyncing ? 'is-syncing' : ''} ${isError ? 'is-error' : ''}`}
         title={isSyncing ? 'Uploading backup...' : isError ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
       >
-        <i className={`fa-solid fa-rotate text-sm ${isSyncing ? 'animate-spin' : ''}`}></i>
+        <i className={`fa-solid ${isSyncing ? 'fa-cloud-arrow-up animate-pulse' : isRestoring ? 'fa-cloud-arrow-down animate-pulse' : isSuccess ? 'fa-cloud-check' : 'fa-cloud'} text-sm`}></i>
       </button>
     </div>
   );
@@ -1373,24 +1385,33 @@ const SideMenu = () => {
   const openDeviceContactPicker = async () => {
     if (contactPickerLoading) return;
     setContactPickerLoading(true);
-    showFeedback('Opening device contacts…');
+    showFeedback('Requesting Contacts permission…');
     try {
-      let permission = null;
-      if (typeof Contacts.getPermissions === 'function') permission = await Contacts.getPermissions();
-      if (!permission || permission.granted !== true) {
-        showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
+      const Contacts = await loadContactsPlugin();
+      if (!Contacts) {
+        showFeedback('Device Contacts are unavailable in this build.');
         return;
       }
+
+      let permission = null;
+      if (typeof Contacts.getPermissions === 'function') {
+        permission = await Contacts.getPermissions();
+      }
+      const permissionGranted = permission?.granted === true || permission?.contacts === 'granted';
+      if (!permissionGranted) {
+        showFeedback('Contacts permission was not granted. Allow Contacts access in Android settings and try again.');
+        return;
+      }
+
       showFeedback('Loading device contacts…');
       const result = await Contacts.getContacts();
       const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-      const usable = contacts.map((contact) => {
-        const displayName = String(contact.displayName || contact.name?.display || [contact.name?.given, contact.name?.family].filter(Boolean).join(' ') || '').trim();
-        const phoneNumbers = Array.isArray(contact.phoneNumbers) ? contact.phoneNumbers : (Array.isArray(contact.phones) ? contact.phones : []);
-        const emails = Array.isArray(contact.emails) ? contact.emails : [];
-        return { ...contact, _name: displayName, _phone: String(phoneNumbers.find(p => p?.number)?.number || '').trim(), _email: String(emails.find(e => e?.address)?.address || '').trim() };
-      }).filter(contact => contact._name || contact._phone || contact._email)
+      const usable = contacts
+        .map(normalizeDeviceContact)
+        .filter(contact => contact._name || contact._phone || contact._email)
         .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
+
+      cacheDeviceContacts(usable);
       setDeviceContacts(usable);
       setContactPickerSearch('');
       setContactPickerOpen(true);
@@ -1586,16 +1607,43 @@ const SideMenu = () => {
             </label>
 
             <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Data Exports</div>
-            <button onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> Active Loans Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-table-list w-7 text-[#7B2B8C]"></i> All Loan EMI Records</button>
-            <button onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-export w-7 text-[#625E70]"></i> All Transactions</button>
-            <button onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-arrow-trend-up w-7 text-[#078A87]"></i> Income Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-arrow-trend-down w-7 text-[#D6455D]"></i> Expense Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-users-viewfinder w-7 text-[#625E70]"></i> Persons Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-receipt w-7 text-[#D6455D]"></i> All Expenses</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-money-bill-trend-up w-7 text-[#078A87]"></i> All Incomes</button>
-            <button onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> All Receivables</button>
-            <button onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-invoice-dollar w-7 text-[#D6455D]"></i> All Payables</button>
+            <div className="px-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setExportGroup(exportGroup === 'summaries' ? '' : 'summaries')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
+              >
+                <span><i className="fa-solid fa-chart-pie w-7 text-[#078A87]"></i>Summaries</span>
+                <i className={`fa-solid fa-chevron-${exportGroup === 'summaries' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
+              </button>
+              {exportGroup === 'summaries' && (
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Income</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Expenses</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Active Loans</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Persons</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Receivables</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Payables</button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setExportGroup(exportGroup === 'transactions' ? '' : 'transactions')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
+              >
+                <span><i className="fa-solid fa-list-check w-7 text-[#7B2B8C]"></i>Transactions</span>
+                <i className={`fa-solid fa-chevron-${exportGroup === 'transactions' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
+              </button>
+              {exportGroup === 'transactions' && (
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Loans EMI Records</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">All Transactions</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Incomes</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">Expenses</button>
+                </div>
+              )}
+            </div>
 
             <SideMenuBranding />
           </div>
@@ -1671,7 +1719,39 @@ const SideMenu = () => {
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
                   <div>
                     <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Category Name *</label>
-                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
+                    <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={formData.name || ''}
+                          autoComplete="off"
+                          onFocus={() => {
+                            const cached = readCachedDeviceContacts();
+                            if (cached.length && !deviceContacts.length) setDeviceContacts(cached);
+                          }}
+                          onChange={e => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                        />
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                   </div>
                 )}
 

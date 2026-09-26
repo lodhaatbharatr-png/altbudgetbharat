@@ -68,11 +68,14 @@ contact_handler_replacement = '''  const openDeviceContactPicker = async () => {
 replace_once('contact picker handler', contact_handler_pattern, contact_handler_replacement)
 
 # Preserve optional address if the installed plugin/device exposes one.
-replace_once(
-    'contact address mapping',
-    r"(name: contact\._name \|\| prev\.name \|\| '',\n\s*phone: contact\._phone \|\| prev\.phone \|\| '',\n\s*email: contact\._email \|\| prev\.email \|\| '',)(\n\s*\}\)\);)",
-    r"\1\n      address: contact._address || prev.address || '',\2",
-)
+# This transformation is intentionally idempotent because earlier contact-picker
+# passes may already have added the address field.
+if 'address: contact._address || prev.address ||' not in text:
+    replace_once(
+        'contact address mapping',
+        r"(name: contact\._name \|\| prev\.name \|\| '',\n\s*phone: contact\._phone \|\| prev\.phone \|\| '',\n\s*email: contact\._email \|\| prev\.email \|\| '',)(\n\s*\}\)\);)",
+        r"\1\n      address: contact._address || prev.address || '',\2",
+    )
 
 # Replace the phase-2 preload with a real startup permission + cache pass.
 preload_pattern = r"  // DEVICE_CONTACTS_PRELOAD_PHASE2\n  useEffect\(\(\) => \{.*?\n  \}, \[\]\);\n\n"
