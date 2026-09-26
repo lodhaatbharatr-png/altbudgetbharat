@@ -57,16 +57,19 @@ jobs:
       - name: Apply Phase 2 UX polish
         run: python3 scripts/ci-phase2-ux-polish.py
 
+      - name: Apply Phase 2 finalization
+        run: python3 scripts/ci-phase2-finalize.py
+
       - name: Commit stabilization source fixes
         if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/native-exports-backup-sync-ci' || github.ref == 'refs/heads/feature/search-contact-picker')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js src/export/exportService.js scripts/ci-stabilize.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py scripts/ci-phase1-final-polish.py scripts/ci-phase2-ux-polish.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
+          git add src/main.jsx src/googleSync.js src/export/exportService.js scripts/ci-stabilize.py scripts/ci-contact-picker-finalize.py scripts/ci-contact-picker-hotfix.py scripts/ci-phase1-final-polish.py scripts/ci-phase2-ux-polish.py scripts/ci-phase2-finalize.py package.json index.html assets/icon.png .github/workflows/build-apk.yml
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
-            git commit -m "fix: finish phase2 contacts reminder and menu polish"
+            git commit -m "fix: finalize phase2 contacts reminder menu and sync UX"
             git push
           fi
 
