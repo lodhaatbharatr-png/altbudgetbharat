@@ -78,7 +78,14 @@ new_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
 if old_replace in text:
     text = text.replace(old_replace, new_replace, 1)
 else:
-    if 'already_applied = {' not in text:
+    # The finalizer helper may already be the newer idempotent version from a
+    # previous CI repair. In that case there is nothing to patch here.
+    helper_is_current = (
+        'already_applied = {' in text
+        and "'Data Exports grouped menu': 'exportGroup'" in text
+        and "'header sync icon': 'fa-cloud-arrow-up'" in text
+    )
+    if not helper_is_current:
         raise SystemExit('Phase2 replace_once helper marker not found')
 
 # The Phase-2 UX pass already creates the grouped Data Exports menu.
