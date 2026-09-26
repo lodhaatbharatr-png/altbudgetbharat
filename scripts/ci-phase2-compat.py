@@ -75,6 +75,17 @@ new_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
 
     raise SystemExit(f'{label}: expected exactly one match, found {count}')
 '''
+plain_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
+    global text
+    updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+    if count != 1:
+        raise SystemExit(f'{label}: expected exactly one match, found {count}')
+    text = updated
+'''
+
+if old_replace not in text and plain_replace in text:
+    text = text.replace(plain_replace, new_replace, 1)
+
 if old_replace in text:
     text = text.replace(old_replace, new_replace, 1)
 else:
