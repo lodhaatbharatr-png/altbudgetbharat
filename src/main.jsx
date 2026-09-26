@@ -356,31 +356,28 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.font = '700 23px sans-serif';
   ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
-  // Footer: no watermark and no container. "Using" + logo + app name on
-  // one horizontal row, with sender details above it.
-  const footerCenterY = ticketY + ticketH - 72;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#1E104B';
-  ctx.font = '900 18px sans-serif';
-  ctx.fillText(`Sent by ${admin?.name || 'BHARAT RASVE'}`, centerX, footerCenterY - 48);
-  ctx.fillStyle = '#625E70';
-  ctx.font = '800 17px sans-serif';
-  ctx.fillText(String(admin?.contact || '7218838122'), centerX, footerCenterY - 24);
-
-  ctx.font = '700 15px sans-serif';
-  ctx.fillStyle = '#625E70';
-  ctx.fillText('Using', centerX - 118, footerCenterY + 4);
+  // Footer: logo left + sender details right, horizontally aligned.
+  const footerX = ticketX + 55;
+  const footerY = ticketY + ticketH * 0.61 + 48;
+  const footerW = ticketW - 110;
+  const footerH = 88;
+  roundRect(footerX, footerY, footerW, footerH, 18);
+  ctx.fillStyle = '#F4F3F8';
+  ctx.fill();
 
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) {
     await new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const maxW = 150, maxH = 38;
-        const scale = Math.min(maxW / img.width, maxH / img.height);
+        const maxLogoW = 180;
+        const maxLogoH = 58;
+        const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
         const logoW = Math.max(1, img.width * scale);
         const logoH = Math.max(1, img.height * scale);
-        ctx.drawImage(img, centerX - 86 - logoW / 2, footerCenterY + 4 - logoH / 2, logoW, logoH);
+        const logoX = footerX + 18 + (maxLogoW - logoW) / 2;
+        const logoY = footerY + (footerH - logoH) / 2;
+        ctx.drawImage(img, logoX, logoY, logoW, logoH);
         resolve();
       };
       img.onerror = resolve;
@@ -388,9 +385,16 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
     });
   }
 
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#1E104B';
-  ctx.font = '800 15px sans-serif';
-  ctx.fillText('Budget Bharat Personal Finance App', centerX + 112, footerCenterY + 4);
+  ctx.font = '900 20px sans-serif';
+  ctx.fillText(`Sent by ${admin?.name || 'BHARAT RASVE'}`, footerX + 225, footerY + 27);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 18px sans-serif';
+  ctx.fillText(String(admin?.contact || '7218838122'), footerX + 225, footerY + 53);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '700 16px sans-serif';
+  ctx.fillText('Budget Bharat Personal Finance App', footerX + 225, footerY + 75);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#8A8596';
@@ -1296,44 +1300,21 @@ const SideMenu = () => {
     showFeedback('Opening device contacts…');
     try {
       let permission = null;
-      if (typeof Contacts.getPermissions === 'function') {
-        permission = await Contacts.getPermissions();
-      }
-
+      if (typeof Contacts.getPermissions === 'function') permission = await Contacts.getPermissions();
       if (!permission || permission.granted !== true) {
         showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
-        if (typeof Contacts.getPermissions === 'function') {
-          permission = await Contacts.getPermissions();
-        }
-      }
-
-      if (!permission || permission.granted !== true) {
-        showFeedback('Contacts permission was not granted. You can enable it in Android Settings.');
         return;
       }
-
       showFeedback('Loading device contacts…');
       const result = await Contacts.getContacts();
       const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-      const usable = contacts
-        .map((contact) => {
-          const displayName = String(
-            contact.displayName ||
-            contact.name?.display ||
-            [contact.name?.given, contact.name?.family].filter(Boolean).join(' ') ||
-            ''
-          ).trim();
-          const phoneNumbers = Array.isArray(contact.phoneNumbers)
-            ? contact.phoneNumbers
-            : (Array.isArray(contact.phones) ? contact.phones : []);
-          const emails = Array.isArray(contact.emails) ? contact.emails : [];
-          const phone = String(phoneNumbers.find(p => p?.number)?.number || '').trim();
-          const email = String(emails.find(e => e?.address)?.address || '').trim();
-          return { ...contact, _name: displayName, _phone: phone, _email: email };
-        })
-        .filter(contact => contact._name || contact._phone || contact._email)
+      const usable = contacts.map((contact) => {
+        const displayName = String(contact.displayName || contact.name?.display || [contact.name?.given, contact.name?.family].filter(Boolean).join(' ') || '').trim();
+        const phoneNumbers = Array.isArray(contact.phoneNumbers) ? contact.phoneNumbers : (Array.isArray(contact.phones) ? contact.phones : []);
+        const emails = Array.isArray(contact.emails) ? contact.emails : [];
+        return { ...contact, _name: displayName, _phone: String(phoneNumbers.find(p => p?.number)?.number || '').trim(), _email: String(emails.find(e => e?.address)?.address || '').trim() };
+      }).filter(contact => contact._name || contact._phone || contact._email)
         .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
-
       setDeviceContacts(usable);
       setContactPickerSearch('');
       setContactPickerOpen(true);
