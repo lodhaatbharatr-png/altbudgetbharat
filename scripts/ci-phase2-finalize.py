@@ -215,12 +215,17 @@ if 'exportGroup' not in text:
 #    plain cloud when idle/error. The existing sync button/action
 #    remains unchanged.
 # ------------------------------------------------------------
-text = text.replace(
-    "const isSyncing = syncStatus === 'syncing';",
-    "const isSyncing = syncStatus === 'syncing';\n  const isRestoring = syncStatus === 'restoring';\n  const isSuccess = syncStatus === 'success';",
-    1,
+# Normalize the sync-status declarations to exactly one copy. Earlier CI passes
+# may already have inserted these lines, so do not stack duplicate declarations.
+text = re.sub(
+    r"  const isSyncing = syncStatus === 'syncing';\n(?:  const isRestoring = syncStatus === 'restoring';\n  const isSuccess = syncStatus === 'success';\n)+",
+    "  const isSyncing = syncStatus === 'syncing';\n  const isRestoring = syncStatus === 'restoring';\n  const isSuccess = syncStatus === 'success';\n",
+    text,
+    count=1,
 )
-if 'fa-cloud-arrow-up animate-pulse' not in text:
+# Header icon is already owned by the newer Phase-2 UX pass when any of the
+# cloud-state icons is present. Only apply the legacy replacement otherwise.
+if not any(marker in text for marker in ('fa-cloud-arrow-up', 'fa-cloud-arrow-down', 'fa-cloud-check')):
     replace_once(
         'header sync icon',
         r"<i className=\{`fa-solid fa-rotate text-sm \$\{isSyncing \? 'animate-spin' : ''\}`\}></i>",
