@@ -356,28 +356,31 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.font = '700 23px sans-serif';
   ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
-  // Footer: logo left + sender details right, horizontally aligned.
-  const footerX = ticketX + 55;
-  const footerY = ticketY + ticketH * 0.61 + 48;
-  const footerW = ticketW - 110;
-  const footerH = 88;
-  roundRect(footerX, footerY, footerW, footerH, 18);
-  ctx.fillStyle = '#F4F3F8';
-  ctx.fill();
+  // Footer: no watermark and no container. "Using" + logo + app name on
+  // one horizontal row, with sender details above it.
+  const footerCenterY = ticketY + ticketH - 72;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 18px sans-serif';
+  ctx.fillText(`Sent by ${admin?.name || 'BHARAT RASVE'}`, centerX, footerCenterY - 48);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 17px sans-serif';
+  ctx.fillText(String(admin?.contact || '7218838122'), centerX, footerCenterY - 24);
+
+  ctx.font = '700 15px sans-serif';
+  ctx.fillStyle = '#625E70';
+  ctx.fillText('Using', centerX - 118, footerCenterY + 4);
 
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) {
     await new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const maxLogoW = 180;
-        const maxLogoH = 58;
-        const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
+        const maxW = 150, maxH = 38;
+        const scale = Math.min(maxW / img.width, maxH / img.height);
         const logoW = Math.max(1, img.width * scale);
         const logoH = Math.max(1, img.height * scale);
-        const logoX = footerX + 18 + (maxLogoW - logoW) / 2;
-        const logoY = footerY + (footerH - logoH) / 2;
-        ctx.drawImage(img, logoX, logoY, logoW, logoH);
+        ctx.drawImage(img, centerX - 86 - logoW / 2, footerCenterY + 4 - logoH / 2, logoW, logoH);
         resolve();
       };
       img.onerror = resolve;
@@ -385,16 +388,9 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
     });
   }
 
-  ctx.textAlign = 'left';
   ctx.fillStyle = '#1E104B';
-  ctx.font = '900 20px sans-serif';
-  ctx.fillText(`Sent by ${admin?.name || 'BHARAT RASVE'}`, footerX + 225, footerY + 27);
-  ctx.fillStyle = '#625E70';
-  ctx.font = '800 18px sans-serif';
-  ctx.fillText(String(admin?.contact || '7218838122'), footerX + 225, footerY + 53);
-  ctx.fillStyle = '#625E70';
-  ctx.font = '700 16px sans-serif';
-  ctx.fillText('Budget Bharat Personal Finance App', footerX + 225, footerY + 75);
+  ctx.font = '800 15px sans-serif';
+  ctx.fillText('Budget Bharat Personal Finance App', centerX + 112, footerCenterY + 4);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#8A8596';
@@ -1146,18 +1142,31 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
 
   const matchedTransactions = useMemo(() => {
     if (!query) return [];
-    return transactions.filter(t =>
-      (t.note && t.note.toLowerCase().includes(query)) ||
-      (t.category && String(t.category).trim().toLowerCase().includes(query)) ||
-      (t.person && t.person.toLowerCase().includes(query)) ||
-      (t.ref && t.ref.toLowerCase().includes(query))
-    );
+    return transactions.filter(t => {
+      const amount = String(t.amount ?? '').replace(/,/g, '');
+      const amountFormatted = formatTableNum(t.amount).replace(/,/g, '');
+      const note = String(t.note || '').toLowerCase();
+      const category = String(t.category || '').trim().toLowerCase();
+      const person = String(t.person || '').toLowerCase();
+      const ref = String(t.ref || '').toLowerCase();
+      return (
+        note.includes(query) ||
+        category.includes(query) ||
+        person.includes(query) ||
+        ref.includes(query) ||
+        amount.includes(query) ||
+        amountFormatted.includes(query)
+      );
+    });
   }, [transactions, query]);
 
   const matchedCategories = useMemo(() => {
     if (!query) return [];
-    const allCats = [...categories.expense, ...categories.income];
-    return allCats.filter(c => c.toLowerCase().includes(query));
+    const allCats = [...(categories.expense || []), ...(categories.income || [])]
+      .map(c => typeof c === 'string' ? c : String(c?.name || c?.label || ''))
+      .map(c => c.trim())
+      .filter(Boolean);
+    return [...new Set(allCats)].filter(c => c.toLowerCase().includes(query));
   }, [categories, query]);
 
   const hasResults = matchedPersons.length > 0 || matchedTransactions.length > 0 || matchedCategories.length > 0;
@@ -1220,7 +1229,7 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
               <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">Categories</h3>
               <div className="flex flex-wrap gap-1.5">
                 {matchedCategories.map((c, i) => (
-                  <button key={i} type="button" onClick={() => setSearchQuery(c)} title={`Filter transactions by ${c}`} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center hover:bg-[#7B2B8C] hover:text-white active:scale-95 transition-all">
+                  <button key={i} type="button" onClick={() => setSearchQuery(String(c).trim())} title={`Filter transactions by ${c}`} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center hover:bg-[#7B2B8C] hover:text-white active:scale-95 transition-all">
                     <i className="fa-solid fa-tag mr-1.5 text-[#7B2B8C] text-[10px]"></i>{c}
                   </button>
                 ))}
@@ -1284,26 +1293,22 @@ const SideMenu = () => {
   const openDeviceContactPicker = async () => {
     if (contactPickerLoading) return;
     setContactPickerLoading(true);
-    showFeedback('Requesting Contacts permission…');
+    showFeedback('Opening device contacts…');
     try {
       let permission = null;
-      try {
-        if (typeof Contacts.requestPermissions === 'function') {
-          permission = await Contacts.requestPermissions();
-        } else if (typeof Contacts.getPermissions === 'function') {
-          permission = await Contacts.getPermissions();
-        }
-      } catch (permissionError) {
-        console.error('Contacts permission request failed:', permissionError);
+      if (typeof Contacts.getPermissions === 'function') {
+        permission = await Contacts.getPermissions();
       }
 
-      const permissionGranted =
-        permission?.granted === true ||
-        permission?.readContacts === 'granted' ||
-        permission?.contacts === 'granted';
+      if (!permission || permission.granted !== true) {
+        showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
+        if (typeof Contacts.getPermissions === 'function') {
+          permission = await Contacts.getPermissions();
+        }
+      }
 
-      if (!permissionGranted) {
-        showFeedback('Contacts permission was not granted. Allow Contacts access in Android settings and try again.');
+      if (!permission || permission.granted !== true) {
+        showFeedback('Contacts permission was not granted. You can enable it in Android Settings.');
         return;
       }
 
@@ -1311,13 +1316,23 @@ const SideMenu = () => {
       const result = await Contacts.getContacts();
       const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
       const usable = contacts
-        .map((contact) => ({
-          ...contact,
-          _name: String(contact.displayName || contact.name?.display || '').trim(),
-          _phone: String(contact.phoneNumbers?.find(p => p?.number)?.number || '').trim(),
-          _email: String(contact.emails?.find(e => e?.address)?.address || '').trim(),
-        }))
-        .filter(contact => contact._name || contact._phone || contact._email);
+        .map((contact) => {
+          const displayName = String(
+            contact.displayName ||
+            contact.name?.display ||
+            [contact.name?.given, contact.name?.family].filter(Boolean).join(' ') ||
+            ''
+          ).trim();
+          const phoneNumbers = Array.isArray(contact.phoneNumbers)
+            ? contact.phoneNumbers
+            : (Array.isArray(contact.phones) ? contact.phones : []);
+          const emails = Array.isArray(contact.emails) ? contact.emails : [];
+          const phone = String(phoneNumbers.find(p => p?.number)?.number || '').trim();
+          const email = String(emails.find(e => e?.address)?.address || '').trim();
+          return { ...contact, _name: displayName, _phone: phone, _email: email };
+        })
+        .filter(contact => contact._name || contact._phone || contact._email)
+        .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
 
       setDeviceContacts(usable);
       setContactPickerSearch('');
@@ -1325,7 +1340,7 @@ const SideMenu = () => {
       showFeedback(`${usable.length} device contacts loaded`);
     } catch (err) {
       console.error('Device contact picker error:', err);
-      showFeedback('Unable to open device contacts. Please allow Contacts permission and try again.');
+      showFeedback(`Unable to load device contacts: ${err?.message || 'Please allow Contacts permission and try again.'}`);
     } finally {
       setContactPickerLoading(false);
     }
