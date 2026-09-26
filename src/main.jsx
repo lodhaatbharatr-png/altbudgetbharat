@@ -33,10 +33,15 @@ const loadContactsPlugin = async () => {
 const DEVICE_CONTACTS_CACHE_KEY = 'budget_bharat_device_contacts_v1';
 const normalizeDeviceContact = (contact) => ({
   contactId: contact?.contactId || contact?.id || '',
-  _name: String(contact?.displayName || contact?.name?.display || contact?.name || '').trim(),
+  _name: String(contact?.displayName || contact?.name?.display || contact?.name?.given || '').trim(),
   _phone: String(contact?.phoneNumbers?.find(p => p?.number)?.number || contact?.phones?.find(p => p?.number)?.number || '').trim(),
   _email: String(contact?.emails?.find(e => e?.address)?.address || contact?.emails?.find(e => e?.email)?.email || '').trim(),
-  _address: String(contact?.postalAddresses?.find(a => a?.street || a?.formatted)?.formatted || contact?.address || '').trim(),
+  _address: String(
+    contact?.postalAddresses?.find(a => a)?.formatted ||
+    contact?.postalAddresses?.find(a => a)?.street ||
+    contact?.address ||
+    ''
+  ).trim(),
 });
 
 const readCachedDeviceContacts = () => {
@@ -484,36 +489,52 @@ const AppProvider = ({ children }) => {
     let cancelled = false;
     const preloadContacts = async () => {
       try {
-        const cached = readCachedDeviceContacts();
-        if (cached.length && !cancelled) setDeviceContacts(prev => prev.length ? prev : cached);
-
         const Contacts = await loadContactsPlugin();
         if (!Contacts || cancelled) return;
 
-        // The Capacitor-community Contacts v5 plugin uses getPermissions()
-        // to request/check Android contacts access before getContacts().
-        const permission = typeof Contacts.getPermissions === 'function'
-          ? await Contacts.getPermissions()
-          : null;
-        const granted = permission?.granted === true || permission?.contacts === 'granted';
+        let permission = null;
+        if (typeof Contacts.checkPermissions === 'function') {
+          permission = await Contacts.checkPermissions();
+        } else if (typeof Contacts.getPermissions === 'function') {
+          permission = await Contacts.getPermissions();
+        }
+
+        const grantedBefore = permission?.contacts === 'granted' || permission?.granted === true;
+        if (!grantedBefore && typeof Contacts.requestPermissions === 'function') {
+          permission = await Contacts.requestPermissions();
+        }
+
+        const granted = permission?.contacts === 'granted' || permission?.granted === true;
         if (!granted || cancelled) return;
 
-        const result = await Contacts.getContacts();
+        const result = await Contacts.getContacts({
+          projection: {
+            name: true,
+            phones: true,
+            emails: true,
+            postalAddresses: true,
+          },
+        });
         const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
         const usable = contacts
           .map(normalizeDeviceContact)
           .filter(contact => contact._name || contact._phone || contact._email)
           .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
+
         if (!cancelled) {
           cacheDeviceContacts(usable);
           setDeviceContacts(usable);
         }
       } catch (err) {
-        console.warn('Background contact permission/cache pass skipped:', err);
+        console.warn('Startup contact permission/cache pass skipped:', err);
       }
     };
-    const timer = setTimeout(preloadContacts, 900);
-    return () => { cancelled = true; clearTimeout(timer); };
+
+    const timer = setTimeout(preloadContacts, 1200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   const showFeedback = (msg) => {
@@ -593,6 +614,7 @@ const AppProvider = ({ children }) => {
       const currentLocalData = { transactions, persons, categories, loans, admin };
       await GoogleDriveSync.pushToCloud(currentLocalData);
       setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
@@ -625,6 +647,7 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
       setSyncStatus('success');
       showFeedback('Backup restored from Google Drive');
     } catch (err) {
@@ -1158,6 +1181,8 @@ const Header = () => {
   const isSyncing = syncStatus === 'syncing';
   const isRestoring = syncStatus === 'restoring';
   const isSuccess = syncStatus === 'success';
+  const isRestoring = syncStatus === 'restoring';
+  const isSuccess = syncStatus === 'success';
   const isError = loadError !== '';
   const [isFocused, setIsFocused] = useState(false);
 
@@ -1389,22 +1414,37 @@ const SideMenu = () => {
     try {
       const Contacts = await loadContactsPlugin();
       if (!Contacts) {
-        showFeedback('Device Contacts are unavailable in this build.');
+        showFeedback('Device Contacts are unavailable in this APK.');
         return;
       }
 
       let permission = null;
-      if (typeof Contacts.getPermissions === 'function') {
+      if (typeof Contacts.checkPermissions === 'function') {
+        permission = await Contacts.checkPermissions();
+      } else if (typeof Contacts.getPermissions === 'function') {
         permission = await Contacts.getPermissions();
       }
-      const permissionGranted = permission?.granted === true || permission?.contacts === 'granted';
-      if (!permissionGranted) {
-        showFeedback('Contacts permission was not granted. Allow Contacts access in Android settings and try again.');
+
+      const grantedBefore = permission?.contacts === 'granted' || permission?.granted === true;
+      if (!grantedBefore && typeof Contacts.requestPermissions === 'function') {
+        permission = await Contacts.requestPermissions();
+      }
+
+      const granted = permission?.contacts === 'granted' || permission?.granted === true;
+      if (!granted) {
+        showFeedback('Contacts permission was not granted. Enable Contacts access in Android Settings and try again.');
         return;
       }
 
       showFeedback('Loading device contacts…');
-      const result = await Contacts.getContacts();
+      const result = await Contacts.getContacts({
+        projection: {
+          name: true,
+          phones: true,
+          emails: true,
+          postalAddresses: true,
+        },
+      });
       const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
       const usable = contacts
         .map(normalizeDeviceContact)
@@ -1418,7 +1458,7 @@ const SideMenu = () => {
       showFeedback(`${usable.length} device contacts loaded`);
     } catch (err) {
       console.error('Device contact picker error:', err);
-      showFeedback(`Unable to load device contacts: ${err?.message || 'Please allow Contacts permission and try again.'}`);
+      showFeedback(`Unable to load device contacts: ${err?.message || 'check Contacts permission in Android Settings'}`);
     } finally {
       setContactPickerLoading(false);
     }
@@ -1771,7 +1811,39 @@ const SideMenu = () => {
                           <span>{contactPickerLoading ? 'Opening...' : 'Device Contacts'}</span>
                         </button>
                       </div>
-                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          value={formData.name || ''}
+                          autoComplete="off"
+                          onFocus={() => {
+                            const cached = readCachedDeviceContacts();
+                            if (cached.length && !deviceContacts.length) setDeviceContacts(cached);
+                          }}
+                          onChange={e => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                        />
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Phone</label>

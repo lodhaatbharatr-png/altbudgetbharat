@@ -206,7 +206,8 @@ exports_replacement = '''            <div className="px-6 mt-6 mb-2 text-[10px] 
                 </div>
               )}
             </div>'''
-replace_once('Data Exports grouped menu', exports_pattern, exports_replacement)
+if 'exportGroup' not in text:
+    replace_once('Data Exports grouped menu', exports_pattern, exports_replacement)
 
 # ------------------------------------------------------------
 # 3) Header sync icon: show cloud-arrow-up during upload, cloud-
@@ -219,12 +220,13 @@ text = text.replace(
     "const isSyncing = syncStatus === 'syncing';\n  const isRestoring = syncStatus === 'restoring';\n  const isSuccess = syncStatus === 'success';",
     1,
 )
-replace_once(
-    'header sync icon',
-    r"<i className=\{`fa-solid fa-rotate text-sm \$\{isSyncing \? 'animate-spin' : ''\}`\}></i>",
-    r"<i className={`fa-solid ${isSyncing ? 'fa-cloud-arrow-up animate-pulse' : isRestoring ? 'fa-cloud-arrow-down animate-pulse' : isSuccess ? 'fa-cloud-check' : 'fa-cloud'} text-sm`}></i>",
-    flags=0,
-)
+if 'fa-cloud-arrow-up animate-pulse' not in text:
+    replace_once(
+        'header sync icon',
+        r"<i className=\{`fa-solid fa-rotate text-sm \$\{isSyncing \? 'animate-spin' : ''\}`\}></i>",
+        r"<i className={`fa-solid ${isSyncing ? 'fa-cloud-arrow-up animate-pulse' : isRestoring ? 'fa-cloud-arrow-down animate-pulse' : isSuccess ? 'fa-cloud-check' : 'fa-cloud'} text-sm`}></i>",
+        flags=0,
+    )
 
 # Mark upload/restore status without changing the underlying data flow.
 upload_start = text.find('  const uploadBackupToCloud = async () => {')
