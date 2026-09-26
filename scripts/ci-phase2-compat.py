@@ -78,14 +78,19 @@ new_replace = '''def replace_once(label, pattern, replacement, flags=re.S):
 if old_replace in text:
     text = text.replace(old_replace, new_replace, 1)
 else:
-    # The finalizer helper may already be the newer idempotent version from a
-    # previous CI repair. In that case there is nothing to patch here.
+    # The finalizer may already contain the idempotent helper. If so, there is
+    # nothing to normalize; otherwise the expected helper marker must be present.
     helper_is_current = (
         'already_applied = {' in text
         and "'Data Exports grouped menu': 'exportGroup'" in text
         and "'header sync icon': 'fa-cloud-arrow-up'" in text
     )
-    if not helper_is_current:
+    helper_is_plain = (
+        "def replace_once(label, pattern, replacement, flags=re.S):" in text
+        and "if count != 1:" in text
+        and "raise SystemExit(f'{label}: expected exactly one match, found {count}')" in text
+    )
+    if not helper_is_current and not helper_is_plain:
         raise SystemExit('Phase2 replace_once helper marker not found')
 
 # The Phase-2 UX pass already creates the grouped Data Exports menu.
