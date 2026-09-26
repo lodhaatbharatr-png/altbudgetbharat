@@ -131,7 +131,14 @@ jobs:
 
       - name: Sync generated Android assets
         run: npx cap sync android
-
+      - name: Dump native contacts plugin + manifest + MainActivity for debugging
+        run: |
+          echo "===== AndroidManifest.xml ====="
+          cat android/app/src/main/AndroidManifest.xml
+          echo "===== MainActivity ====="
+          find android/app/src/main/java -iname "MainActivity.*" -exec cat {} \;
+          echo "===== contacts plugin android source ====="
+          find node_modules/@capacitor-community/contacts/android -iname "*.java" -exec sh -c 'echo "--- {} ---"; cat {}' \;
       - name: Build Android Debug APK
         run: |
           cd android
