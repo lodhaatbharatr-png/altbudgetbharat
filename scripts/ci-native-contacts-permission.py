@@ -5,192 +5,131 @@ ROOT = Path(__file__).resolve().parents[1]
 MAIN = ROOT / 'src' / 'main.jsx'
 text = MAIN.read_text(encoding='utf-8')
 
-# Capacitor Community Contacts v5 is the selected Capacitor-5-compatible plugin.
-# Its documented v5 API exposes getPermissions()/getContacts(); Capacitor's
-# native Plugin base also exposes requestPermissions() at runtime when the
-# plugin declares a permission alias. Prefer that native request so Android
-# can show the real system Contacts permission dialog, then fall back safely
-# for older plugin builds.
-normalizer_pattern = r"const normalizeDeviceContact = \(contact\) => \(\{.*?\n\}\);"
-normalizer_replacement = '''const normalizeDeviceContact = (contact) => ({
-  contactId: contact?.contactId || contact?.id || '',
+
+def replace_once(label, pattern, replacement, flags=re.S):
+    global text
+    text, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+    if count != 1:
+        raise SystemExit(f'{label}: expected exactly one match, found {count}')
+
+
+# Use the official Capacitor Contacts plugin that matches Capacitor 5.
+replace_once(
+    'contacts plugin import',
+    r"const loadContactsPlugin = async \(\) => \{.*?\n\};",
+    '''const loadContactsPlugin = async () => {
+  try {
+    const mod = await import('@capacitor/contacts');
+    return mod.Contacts;
+  } catch (err) {
+    console.error('Contacts plugin unavailable:', err);
+    return null;
+  }
+};''',
+)
+
+# Normalize the official @capacitor/contacts Contact shape into the app's
+# existing internal fields. Keep this small so the rest of Budget Bharat stays intact.
+replace_once(
+    'contact normalizer',
+    r"const normalizeDeviceContact = \(contact\) => \(\{.*?\n\}\);",
+    '''const normalizeDeviceContact = (contact) => ({
+  contactId: contact?.id || contact?.rawId || '',
   _name: String(
     contact?.displayName ||
-    contact?.name?.display ||
-    [contact?.name?.given, contact?.name?.family].filter(Boolean).join(' ') ||
-    contact?.name ||
+    [contact?.name?.givenName, contact?.name?.middleName, contact?.name?.familyName]
+      .filter(Boolean).join(' ') ||
     ''
   ).trim(),
   _phone: String(
-    contact?.phoneNumbers?.find(p => p?.number)?.number ||
-    contact?.phones?.find(p => p?.number)?.number ||
-    ''
+    contact?.phoneNumbers?.find(p => p?.value)?.value || ''
   ).trim(),
   _email: String(
-    contact?.emails?.find(e => e?.address)?.address ||
-    contact?.emails?.find(e => e?.email)?.email ||
-    ''
+    contact?.emails?.find(e => e?.value)?.value || ''
   ).trim(),
   _address: String(
-    contact?.postalAddresses?.find(a => a?.formatted || a?.street)?.formatted ||
-    contact?.postalAddresses?.find(a => a?.formatted || a?.street)?.street ||
-    contact?.address ||
+    contact?.addresses?.find(a => a?.formatted || a?.street)?.formatted ||
+    contact?.addresses?.find(a => a?.formatted || a?.street)?.street ||
     ''
   ).trim(),
-});'''
-text, count = re.subn(normalizer_pattern, normalizer_replacement, text, count=1, flags=re.S)
-if count != 1:
-    raise SystemExit(f'contact normalizer: expected exactly one match, found {count}')
+});''',
+)
 
-# A native request must happen before getContacts(). The previous implementation
-# only checked permission and therefore could remain on a "pending/opening" state
-# forever when Android had not granted Contacts yet.
-handler_pattern = r"  const openDeviceContactPicker = async \(\) => \{.*?\n  \};\n\n  const selectDeviceContact"
-handler_replacement = '''  const openDeviceContactPicker = async () => {
+# Replace the old permission + bulk getContacts flow with the native OS picker.
+# @capacitor/contacts intentionally requests READ_CONTACTS internally when
+# pickContact() is called on Android. There is no separate permission call,
+# which removes the hanging getPermissions/requestPermissions round-trip.
+replace_once(
+    'native contact picker handler',
+    r"  const openDeviceContactPicker = async \(\) => \{.*?\n  \};\n\n  const selectDeviceContact",
+    '''  const openDeviceContactPicker = async () => {
     if (contactPickerLoading) return;
     setContactPickerLoading(true);
-    showFeedback('Requesting Contacts permission…');
+    showFeedback('Opening Contacts…');
     try {
       const Contacts = await loadContactsPlugin();
-      if (!Contacts) {
+      if (!Contacts || typeof Contacts.pickContact !== 'function') {
         showFeedback('Device Contacts are unavailable in this APK.');
         return;
       }
 
-      const requestNativeContactsPermission = async () => {
-        // Capacitor Plugin permission API. Community Contacts v5 declares the
-        // "contacts" permission alias, so requestPermissions() opens Android's
-        // native runtime dialog when access has not yet been granted.
-        if (typeof Contacts.requestPermissions === 'function') {
-          return await Contacts.requestPermissions();
-        }
-        if (typeof Contacts.getPermissions === 'function') {
-          return await Contacts.getPermissions();
-        }
-        return null;
-      };
-
-      const permission = await Promise.race([
-        requestNativeContactsPermission(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Contacts permission request timed out.')), 15000)),
-      ]);
-      const granted = permission?.contacts === 'granted' || permission?.granted === true || permission?.readContacts === 'granted';
-      if (!granted) {
-        showFeedback('Contacts permission was not granted. Please allow Contacts access in Android Settings and try again.');
+      const picked = await Contacts.pickContact();
+      if (!picked) {
+        showFeedback('No contact selected.');
         return;
       }
 
-      showFeedback('Loading device contacts…');
-      const result = await Promise.race([
-        Contacts.getContacts({
-          projection: {
-            name: true,
-            phones: true,
-            emails: true,
-            postalAddresses: true,
-          },
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Device contacts read timed out.')), 20000)),
-      ]);
-      const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-      const usable = contacts
-        .map(normalizeDeviceContact)
-        .filter(contact => contact._name || contact._phone || contact._email)
-        .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
+      const normalized = normalizeDeviceContact(picked);
+      if (!normalized._name && !normalized._phone && !normalized._email) {
+        showFeedback('Selected contact has no usable details.');
+        return;
+      }
 
-      cacheDeviceContacts(usable);
-      setDeviceContacts(usable);
-      setContactPickerSearch('');
-      setContactPickerOpen(true);
-      showFeedback(`${usable.length} device contacts loaded`);
+      setFormData(prev => ({
+        ...prev,
+        name: normalized._name || prev.name || '',
+        phone: normalized._phone || prev.phone || '',
+        email: normalized._email || prev.email || '',
+        address: normalized._address || prev.address || '',
+      }));
+      showFeedback(`${normalized._name || 'Contact'} loaded`);
     } catch (err) {
       console.error('Device contact picker error:', err);
-      showFeedback(`Unable to load device contacts: ${err?.message || 'check Contacts permission in Android settings'}`);
+      const code = err?.code || '';
+      if (code === 'OS-PLUG-CONT-0006') {
+        showFeedback('Contact picker canceled.');
+      } else if (code === 'OS-PLUG-CONT-0020') {
+        showFeedback('Contacts permission was denied. Allow Contacts access in Android Settings and try again.');
+      } else {
+        showFeedback(`Unable to open contacts: ${err?.message || 'Please try again.'}`);
+      }
     } finally {
       setContactPickerLoading(false);
     }
   };
 
-  const selectDeviceContact'''
-text, count = re.subn(handler_pattern, handler_replacement, text, count=1, flags=re.S)
-if count != 1:
-    raise SystemExit(f'contact picker handler: expected exactly one match, found {count}')
+  const selectDeviceContact''',
+)
 
-# Startup behavior: after the React UI has mounted, request native permission
-# once and cache the complete contact directory locally. This is deliberately
-# delayed so the permission dialog is shown over the already-visible app and
-# cannot prevent the launcher/main UI from mounting.
-preload_pattern = r"  // DEVICE_CONTACTS_PRELOAD_PHASE2\n  useEffect\(\(\) => \{.*?\n  \}, \[\]\);\n\n"
-preload_replacement = '''  // DEVICE_CONTACTS_PRELOAD_PHASE2
+# Do not request contacts permission at startup. Android runtime permission is
+# requested by the native picker only when the user actually taps Pick Contact.
+replace_once(
+    'startup contact preload',
+    r"  // DEVICE_CONTACTS_PRELOAD_PHASE2\n  useEffect\(\(\) => \{.*?\n  \}, \[\]\);\n\n",
+    '''  // DEVICE_CONTACTS_PRELOAD_PHASE2
   useEffect(() => {
-    let cancelled = false;
-    const preloadContacts = async () => {
-      try {
-        const Contacts = await loadContactsPlugin();
-        if (!Contacts || cancelled) return;
-
-        const requestNativeContactsPermission = async () => {
-          if (typeof Contacts.requestPermissions === 'function') {
-            return await Contacts.requestPermissions();
-          }
-          if (typeof Contacts.getPermissions === 'function') {
-            return await Contacts.getPermissions();
-          }
-          return null;
-        };
-
-        const permission = await Promise.race([
-          requestNativeContactsPermission(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Contacts permission request timed out.')), 15000)),
-        ]);
-        const granted = permission?.contacts === 'granted' || permission?.granted === true || permission?.readContacts === 'granted';
-        if (!granted || cancelled) return;
-
-        const result = await Promise.race([
-          Contacts.getContacts({
-            projection: {
-              name: true,
-              phones: true,
-              emails: true,
-              postalAddresses: true,
-            },
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Device contacts read timed out.')), 20000)),
-        ]);
-        const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-        const usable = contacts
-          .map(normalizeDeviceContact)
-          .filter(contact => contact._name || contact._phone || contact._email)
-          .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
-
-        if (!cancelled) {
-          cacheDeviceContacts(usable);
-          setDeviceContacts(usable);
-        }
-      } catch (err) {
-        console.warn('Startup contact permission/cache pass skipped:', err);
-      }
-    };
-
-    const timer = setTimeout(preloadContacts, 1400);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    // Restore only previously cached suggestions. Do not touch the native
+    // Contacts API during startup; the native picker owns the permission flow.
+    try {
+      const cached = readCachedDeviceContacts();
+      if (cached.length) setDeviceContacts(cached);
+    } catch (err) {
+      console.warn('Cached contact preload skipped:', err);
+    }
   }, []);
 
-'''
-text, count = re.subn(preload_pattern, preload_replacement, text, count=1, flags=re.S)
-if count != 1:
-    raise SystemExit(f'contact startup preload: expected exactly one match, found {count}')
-
-# Keep address population when a contact is selected.
-if 'address: contact._address || prev.address ||' not in text:
-    select_pattern = r"(email: contact\._email \|\| prev\.email \|\| '',)(\n\s*\}\)\);)"
-    select_replacement = r"\1\n      address: contact._address || prev.address || '',\2"
-    text, count = re.subn(select_pattern, select_replacement, text, count=1)
-    if count != 1:
-        raise SystemExit(f'contact address mapping: expected exactly one match, found {count}')
+''',
+)
 
 MAIN.write_text(text, encoding='utf-8')
-print('Native contacts permission request, startup cache, picker fetch, timeout feedback, and address mapping applied.')
+print('Applied official @capacitor/contacts native picker flow; removed startup permission request.')
