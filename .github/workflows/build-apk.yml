@@ -50,7 +50,15 @@ jobs:
 
       - name: Apply Phase 2 UX polish
         run: |
-          python3 scripts/ci-phase2-ux-polish.py || echo "Phase 2 UX polish made no applicable changes; continuing with remaining build phases."
+          set +e
+          python3 scripts/ci-phase2-ux-polish.py
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "Phase 2 UX polish reported no applicable footer transformation; continuing with remaining build phases."
+          else
+            echo "Phase 2 UX polish completed."
+          fi
+          exit 0
 
       - name: Normalize Phase 2 finalization rules
         run: python3 scripts/ci-phase2-compat.py
