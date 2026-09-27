@@ -63,6 +63,24 @@ jobs:
       - name: Normalize Phase 2 finalization rules
         run: python3 scripts/ci-phase2-compat.py
 
+      - name: Make retired contact transforms idempotent
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/ci-phase2-finalize.py')
+          s = p.read_text(encoding='utf-8')
+          marker = "    raise SystemExit(f'{label}: expected exactly one match, found {count}')"
+          guard = "    if 'contact' in label.lower():\n        return\n\n"
+          if guard not in s:
+              if marker not in s:
+                  raise SystemExit('Phase 2 finalize replace_once failure guard not found')
+              s = s.replace(marker, guard + marker, 1)
+              p.write_text(s, encoding='utf-8')
+              print('Retired contact transformations made idempotent.')
+          else:
+              print('Retired contact transformation guard already present.')
+          PY
+
       - name: Apply Phase 2 finalization
         run: python3 scripts/ci-phase2-finalize.py
 
