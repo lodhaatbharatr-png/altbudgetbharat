@@ -5,6 +5,19 @@ ROOT = Path(__file__).resolve().parents[1]
 path = ROOT / 'src' / 'main.jsx'
 text = path.read_text(encoding='utf-8')
 
+# This cleanup is intentionally idempotent because the APK workflow runs on every build.
+contact_markers = (
+    '@capacitor/contacts',
+    'loadContactsPlugin',
+    'deviceContacts',
+    'contactPickerOpen',
+    'openDeviceContactPicker',
+    'selectDeviceContact',
+)
+if not any(marker in text for marker in contact_markers):
+    print('Device contact picker already removed.')
+    raise SystemExit(0)
+
 # Remove the device-contact plugin helpers/cache from the module header.
 text, n = re.subn(
     r"\nconst loadContactsPlugin = async \(\) => \{.*?\nconst SafePortal =",
