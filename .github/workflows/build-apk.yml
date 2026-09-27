@@ -45,9 +45,6 @@ jobs:
       - name: Apply stabilization source fixes
         run: python3 scripts/ci-stabilize.py
 
-      - name: Remove retired device contact picker
-        run: python3 scripts/ci-remove-device-contacts.py
-
       - name: Apply Phase 1 final polish
         run: python3 scripts/ci-phase1-final-polish.py
 
@@ -59,6 +56,9 @@ jobs:
 
       - name: Apply Phase 2 finalization
         run: python3 scripts/ci-phase2-finalize.py
+
+      - name: Remove retired device contact picker
+        run: python3 scripts/ci-remove-device-contacts.py
 
       - name: Commit stabilization source fixes
         if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/native-exports-backup-sync-ci' || github.ref == 'refs/heads/feature/search-contact-picker')
