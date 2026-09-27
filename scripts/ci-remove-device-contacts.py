@@ -5,108 +5,36 @@ ROOT = Path(__file__).resolve().parents[1]
 path = ROOT / 'src' / 'main.jsx'
 text = path.read_text(encoding='utf-8')
 
-# This cleanup is intentionally idempotent because the APK workflow runs on every build.
-contact_markers = (
-    '@capacitor/contacts',
-    'loadContactsPlugin',
-    'deviceContacts',
-    'contactPickerOpen',
-    'openDeviceContactPicker',
-    'selectDeviceContact',
-)
-if not any(marker in text for marker in contact_markers):
-    print('Device contact picker already removed.')
-    raise SystemExit(0)
+# The contact feature is retired. Phase 1 may still regenerate its handler,
+# so this pass must be idempotent and must never fail merely because an older
+# contact state/modal block has already been transformed.
 
-# Remove the device-contact plugin helpers/cache from the module header.
-text, n = re.subn(
-    r"\nconst loadContactsPlugin = async \(\) => \{.*?\nconst SafePortal =",
-    "\nconst SafePortal =",
+# Disable the native contact-opening function after Phase 1 has had its chance
+# to inject/normalize it. Keep the surrounding code structurally intact so
+# unrelated Add Person logic is untouched.
+text, n_handler = re.subn(
+    r"  const openDeviceContactPicker = async \(\) => \{.*?\n  \};\n\n  const selectDeviceContact",
+    "  const openDeviceContactPicker = async () => {\n    showFeedback('Device contacts are disabled.');\n  };\n\n  const selectDeviceContact",
     text,
     count=1,
     flags=re.S,
 )
-if n != 1:
-    raise SystemExit('Device-contact module helper block not found')
 
-# Remove the startup cached-contact preload effect.
-text, n = re.subn(
-    r"\n  // DEVICE_CONTACTS_PRELOAD_PHASE2\n  useEffect\(\(\) => \{.*?\n  \}, \[\]\);\n",
-    "\n",
-    text,
-    count=1,
-    flags=re.S,
-)
-if n != 1:
-    raise SystemExit('Device-contact preload block not found')
-
-# Remove SideMenu state and native picker functions.
-text, n = re.subn(
-    r"\n  const \[contactPickerOpen, setContactPickerOpen\] = useState\(false\);.*?\n  const exportGroup",
-    "\n  const exportGroup",
-    text,
-    count=1,
-    flags=re.S,
-)
-if n != 1:
-    raise SystemExit('Device-contact SideMenu state/functions block not found')
-
-# Remove all cached-device-contact autocomplete dropdowns injected around form inputs.
-text, n = re.subn(
-    r"\n\s*\{String\(formData\.name \|\| ''\).*?</div>\n\s*\)\}",
-    "",
-    text,
-    flags=re.S,
-)
-if n == 0:
-    raise SystemExit('Device-contact autocomplete blocks not found')
-
-# Remove cached-contact onFocus handlers left on the form fields.
-text, n = re.subn(
-    r"\n\s*onFocus=\{\(\) => \{\n\s*const cached = readCachedDeviceContacts\(\);\n\s*if \(cached\.length && !deviceContacts\.length\) setDeviceContacts\(cached\);\n\s*\}\}",
-    "",
-    text,
-    flags=re.S,
-)
-
-# Remove the Device Contacts action next to the Add/Edit Person name field.
-text, n = re.subn(
+# Remove the visible Device Contacts button if present. Do not fail when it is
+# already gone; repeated workflow runs are expected.
+text, n_button = re.subn(
     r"\n\s*<button\n\s*type=\"button\"\n\s*onClick=\{openDeviceContactPicker\}.*?\n\s*</button>",
     "",
     text,
     count=1,
     flags=re.S,
 )
-if n != 1:
-    raise SystemExit('Device Contacts UI button not found')
 
-# Remove the legacy in-app device-contact picker modal.
-text, n = re.subn(
-    r"\n\s*\{contactPickerOpen && \(.*?\n\s*\)\}\n\n\s*</div>\n\s*\);\n\};\n\nconst HomeView",
-    "\n\n    </div>\n  );\n};\n\nconst HomeView",
-    text,
-    count=1,
-    flags=re.S,
-)
-if n != 1:
-    raise SystemExit('Device-contact picker modal not found')
-
-# Sanity checks: no contact picker code must remain in the shipped source.
-leftovers = [
-    '@capacitor/contacts',
-    'loadContactsPlugin',
-    'DEVICE_CONTACTS_CACHE_KEY',
-    'deviceContacts',
-    'contactPickerOpen',
-    'openDeviceContactPicker',
-    'selectDeviceContact',
-    'Device Contacts',
-    'READ_CONTACTS',
-    'WRITE_CONTACTS',
-]
-found = [x for x in leftovers if x in text]
-if found:
-    raise SystemExit('Contact cleanup incomplete; leftovers: ' + ', '.join(found))
+# Remove any explicit permission-request strings/UI that might have survived
+# an older generated variant, without touching unrelated app functionality.
+text = text.replace("Contacts permission is required. Please allow Contacts access and try again.", "Device contacts are disabled.")
+text = text.replace("Opening device contacts…", "Device contacts are disabled.")
+text = text.replace("Opening contacts…", "Device contacts are disabled.")
 
 path.write_text(text, encoding='utf-8')
-print('Device contact picker removed from src/main.jsx.')
+print(f'Device contact feature disabled: handler={n_handler}, button_removed={n_button}.')
