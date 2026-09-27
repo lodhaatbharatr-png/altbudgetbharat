@@ -525,6 +525,7 @@ const AppProvider = ({ children }) => {
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
@@ -557,6 +558,7 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
@@ -1598,135 +1600,14 @@ const SideMenu = () => {
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
                   <div>
                     <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Category Name *</label>
-                    <div className="relative">
-                        <div className="relative">
-                        <div className="relative">
-                        <div className="relative">
-                        <div className="relative">
-                        <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          value={formData.name || ''}
-                          autoComplete="off"
-                          onFocus={() => {
-                            const cached = readCachedDeviceContacts();
-                            if (cached.length && !deviceContacts.length) setDeviceContacts(cached);
-                          }}
-                          onChange={e => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
-                        />
-                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
-                            {deviceContacts
-                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
-                              .slice(0, 8)
-                              .map((contact, index) => (
-                                <button
-                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
-                                  type="button"
-                                  onMouseDown={e => e.preventDefault()}
-                                  onClick={() => selectDeviceContact(contact)}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
-                                >
-                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                        
-                                  onClick={() => selectDeviceContact(contact)}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
-                                >
-                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
-                            {deviceContacts
-                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
-                              .slice(0, 8)
-                              .map((contact, index) => (
-                                <button
-                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
-                                  type="button"
-                                  onMouseDown={e => e.preventDefault()}
-                                  onClick={() => selectDeviceContact(contact)}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
-                                >
-                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
-                            {deviceContacts
-                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
-                              .slice(0, 8)
-                              .map((contact, index) => (
-                                <button
-                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
-                                  type="button"
-                                  onMouseDown={e => e.preventDefault()}
-                                  onClick={() => selectDeviceContact(contact)}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
-                                >
-                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
-                            {deviceContacts
-                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
-                              .slice(0, 8)
-                              .map((contact, index) => (
-                                <button
-                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
-                                  type="button"
-                                  onMouseDown={e => e.preventDefault()}
-                                  onClick={() => selectDeviceContact(contact)}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
-                                >
-                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
-                            {deviceContacts
-                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
-                              .slice(0, 8)
-                              .map((contact, index) => (
-                                <button
-                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
-                                  type="button"
-                                  onMouseDown={e => e.preventDefault()}
-                                  onClick={() => selectDeviceContact(contact)}
-                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
-                                >
-                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name || ''}
+                      autoComplete="off"
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                    />
                   </div>
                 )}
 
@@ -1882,8 +1763,7 @@ const SideMenu = () => {
                 <input type="text" value={contactPickerSearch} onChange={e => setContactPickerSearch(e.target.value)} autoFocus placeholder="Search device contacts..." className="w-full bg-[#F4F3F8] border border-[#E4E1EA] rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold text-[#1E104B] outline-none focus:bg-white focus:border-[#078A87]" />
               </div>
             </div>
-            <div className="max-h-[58vh] overflow-y-auto hide-scrollbar p-2">
-              {deviceContacts.filter(contact => {
+            <div className="max-h-[58vh] overflow-y-auto hide-scrollbar p-2">.filter(contact => {
                 const q = contactPickerSearch.trim().toLowerCase();
                 if (!q) return true;
                 return `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
@@ -1896,14 +1776,12 @@ const SideMenu = () => {
                   </span>
                   <i className="fa-solid fa-chevron-right text-[9px] text-[#8A8596]"></i>
                 </button>
-              ))}
-              {deviceContacts.length > 0 && deviceContacts.filter(contact => {
+              ))}.length > 0 && deviceContacts.filter(contact => {
                 const q = contactPickerSearch.trim().toLowerCase();
                 return !q || `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
               }).length === 0 && (
                 <div className="text-center py-10 px-5"><i className="fa-solid fa-magnifying-glass text-2xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No matching contacts.</p></div>
-              )}
-              {deviceContacts.length === 0 && (
+              )}.length === 0 && (
                 <div className="text-center py-10 px-5"><i className="fa-solid fa-address-book text-3xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No usable contacts found.</p></div>
               )}
             </div>
