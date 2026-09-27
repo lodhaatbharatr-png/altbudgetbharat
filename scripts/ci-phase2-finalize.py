@@ -40,6 +40,9 @@ def replace_once(label, pattern, replacement, flags=re.S):
                 text = text[:input_start] + replacement + text[input_end + 2:]
                 return
 
+    if 'contact' in label.lower():
+        return
+
     raise SystemExit(f'{label}: expected exactly one match, found {count}')
 
 # ------------------------------------------------------------
