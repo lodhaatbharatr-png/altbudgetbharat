@@ -5,47 +5,115 @@ ROOT = Path(__file__).resolve().parents[1]
 path = ROOT / 'src' / 'main.jsx'
 text = path.read_text(encoding='utf-8')
 
-# The contact feature is retired. Phase 1 may still regenerate its handler,
-# so this pass must be idempotent and must never fail merely because an older
-# contact state/modal block has already been transformed.
+# Device Contacts is retired. This pass intentionally runs AFTER all Phase 1/2
+# source generators, so it is the final authority: no contact plugin import,
+# loader, cache helper, handler, picker button, or preload may reach Vite.
 
-# Remove the retired contact plugin loader and cache helpers from the module
-# header. This is the important build fix: no @capacitor/contacts import may
-# survive into Vite/Rollup after the feature has been retired.
-text, n_module = re.subn(
-    r"\nconst loadContactsPlugin = async \(\) => \{.*?\nconst SafePortal =",
-    "\nconst SafePortal =",
+# 1) Remove the package reference first. This is the critical build guard:
+# @capacitor/contacts is no longer installed and Rollup must never see it.
+text = re.sub(
+    r"\s*const\s+mod\s*=\s*await\s+import\(['\"]@capacitor/contacts['\"]\);\s*\n\s*return\s+mod\.Contacts;",
+    "\n    return null;",
+    text,
+    count=1,
+)
+text = re.sub(
+    r"await\s+import\(['\"]@capacitor/contacts['\"]\)",
+    "Promise.resolve(null)",
+    text,
+)
+
+# 2) Remove the entire plugin loader and retired cache/normalization helpers.
+# Match each helper independently so formatting changes in generated code do
+# not make cleanup dependent on one exact surrounding block.
+text = re.sub(
+    r"\nconst\s+loadContactsPlugin\s*=\s*async\s*\(\)\s*=>\s*\{.*?\n\};\n",
+    "\n",
+    text,
+    count=1,
+    flags=re.S,
+)
+text = re.sub(
+    r"\nconst\s+DEVICE_CONTACTS_CACHE_KEY\s*=.*?\nconst\s+normalizeDeviceContact\s*=.*?\n\};\n",
+    "\n",
+    text,
+    count=1,
+    flags=re.S,
+)
+text = re.sub(
+    r"\nconst\s+readCachedDeviceContacts\s*=\s*\(\)\s*=>\s*\{.*?\n\};\n",
+    "\n",
+    text,
+    count=1,
+    flags=re.S,
+)
+text = re.sub(
+    r"\nconst\s+cacheDeviceContacts\s*=\s*\(contacts\)\s*=>\s*\{.*?\n\};\n",
+    "\n",
     text,
     count=1,
     flags=re.S,
 )
 
-# Disable the native contact-opening function after Phase 1 has had its chance
-# to inject/normalize it. Keep the surrounding code structurally intact so
-# unrelated Add Person logic is untouched.
-text, n_handler = re.subn(
-    r"  const openDeviceContactPicker = async \(\) => \{.*?\n  \};\n\n  const selectDeviceContact",
-    "  const openDeviceContactPicker = async () => {\n    showFeedback('Device contacts are disabled.');\n  };\n\n  const selectDeviceContact",
+# 3) Remove any generated startup contact preload effect.
+text = re.sub(
+    r"\n\s*// DEVICE_CONTACTS_PRELOAD_PHASE2.*?\n\s*\}, \[\]\);\n",
+    "\n",
     text,
     count=1,
     flags=re.S,
 )
 
-# Remove the visible Device Contacts button if present. Do not fail when it is
-# already gone; repeated workflow runs are expected.
-text, n_button = re.subn(
-    r"\n\s*<button\n\s*type=\"button\"\n\s*onClick=\{openDeviceContactPicker\}.*?\n\s*</button>",
+# 4) Remove the contact-opening handler. Keep a harmless local stub only if
+# surrounding source still references the function; normally the button is
+# removed below and the function disappears entirely.
+text = re.sub(
+    r"\n\s*const\s+openDeviceContactPicker\s*=\s*async\s*\(\)\s*=>\s*\{.*?\n\s*\};\n\s*\n\s*const\s+selectDeviceContact",
+    "\n\n  const selectDeviceContact",
+    text,
+    count=1,
+    flags=re.S,
+)
+
+# 5) Remove the visible Device Contacts button, regardless of minor JSX
+# attribute changes introduced by previous UX passes.
+text = re.sub(
+    r"\n\s*<button\b(?=[^>]*onClick=\{openDeviceContactPicker\})[^>]*>.*?\n\s*</button>",
     "",
     text,
     count=1,
     flags=re.S,
 )
 
-# Remove any explicit permission-request strings/UI that might have survived
-# an older generated variant, without touching unrelated app functionality.
-text = text.replace("Contacts permission is required. Please allow Contacts access and try again.", "Device contacts are disabled.")
-text = text.replace("Opening device contacts…", "Device contacts are disabled.")
-text = text.replace("Opening contacts…", "Device contacts are disabled.")
+# 6) Remove contact-only suggestion/preload UI if it remains around the Add
+# Person name field. The normal name input must remain untouched.
+text = re.sub(
+    r"\{String\(formData\.name \|\| ''\)\.trim\(\)\.length >= 1 && deviceContacts\.length > 0 && \(.*?\)\}",
+    "",
+    text,
+    count=1,
+    flags=re.S,
+)
+text = re.sub(
+    r"\n\s*onFocus=\{\(\) => \{\s*const cached = readCachedDeviceContacts\(\);.*?\n\s*\}\}\n",
+    "\n",
+    text,
+    count=1,
+    flags=re.S,
+)
+
+# 7) Remove any remaining contact-specific state declarations. These are safe
+# to remove because the feature itself is retired.
+text = re.sub(r"\n\s*const \[contactPickerLoading, setContactPickerLoading\] = useState\(false\);", "", text, count=1)
+text = re.sub(r"\n\s*const \[contactPickerOpen, setContactPickerOpen\] = useState\(false\);", "", text, count=1)
+text = re.sub(r"\n\s*const \[contactPickerSearch, setContactPickerSearch\] = useState\(''\);", "", text, count=1)
+text = re.sub(r"\n\s*const \[deviceContacts, setDeviceContacts\] = useState\([^;]*\);", "", text, count=1)
+
+# 8) Final hard guard: if any plugin import survived in a future generated
+# variant, neutralize the exact dynamic import so Vite cannot resolve it.
+text = text.replace("import('@capacitor/contacts')", "null")
 
 path.write_text(text, encoding='utf-8')
-print(f'Device contact feature disabled: module={n_module}, handler={n_handler}, button_removed={n_button}.')
+
+remaining = text.count('@capacitor/contacts')
+print(f'Device contact feature disabled: retired code stripped; remaining plugin references={remaining}.')
