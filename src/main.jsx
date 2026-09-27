@@ -494,14 +494,39 @@ const AppProvider = ({ children }) => {
 
   // DEVICE_CONTACTS_PRELOAD_PHASE2
   useEffect(() => {
-    // Restore only previously cached suggestions. Do not touch the native
-    // Contacts API during startup; the native picker owns the permission flow.
-    try {
-      const cached = readCachedDeviceContacts();
-      if (cached.length) setDeviceContacts(cached);
-    } catch (err) {
-      console.warn('Cached contact preload skipped:', err);
-    }
+    let cancelled = false;
+    const preloadContacts = async () => {
+      try {
+        const cached = readCachedDeviceContacts();
+        if (cached.length && !cancelled) setDeviceContacts(prev => prev.length ? prev : cached);
+
+        const Contacts = await loadContactsPlugin();
+        if (!Contacts || cancelled) return;
+
+        // The Capacitor-community Contacts v5 plugin uses getPermissions()
+        // to request/check Android contacts access before getContacts().
+        const permission = typeof Contacts.getPermissions === 'function'
+          ? await Contacts.getPermissions()
+          : null;
+        const granted = permission?.granted === true || permission?.contacts === 'granted';
+        if (!granted || cancelled) return;
+
+        const result = await Contacts.getContacts();
+        const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
+        const usable = contacts
+          .map(normalizeDeviceContact)
+          .filter(contact => contact._name || contact._phone || contact._email)
+          .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
+        if (!cancelled) {
+          cacheDeviceContacts(usable);
+          setDeviceContacts(usable);
+        }
+      } catch (err) {
+        console.warn('Background contact permission/cache pass skipped:', err);
+      }
+    };
+    const timer = setTimeout(preloadContacts, 900);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, []);
 
   const showFeedback = (msg) => {
@@ -584,6 +609,7 @@ const AppProvider = ({ children }) => {
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
@@ -616,6 +642,7 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
@@ -1377,49 +1404,7 @@ const SideMenu = () => {
   const [exportGroup, setExportGroup] = useState('');
 
   const openDeviceContactPicker = async () => {
-    if (contactPickerLoading) return;
-    setContactPickerLoading(true);
-    showFeedback('Opening Contacts…');
-    try {
-      const Contacts = await loadContactsPlugin();
-      if (!Contacts || typeof Contacts.pickContact !== 'function') {
-        showFeedback('Device Contacts are unavailable in this APK.');
-        return;
-      }
-
-      const picked = await Contacts.pickContact();
-      if (!picked) {
-        showFeedback('No contact selected.');
-        return;
-      }
-
-      const normalized = normalizeDeviceContact(picked);
-      if (!normalized._name && !normalized._phone && !normalized._email) {
-        showFeedback('Selected contact has no usable details.');
-        return;
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        name: normalized._name || prev.name || '',
-        phone: normalized._phone || prev.phone || '',
-        email: normalized._email || prev.email || '',
-        address: normalized._address || prev.address || '',
-      }));
-      showFeedback(`${normalized._name || 'Contact'} loaded`);
-    } catch (err) {
-      console.error('Device contact picker error:', err);
-      const code = err?.code || '';
-      if (code === 'OS-PLUG-CONT-0006') {
-        showFeedback('Contact picker canceled.');
-      } else if (code === 'OS-PLUG-CONT-0020') {
-        showFeedback('Contacts permission was denied. Allow Contacts access in Android Settings and try again.');
-      } else {
-        showFeedback(`Unable to open contacts: ${err?.message || 'Please try again.'}`);
-      }
-    } finally {
-      setContactPickerLoading(false);
-    }
+    showFeedback('Device contacts are disabled.');
   };
 
   const selectDeviceContact = (contact) => {
@@ -1720,6 +1705,7 @@ const SideMenu = () => {
                     <div className="relative">
                         <div className="relative">
                         <div className="relative">
+                        <div className="relative">
                         <input
                           type="text"
                           required
@@ -1792,6 +1778,26 @@ const SideMenu = () => {
                           </div>
                         )}
                       </div>
+                        {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                            {deviceContacts
+                              .filter(contact => `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(String(formData.name || '').trim().toLowerCase()))
+                              .slice(0, 8)
+                              .map((contact, index) => (
+                                <button
+                                  key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`}
+                                  type="button"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                   </div>
                 )}
 
@@ -1800,16 +1806,6 @@ const SideMenu = () => {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[10px] font-bold text-[#625E70] uppercase">Name *</label>
-                        <button
-                          type="button"
-                          onClick={openDeviceContactPicker}
-                          disabled={contactPickerLoading}
-                          title="Select from device contacts"
-                          className="inline-flex items-center gap-1.5 text-[10px] font-black text-[#078A87] hover:text-[#056E6C] active:scale-95 disabled:opacity-50 transition-all"
-                        >
-                          <i className={`fa-solid ${contactPickerLoading ? 'fa-spinner animate-spin' : 'fa-address-book'} text-[11px]`}></i>
-                          <span>{contactPickerLoading ? 'Opening...' : 'Device Contacts'}</span>
-                        </button>
                       </div>
                       <div className="relative">
                         <input
