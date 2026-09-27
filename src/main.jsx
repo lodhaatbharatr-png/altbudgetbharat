@@ -442,43 +442,6 @@ const AppProvider = ({ children }) => {
 
   const [googleUser, setGoogleUser] = useState(null);
 
-  // DEVICE_CONTACTS_PRELOAD_PHASE2
-  useEffect(() => {
-    let cancelled = false;
-    const preloadContacts = async () => {
-      try {
-        const cached = readCachedDeviceContacts();
-        if (cached.length && !cancelled) setDeviceContacts(prev => prev.length ? prev : cached);
-
-        const Contacts = await loadContactsPlugin();
-        if (!Contacts || cancelled) return;
-
-        // The Capacitor-community Contacts v5 plugin uses getPermissions()
-        // to request/check Android contacts access before getContacts().
-        const permission = typeof Contacts.getPermissions === 'function'
-          ? await Contacts.getPermissions()
-          : null;
-        const granted = permission?.granted === true || permission?.contacts === 'granted';
-        if (!granted || cancelled) return;
-
-        const result = await Contacts.getContacts();
-        const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-        const usable = contacts
-          .map(normalizeDeviceContact)
-          .filter(contact => contact._name || contact._phone || contact._email)
-          .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
-        if (!cancelled) {
-          cacheDeviceContacts(usable);
-          setDeviceContacts(usable);
-        }
-      } catch (err) {
-        console.warn('Background contact permission/cache pass skipped:', err);
-      }
-    };
-    const timer = setTimeout(preloadContacts, 900);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, []);
-
   const showFeedback = (msg) => {
     setToast({ show: true, msg });
     setTimeout(() => setToast({ show: false, msg: '' }), 3000);
@@ -560,6 +523,7 @@ const AppProvider = ({ children }) => {
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
@@ -592,6 +556,7 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
       setSyncStatus('success');
@@ -1347,15 +1312,7 @@ const SideMenu = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
-  const [contactPickerOpen, setContactPickerOpen] = useState(false);
-  const [contactPickerSearch, setContactPickerSearch] = useState('');
-  const [deviceContacts, setDeviceContacts] = useState([]);
-  const [contactPickerLoading, setContactPickerLoading] = useState(false);
   const [exportGroup, setExportGroup] = useState('');
-
-  const openDeviceContactPicker = async () => {
-    showFeedback('Device contacts are disabled.');
-  };
 
   const selectDeviceContact = (contact) => {
     setFormData(prev => ({
@@ -1656,18 +1613,26 @@ const SideMenu = () => {
                         <div className="relative">
                         <div className="relative">
                         <div className="relative">
+                        <div className="relative">
                         <input
                           type="text"
                           required
                           value={formData.name || ''}
                           autoComplete="off"
-                          onFocus={() => {
-                            const cached = readCachedDeviceContacts();
-                            if (cached.length && !deviceContacts.length) setDeviceContacts(cached);
-                          }}
                           onChange={e => setFormData({ ...formData, name: e.target.value })}
                           className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
                         />
+                        
+                                  onClick={() => selectDeviceContact(contact)}
+                                  className="w-full text-left px-3 py-2.5 hover:bg-[#F4F3F8] active:bg-[#EDE9F6] border-b border-[#E4E1EA]/60 last:border-b-0"
+                                >
+                                  <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
+                                  <span className="block text-[10px] font-semibold text-[#625E70] truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                         {String(formData.name || '').trim().length >= 1 && deviceContacts.length > 0 && (
                           <div className="absolute left-0 right-0 top-full mt-1 z-[80] bg-white border border-[#E4E1EA] rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
                             {deviceContacts
