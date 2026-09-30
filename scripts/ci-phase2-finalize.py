@@ -143,157 +143,160 @@ restore = restore.replace("finally {\n      setSyncStatus('idle');\n    }", "fin
 text = text[:restore_start] + restore + text[restore_end:]
 
 # ------------------------------------------------------------
-# 4) Payment reminder: no footer container and no bottom label.
-#    Keep the ticket style, move footer below the separator, use
-#    two clean horizontal areas, and preserve logo aspect ratio.
+# 4) Payment reminder legacy polish.
+# Newer reminder generators support ledger-specific reminders and must be
+# preserved; only apply the legacy EMI-only replacement to older source.
 # ------------------------------------------------------------
-reminder_start = text.find('const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {')
-reminder_end = text.find('\n\nconst AppContext = createContext();', reminder_start)
-if reminder_start < 0 or reminder_end < 0:
-    raise SystemExit('payment reminder function markers not found')
-
-reminder = '''const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
-  const width = 900, height = 650;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas is not available on this device.');
-
-  const roundRect = (x, y, w, h, r) => {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  };
-
-  ctx.fillStyle = '#F4F3F8';
-  ctx.fillRect(0, 0, width, height);
-
-  const ticketX = 48, ticketY = 28, ticketW = width - 96, ticketH = height - 46;
-  ctx.save();
-  roundRect(ticketX, ticketY, ticketW, ticketH, 28);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
-  ctx.restore();
-
-  // Ticket cut-outs at the footer separator.
-  const separatorY = 414;
-  ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath();
-  ctx.arc(ticketX, separatorY, 24, -Math.PI / 2, Math.PI / 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(ticketX + ticketW, separatorY, 24, Math.PI / 2, Math.PI * 1.5);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.strokeStyle = '#D8D3E0';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([9, 10]);
-  ctx.beginPath();
-  ctx.moveTo(ticketX + 34, separatorY);
-  ctx.lineTo(ticketX + ticketW - 34, separatorY);
-  ctx.stroke();
-  ctx.restore();
-
-  const centerX = width / 2;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  ctx.fillStyle = '#1E104B';
-  ctx.font = '900 34px sans-serif';
-  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 100);
-
-  ctx.fillStyle = '#625E70';
-  ctx.font = '800 25px sans-serif';
-  ctx.fillText('Payment reminder for', centerX, 145);
-
-  roundRect(205, 172, 490, 86, 22);
-  ctx.fillStyle = '#F1EAF4';
-  ctx.fill();
-  ctx.fillStyle = '#7B2B8C';
-  ctx.font = '900 58px sans-serif';
-  ctx.fillText(formatMoney(amount), centerX, 216);
-
-  ctx.fillStyle = '#1E104B';
-  ctx.font = '800 25px sans-serif';
-  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
-
-  ctx.fillStyle = '#625E70';
-  ctx.font = '700 23px sans-serif';
-  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
-
-  // Footer is deliberately outside any background container.
-  const footerTop = separatorY + 24;
-  const dividerX = width / 2;
-
-  ctx.save();
-  ctx.strokeStyle = '#D8D3E0';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(dividerX, footerTop + 8);
-  ctx.lineTo(dividerX, height - 28);
-  ctx.stroke();
-  ctx.restore();
-
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#8A8596';
-  ctx.font = '800 16px sans-serif';
-  ctx.fillText('Sent by', 70, footerTop + 24);
-  ctx.fillStyle = '#1E104B';
-  ctx.font = '900 22px sans-serif';
-  ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
-  ctx.fillStyle = '#625E70';
-  ctx.font = '800 18px sans-serif';
-  ctx.fillText(String(admin?.contact || '7218838122'), 70, footerTop + 82);
-
-  const brandingCenterX = dividerX + (width - dividerX) / 2;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#8A8596';
-  ctx.font = '800 15px sans-serif';
-  ctx.fillText('Using', brandingCenterX, footerTop + 18);
-
-  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
-  if (logoSrc) {
-    await new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const maxLogoW = 170;
-        const maxLogoH = 46;
-        const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
-        const logoW = Math.max(1, img.width * scale);
-        const logoH = Math.max(1, img.height * scale);
-        ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 28 + (maxLogoH - logoH) / 2, logoW, logoH);
-        resolve();
+if "reminderType = 'emi'" not in text:
+    reminder_start = text.find('const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {')
+    reminder_end = text.find('\n\nconst AppContext = createContext();', reminder_start)
+    if reminder_start < 0 or reminder_end < 0:
+        raise SystemExit('payment reminder function markers not found')
+    
+    reminder = '''const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
+      const width = 900, height = 650;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas is not available on this device.');
+    
+      const roundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
       };
-      img.onerror = resolve;
-      img.src = logoSrc;
-    });
-  }
+    
+      ctx.fillStyle = '#F4F3F8';
+      ctx.fillRect(0, 0, width, height);
+    
+      const ticketX = 48, ticketY = 28, ticketW = width - 96, ticketH = height - 46;
+      ctx.save();
+      roundRect(ticketX, ticketY, ticketW, ticketH, 28);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.restore();
+    
+      // Ticket cut-outs at the footer separator.
+      const separatorY = 414;
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(ticketX, separatorY, 24, -Math.PI / 2, Math.PI / 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(ticketX + ticketW, separatorY, 24, Math.PI / 2, Math.PI * 1.5);
+      ctx.fill();
+      ctx.restore();
+    
+      ctx.save();
+      ctx.strokeStyle = '#D8D3E0';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([9, 10]);
+      ctx.beginPath();
+      ctx.moveTo(ticketX + 34, separatorY);
+      ctx.lineTo(ticketX + ticketW - 34, separatorY);
+      ctx.stroke();
+      ctx.restore();
+    
+      const centerX = width / 2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+    
+      ctx.fillStyle = '#1E104B';
+      ctx.font = '900 34px sans-serif';
+      ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 100);
+    
+      ctx.fillStyle = '#625E70';
+      ctx.font = '800 25px sans-serif';
+      ctx.fillText('Payment reminder for', centerX, 145);
+    
+      roundRect(205, 172, 490, 86, 22);
+      ctx.fillStyle = '#F1EAF4';
+      ctx.fill();
+      ctx.fillStyle = '#7B2B8C';
+      ctx.font = '900 58px sans-serif';
+      ctx.fillText(formatMoney(amount), centerX, 216);
+    
+      ctx.fillStyle = '#1E104B';
+      ctx.font = '800 25px sans-serif';
+      ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
+    
+      ctx.fillStyle = '#625E70';
+      ctx.font = '700 23px sans-serif';
+      ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
+    
+      // Footer is deliberately outside any background container.
+      const footerTop = separatorY + 24;
+      const dividerX = width / 2;
+    
+      ctx.save();
+      ctx.strokeStyle = '#D8D3E0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(dividerX, footerTop + 8);
+      ctx.lineTo(dividerX, height - 28);
+      ctx.stroke();
+      ctx.restore();
+    
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#8A8596';
+      ctx.font = '800 16px sans-serif';
+      ctx.fillText('Sent by', 70, footerTop + 24);
+      ctx.fillStyle = '#1E104B';
+      ctx.font = '900 22px sans-serif';
+      ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
+      ctx.fillStyle = '#625E70';
+      ctx.font = '800 18px sans-serif';
+      ctx.fillText(String(admin?.contact || '7218838122'), 70, footerTop + 82);
+    
+      const brandingCenterX = dividerX + (width - dividerX) / 2;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#8A8596';
+      ctx.font = '800 15px sans-serif';
+      ctx.fillText('Using', brandingCenterX, footerTop + 18);
+    
+      const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+      if (logoSrc) {
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const maxLogoW = 170;
+            const maxLogoH = 46;
+            const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
+            const logoW = Math.max(1, img.width * scale);
+            const logoH = Math.max(1, img.height * scale);
+            ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 28 + (maxLogoH - logoH) / 2, logoW, logoH);
+            resolve();
+          };
+          img.onerror = resolve;
+          img.src = logoSrc;
+        });
+      }
+    
+      ctx.fillStyle = '#1E104B';
+      ctx.font = '900 17px sans-serif';
+      ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 88);
+      ctx.fillStyle = '#625E70';
+      ctx.font = '700 15px sans-serif';
+      ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 112);
+    
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
+      });
+      return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    };'''
+    text = text[:reminder_start] + reminder + text[reminder_end:]
+    
+    MAIN.write_text(text, encoding='utf-8')
+    
+    # ------------------------------------------------------------
+    
 
-  ctx.fillStyle = '#1E104B';
-  ctx.font = '900 17px sans-serif';
-  ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 88);
-  ctx.fillStyle = '#625E70';
-  ctx.font = '700 15px sans-serif';
-  ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 112);
-
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
-  });
-  return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
-};'''
-text = text[:reminder_start] + reminder + text[reminder_end:]
-
-MAIN.write_text(text, encoding='utf-8')
-
-# ------------------------------------------------------------
 # 5) Make every DOM JPEG export retain the already requested top
 #    padding even if an earlier CI script did not patch the helper.
 # ------------------------------------------------------------
