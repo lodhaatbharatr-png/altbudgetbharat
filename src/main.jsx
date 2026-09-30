@@ -50,7 +50,7 @@ class ErrorBoundary extends React.Component {
             {String((this.state.error && this.state.error.message) || this.state.error || 'Unknown error')}
           </p>
           <button onClick={this.handleReset} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all">
-            {t("Try Again")}
+            {translate("Try Again")}
           </button>
         </div>
       );
@@ -63,7 +63,7 @@ const AppBottomBranding = () => {
   const handleWhatsAppDeveloper = (e) => {
     e.preventDefault();
     const phone = '917218838122';
-    const textMsg = `${t('Hi Bharat, i need help regarding..')}`;
+    const textMsg = `${translate('Hi Bharat, i need help regarding..')}`;
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
@@ -76,7 +76,7 @@ const AppBottomBranding = () => {
         className="h-[31px] object-contain mb-1.5 drop-shadow-sm"
       />
       <p className="text-[10px] font-bold text-[#625E70] tracking-wide mb-2.5">
-        {t("Developed by - Bharat Rasve © 2026")}
+        {translate("Developed by - Bharat Rasve © 2026")}
       </p>
       <div className="flex items-center justify-center gap-2">
         <button
@@ -705,7 +705,7 @@ const UI_TRANSLATIONS = {
     "hi": "लागू की गई भाषा"
   }
 };
-const t = (key) => {
+const translate = (key) => {
   const language = getSelectedLanguage();
   return language === 'en' ? key : ((UI_TRANSLATIONS[key] && UI_TRANSLATIONS[key][language]) || key);
 };
@@ -853,11 +853,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 34px sans-serif';
-  ctx.fillText(`${t('Hello')} ${personName || t('there')}!`, centerX, 100);
+  ctx.fillText(`${translate('Hello')} ${personName || translate('there')}!`, centerX, 100);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? t('Outstanding balance') : t('Payment reminder for'), centerX, 145);
+  ctx.fillText(reminderType === 'ledger' ? translate('Outstanding balance') : translate('Payment reminder for'), centerX, 145);
 
   roundRect(205, 172, 490, 86, 22);
   ctx.fillStyle = '#F1EAF4';
@@ -868,11 +868,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? t(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive') : `${t('Due on')} ${formatDisplayDate(dueDate)}`, centerX, 291);
+  ctx.fillText(reminderType === 'ledger' ? translate(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive') : `${translate('Due on')} ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? `${t('On or before')} ${formatDisplayDate(dueDate)}` : `${loanName || t('Loan EMI')}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
+  ctx.fillText(reminderType === 'ledger' ? `${translate('On or before')} ${formatDisplayDate(dueDate)}` : `${loanName || translate('Loan EMI')}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
   // Footer is deliberately outside any background container.
   const footerTop = separatorY + 24;
@@ -890,7 +890,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.textAlign = 'left';
   ctx.fillStyle = '#8A8596';
   ctx.font = '800 16px sans-serif';
-  ctx.fillText(t('Sent by'), 70, footerTop + 24);
+  ctx.fillText(translate('Sent by'), 70, footerTop + 24);
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 22px sans-serif';
   ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
@@ -902,7 +902,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.textAlign = 'center';
   ctx.fillStyle = '#8A8596';
   ctx.font = '800 15px sans-serif';
-  ctx.fillText(t('Using'), brandingCenterX, footerTop + 18);
+  ctx.fillText(translate('Using'), brandingCenterX, footerTop + 18);
 
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) {
@@ -924,10 +924,10 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 17px sans-serif';
-  ctx.fillText(t('Your Personal Finance App'), brandingCenterX, footerTop + 88);
+  ctx.fillText(translate('Your Personal Finance App'), brandingCenterX, footerTop + 88);
   ctx.fillStyle = '#625E70';
   ctx.font = '700 15px sans-serif';
-  ctx.fillText(t('Developed by - Bharat Rasve'), brandingCenterX, footerTop + 112);
+  ctx.fillText(translate('Developed by - Bharat Rasve'), brandingCenterX, footerTop + 112);
 
   const blob = await new Promise((resolve, reject) => {
     canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
@@ -980,11 +980,11 @@ const AppProvider = ({ children }) => {
   const [googleUser, setGoogleUser] = useState(null);
 
   const showFeedback = (msg) => {
-    const exact = t(msg);
+    const exact = translate(msg);
     const prefixKey = exact === msg
       ? Object.keys(UI_TRANSLATIONS).filter(key => key.endsWith(': ') && msg.startsWith(key)).sort((a, b) => b.length - a.length)[0]
       : null;
-    const translatedMessage = exact !== msg ? exact : prefixKey ? t(prefixKey) + msg.slice(prefixKey.length) : msg;
+    const translatedMessage = exact !== msg ? exact : prefixKey ? translate(prefixKey) + msg.slice(prefixKey.length) : msg;
     setToast({ show: true, msg: translatedMessage });
     setTimeout(() => setToast({ show: false, msg: '' }), 3000);
   };
@@ -1119,11 +1119,11 @@ const AppProvider = ({ children }) => {
   };
 
   const addTransaction = (tx) => {
-    const typeLabel = t(tx.type === 'BORROW' ? 'Received' : tx.type === 'LENT' ? 'Given' : tx.type === 'EXPENSE' ? 'Expense' : 'Income');
+    const typeLabel = translate(tx.type === 'BORROW' ? 'Received' : tx.type === 'LENT' ? 'Given' : tx.type === 'EXPENSE' ? 'Expense' : 'Income');
     return gasRun('addTransaction', tx)
       .then((payload) => { 
         if (payload) applyPayload(payload); 
-        showFeedback(`${typeLabel} ${t('entry saved')}`); 
+        showFeedback(`${typeLabel} ${translate('entry saved')}`); 
       })
       .catch((err) => { showFeedback('Save failed: ' + err.message); throw err; });
   };
@@ -1552,7 +1552,7 @@ const PeriodSelector = () => {
                     : 'text-slate-500 font-semibold hover:text-slate-800'
                 }`}
               >
-                {t(opt === 'Qtr' ? 'Qtr' : opt)}
+                {translate(opt === 'Qtr' ? 'Qtr' : opt)}
               </button>
             );
           })}
@@ -1562,11 +1562,11 @@ const PeriodSelector = () => {
       {filterPeriod === 'Custom' && (
         <div className="flex space-x-2 mt-1.5 bg-white p-2 rounded-xl border border-theme-dark/15 shadow-sm animate-slide-up origin-top text-[10px] font-bold items-center">
           <div className="flex flex-col w-28">
-            <span className="text-theme-dark/60 uppercase text-[8px]">{t("From")}</span>
+            <span className="text-theme-dark/60 uppercase text-[8px]">{translate("From")}</span>
             <AppDatePicker value={customFrom} onChange={setCustomFrom} className="outline-none text-theme-dark bg-transparent text-[10px] w-full cursor-pointer" />
           </div>
           <div className="flex flex-col border-l border-theme-dark/20 pl-2 w-28">
-            <span className="text-theme-dark/60 uppercase text-[8px]">{t("To")}</span>
+            <span className="text-theme-dark/60 uppercase text-[8px]">{translate("To")}</span>
             <AppDatePicker value={customTo} onChange={setCustomTo} className="outline-none text-theme-dark bg-transparent text-[10px] w-full cursor-pointer" />
           </div>
         </div>
@@ -1580,7 +1580,7 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
   const sortedTransactions = sortTransactionsByDateDesc(transactions);
   const displayTxs = expanded ? sortedTransactions : sortedTransactions.slice(0, maxRows);
 
-  if (transactions.length === 0) return <p className="text-xs text-theme-dark/60 font-semibold px-3 py-3">{t("No records found.")}</p>;
+  if (transactions.length === 0) return <p className="text-xs text-theme-dark/60 font-semibold px-3 py-3">{translate("No records found.")}</p>;
 
   return (
     <div className={embedded ? 'w-full' : 'bg-white rounded-lg border border-theme-dark/10 overflow-hidden shadow-sm'}>
@@ -1588,10 +1588,10 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
         <table className="w-full text-left text-[10px] whitespace-nowrap">
           <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
             <tr>
-              <th className="px-3 py-1.5">{t("Date")}</th>
-              <th className="px-3 py-1.5">{t("Description")}</th>
-              <th className="px-3 py-1.5">{t("Type")}</th>
-              <th className="px-3 py-1.5 text-right">{t("Amount")}</th>
+              <th className="px-3 py-1.5">{translate("Date")}</th>
+              <th className="px-3 py-1.5">{translate("Description")}</th>
+              <th className="px-3 py-1.5">{translate("Type")}</th>
+              <th className="px-3 py-1.5 text-right">{translate("Amount")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-theme-dark/5 font-medium text-theme-dark">
@@ -1616,7 +1616,7 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
                     )}
                   </td>
                   <td className="px-3 py-3.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                    {t(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
+                    {translate(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
                   </td>
                   <td className="px-3 py-3.5 text-right font-black text-xs" style={{ color: txColor }}>
                     {isPos ? '+' : '-'}{formatTableNum(t.amount)}
@@ -1675,7 +1675,7 @@ const Header = () => {
         ></i>
         <input
           type="text"
-          placeholder={t("Search people, note, category...")}
+          placeholder={translate("Search people, note, category...")}
           value={searchQuery}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -1750,20 +1750,20 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
   return (
     <div className="px-4 mt-4 pb-8 space-y-5">
       <div className="flex justify-between items-center px-1">
-        <span className="text-xs text-theme-dark/60 font-bold">{t("Results for")} "<span className="text-theme-dark">{searchQuery}</span>"</span>
-        <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} {t("matches")}</span>
+        <span className="text-xs text-theme-dark/60 font-bold">{translate("Results for")} "<span className="text-theme-dark">{searchQuery}</span>"</span>
+        <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} {translate("matches")}</span>
       </div>
 
       {!hasResults ? (
         <div className="text-center py-12">
           <i className="fa-solid fa-magnifying-glass text-3xl text-theme-dark/20 mb-2"></i>
-          <p className="text-sm font-bold text-theme-dark/60">{t("No matches found")}</p>
+          <p className="text-sm font-bold text-theme-dark/60">{translate("No matches found")}</p>
         </div>
       ) : (
         <>
           {matchedPersons.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{t("People")} ({matchedPersons.length})</h3>
+              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{translate("People")} ({matchedPersons.length})</h3>
               <div className="space-y-2">
                 {matchedPersons.map(p => {
                   let dr = 0, cr = 0;
@@ -1802,7 +1802,7 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
 
           {matchedCategories.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{t("Categories")}</h3>
+              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{translate("Categories")}</h3>
               <div className="flex flex-wrap gap-1.5">
                 {matchedCategories.map((c, i) => (
                   <button key={i} type="button" onClick={() => setSearchQuery(String(c).trim())} title={`Filter transactions by ${c}`} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center hover:bg-[#7B2B8C] hover:text-white active:scale-95 transition-all">
@@ -1832,7 +1832,7 @@ const SideMenuBranding = () => (
       alt="Budget Bharat"
       className="h-6 object-contain mb-1.5"
     />
-    <p className="text-[9px] font-bold text-[#8A8596]">{t("Developed by - Bharat Rasve © 2026")}</p>
+    <p className="text-[9px] font-bold text-[#8A8596]">{translate("Developed by - Bharat Rasve © 2026")}</p>
   </div>
 );
 // --- START OF src/main.jsx (PART 3) ---
@@ -1962,7 +1962,7 @@ const SideMenu = () => {
             />
             <div>
               <h2 className="text-lg font-black tracking-tight text-white">Budget Bharat</h2>
-              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">{t("Your Personal Finance Manager")}</p>
+              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">{translate("Your Personal Finance Manager")}</p>
             </div>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white flex-none">
@@ -1974,7 +1974,7 @@ const SideMenu = () => {
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
             <div className="px-6 pb-3 mb-3 border-b border-[#E4E1EA]">
               <label htmlFor="budget-bharat-language" className="block text-[10px] font-bold text-[#8A8596] uppercase tracking-widest mb-2">
-                <i className="fa-solid fa-language mr-2 text-[#7B2B8C]"></i>{t("Choose Language")}
+                <i className="fa-solid fa-language mr-2 text-[#7B2B8C]"></i>{translate("Choose Language")}
               </label>
               <select
                 id="budget-bharat-language"
@@ -1991,32 +1991,32 @@ const SideMenu = () => {
                   <i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}
                 </p>
               ) : (
-                <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite"><i className="fa-solid fa-circle-check mr-1"></i>{t('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</p>
+                <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite"><i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</p>
               )}
             </div>
-            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{t("Record Setup")}</div>
+            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Record Setup")}</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> {t('Manage Persons')} ({persons.length})</span>
+              <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> {translate('Manage Persons')} ({persons.length})</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
             <button onClick={() => openSubView('manageCategories')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-tags w-7 text-[#7B2B8C]"></i> {t("Manage Categories")}</span>
+              <span><i className="fa-solid fa-tags w-7 text-[#7B2B8C]"></i> {translate("Manage Categories")}</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
             <button onClick={() => openSubView('manageAdmin')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-user-gear w-7 text-[#7B2B8C]"></i> {t("Admin Setup")}</span>
+              <span><i className="fa-solid fa-user-gear w-7 text-[#7B2B8C]"></i> {translate("Admin Setup")}</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{t("Quick Create")}</div>
-            <button onClick={() => openSubView('addPerson')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-user-plus w-7 text-[#078A87]"></i> {t("Add Person")}</button>
-            <button onClick={() => openSubView('addCategory')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-tag w-7 text-[#078A87]"></i> {t("Add Category")}</button>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Quick Create")}</div>
+            <button onClick={() => openSubView('addPerson')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-user-plus w-7 text-[#078A87]"></i> {translate("Add Person")}</button>
+            <button onClick={() => openSubView('addCategory')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-tag w-7 text-[#078A87]"></i> {translate("Add Category")}</button>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{t("Data Backup & Restore")}</div>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Data Backup & Restore")}</div>
             {googleUser ? (
               <>
                 <div className="px-6 py-2 bg-[#F4F3F8] rounded-xl mx-4 my-1 border border-[#E4E1EA]">
-                  <p className="text-[9px] font-bold text-[#625E70] uppercase">{t("Connected Account")}</p>
+                  <p className="text-[9px] font-bold text-[#625E70] uppercase">{translate("Connected Account")}</p>
                   <p className="text-xs font-black text-[#1E104B] truncate">{googleUser.email || googleUser.name}</p>
                 </div>
                 <button onClick={() => { setIsMenuOpen(false); uploadBackupToCloud(); }} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#078A87]">
@@ -2031,15 +2031,15 @@ const SideMenu = () => {
               </>
             ) : (
               <button onClick={handleGoogleLogin} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]">
-                <i className="fa-brands fa-google w-7 text-[#7B2B8C]"></i> {t("Sign in with Google")}
+                <i className="fa-brands fa-google w-7 text-[#7B2B8C]"></i> {translate("Sign in with Google")}
               </button>
             )}
 
             <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] mt-2">
-              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> {t("Export Backup File")}
+              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> {translate("Export Backup File")}
             </button>
             <label className="w-full flex items-center px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] cursor-pointer">
-              <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> {t("Restore from Backup")}
+              <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> {translate("Restore from Backup")}
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -2055,24 +2055,24 @@ const SideMenu = () => {
               />
             </label>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{t("Data Exports")}</div>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Data Exports")}</div>
             <div className="px-4 space-y-2">
               <button
                 type="button"
                 onClick={() => setExportGroup(exportGroup === 'summaries' ? '' : 'summaries')}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
               >
-                <span><i className="fa-solid fa-chart-pie w-7 text-[#078A87]"></i>{t("Summaries")}</span>
+                <span><i className="fa-solid fa-chart-pie w-7 text-[#078A87]"></i>{translate("Summaries")}</span>
                 <i className={`fa-solid fa-chevron-${exportGroup === 'summaries' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
               </button>
               {exportGroup === 'summaries' && (
                 <div className="grid grid-cols-2 gap-1.5 px-1">
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Income")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Expenses")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Active Loans")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Persons")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Receivables")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Payables")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Income")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Expenses")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Active Loans")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Persons")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Receivables")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Payables")}</button>
                 </div>
               )}
 
@@ -2081,15 +2081,15 @@ const SideMenu = () => {
                 onClick={() => setExportGroup(exportGroup === 'transactions' ? '' : 'transactions')}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
               >
-                <span><i className="fa-solid fa-list-check w-7 text-[#7B2B8C]"></i>{t("Transactions")}</span>
+                <span><i className="fa-solid fa-list-check w-7 text-[#7B2B8C]"></i>{translate("Transactions")}</span>
                 <i className={`fa-solid fa-chevron-${exportGroup === 'transactions' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
               </button>
               {exportGroup === 'transactions' && (
                 <div className="grid grid-cols-2 gap-1.5 px-1">
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Loans EMI Records")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("All Transactions")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Incomes")}</button>
-                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{t("Expenses")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Loans EMI Records")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("All Transactions")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Incomes")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Expenses")}</button>
                 </div>
               )}
             </div>
@@ -2101,10 +2101,10 @@ const SideMenu = () => {
         {menuView === 'managePersons' && (
           <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
             <div className="flex justify-between items-center mb-4">
-              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {t("Back")}</button>
-              <button onClick={() => openSubView('addPerson')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {t("Add")}</button>
+              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
+              <button onClick={() => openSubView('addPerson')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {translate("Add")}</button>
             </div>
-            <h3 className="text-base font-black text-[#1E104B] mb-3">{t('Directory Persons')} ({persons.length})</h3>
+            <h3 className="text-base font-black text-[#1E104B] mb-3">{translate('Directory Persons')} ({persons.length})</h3>
             <div className="space-y-2 flex-1 overflow-y-auto hide-scrollbar">
               {persons.map(p => (
                 <div key={p.id || p.name} className="p-3 bg-[#F4F3F8] rounded-xl border border-[#E4E1EA] flex justify-between items-center">
@@ -2113,7 +2113,7 @@ const SideMenu = () => {
                     <p className="text-[9px] text-[#8A8596] font-medium">{p.phone || 'No phone'} • {p.address || 'Maharashtra'}</p>
                   </div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => openSubView('editPerson', p)} title={t("Edit Person")} className="w-7 h-7 rounded-lg bg-white text-[#7B2B8C] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#7B2B8C] hover:text-white transition-all"><i className="fa-solid fa-pen"></i></button>
+                    <button onClick={() => openSubView('editPerson', p)} title={translate("Edit Person")} className="w-7 h-7 rounded-lg bg-white text-[#7B2B8C] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#7B2B8C] hover:text-white transition-all"><i className="fa-solid fa-pen"></i></button>
                     <button onClick={() => setPersonToDelete(p.name)} title="Delete Person" className="w-7 h-7 rounded-lg bg-white text-[#D6455D] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#D6455D] hover:text-white transition-all"><i className="fa-solid fa-trash-can"></i></button>
                   </div>
                 </div>
@@ -2126,12 +2126,12 @@ const SideMenu = () => {
         {menuView === 'manageCategories' && (
           <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
             <div className="flex justify-between items-center mb-4">
-              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {t("Back")}</button>
-              <button onClick={() => openSubView('addCategory')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {t("Add")}</button>
+              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
+              <button onClick={() => openSubView('addCategory')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {translate("Add")}</button>
             </div>
             <div className="flex gap-2 mb-4">
-              <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{t("Expense")}</button>
-              <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{t("Income")}</button>
+              <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Expense")}</button>
+              <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Income")}</button>
             </div>
             <div className="space-y-2 flex-1 overflow-y-auto hide-scrollbar">
               {(catType === 'expense' ? categories.expense : categories.income).map((c, idx) => (
@@ -2150,24 +2150,24 @@ const SideMenu = () => {
 
         {(menuView === 'addPerson' || menuView === 'editPerson' || menuView === 'addCategory' || menuView === 'editCategory' || menuView === 'manageAdmin') && (
           <div className="flex-1 p-6 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
-            <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] mb-3 active:scale-95 self-start hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {t("Back")}</button>
+            <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] mb-3 active:scale-95 self-start hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
             <h3 className="text-base font-black text-[#1E104B] mb-1">
-              {menuView === 'addPerson' ? t('Add New Person') : menuView === 'editPerson' ? t('Edit Person') : menuView === 'addCategory' ? `${t('Add New')} ${t(catType === 'expense' ? 'Expense' : 'Income')} ${t('Category')}` : menuView === 'editCategory' ? t('Edit Category') : t('Admin Setup')}
+              {menuView === 'addPerson' ? translate('Add New Person') : menuView === 'editPerson' ? translate('Edit Person') : menuView === 'addCategory' ? `${translate('Add New')} ${translate(catType === 'expense' ? 'Expense' : 'Income')} ${translate('Category')}` : menuView === 'editCategory' ? translate('Edit Category') : translate('Admin Setup')}
             </h3>
             <p className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4">
-              {menuView === 'addCategory' ? `${t('Target Ledger')}: ${t(catType === 'expense' ? 'Expense' : 'Income')}` : menuView === 'addPerson' ? t('Directory Party Entry') : t('Configuration Setup')}
+              {menuView === 'addCategory' ? `${translate('Target Ledger')}: ${translate(catType === 'expense' ? 'Expense' : 'Income')}` : menuView === 'addPerson' ? translate('Directory Party Entry') : translate('Configuration Setup')}
             </p>
             {menuView === 'addCategory' && (
               <div className="flex gap-2 mb-4">
-                <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{t("Expense")}</button>
-                <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{t("Income")}</button>
+                <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Expense")}</button>
+                <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Income")}</button>
               </div>
             )}
             <form onSubmit={handleFormSubmit} className="space-y-4 pb-12">
               <div className="space-y-4">
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
                   <div>
-                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Category Name *")}</label>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Category Name *")}</label>
                     <input
                       type="text"
                       required
@@ -2183,7 +2183,7 @@ const SideMenu = () => {
                   <>
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">{t("Name *")}</label>
+                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">{translate("Name *")}</label>
                       </div>
                       <input
                         type="text"
@@ -2195,16 +2195,16 @@ const SideMenu = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Phone")}</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Phone")}</label>
                       <input type="tel" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Email Id")}</label>
-                      <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder={t("Optional")} />
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Email Id")}</label>
+                      <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder={translate("Optional")} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-1">{t("Address / Location")}</label>
-                      <input type="text" value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder={t("City or Village")} />
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-1">{translate("Address / Location")}</label>
+                      <input type="text" value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder={translate("City or Village")} />
                     </div>
                   </>
                 )}
@@ -2212,23 +2212,23 @@ const SideMenu = () => {
                 {menuView === 'manageAdmin' && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Name *")}</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Name *")}</label>
                       <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. Bharat Rasve" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Contact")}</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Contact")}</label>
                       <input type="tel" value={formData.contact || ''} onChange={e => setFormData({ ...formData, contact: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. 9876543210" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Email id")}</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Email id")}</label>
                       <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. user@example.com" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Statement Header note")}</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Statement Header note")}</label>
                       <input type="text" value={formData.headerNote || formData.note || ''} onChange={e => setFormData({ ...formData, headerNote: e.target.value, note: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. Official Accounting Summary" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Statement Footer note")}</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Statement Footer note")}</label>
                       <input type="text" value={formData.footerNote || ''} onChange={e => setFormData({ ...formData, footerNote: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. Thank you for your business" />
                     </div>
                   </>
@@ -2253,10 +2253,10 @@ const SideMenu = () => {
               <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
             </div>
             <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-              {isSubmitting ? t('Deleting Person...') : t('Delete Person?')}
+              {isSubmitting ? translate('Deleting Person...') : translate('Delete Person?')}
             </h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
-              {isSubmitting ? `${t('Removing')} ${personToDelete} ${t('and associated records.')}` : <>{t("Delete")} <strong>{personToDelete}</strong> {t("and all linked transactions? This action cannot be undone.")}</>}
+              {isSubmitting ? `${translate('Removing')} ${personToDelete} ${translate('and associated records.')}` : <>{translate("Delete")} <strong>{personToDelete}</strong> {translate("and all linked transactions? This action cannot be undone.")}</>}
             </p>
             <div className="flex gap-3 w-full">
               <button
@@ -2265,7 +2265,7 @@ const SideMenu = () => {
                 onClick={() => setPersonToDelete(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
               >
-                {t("Cancel")}
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -2287,7 +2287,7 @@ const SideMenu = () => {
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xl mx-auto mb-3">
               <i className="fa-solid fa-tag"></i>
             </div>
-            <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">{t("Delete Category?")}</h3>
+            <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">{translate("Delete Category?")}</h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
               Delete category <strong>"{catToDelete.name}"</strong>?
             </p>
@@ -2298,7 +2298,7 @@ const SideMenu = () => {
                 onClick={() => setCatToDelete(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all"
               >
-                {t("Cancel")}
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -2307,7 +2307,7 @@ const SideMenu = () => {
                 className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5"
               >
                 {isSubmitting && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
-                <span>{t("Delete")}</span>
+                <span>{translate("Delete")}</span>
               </button>
             </div>
           </div>
@@ -2369,45 +2369,45 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
 
       <div className="grad-kpi rounded-2xl p-3.5 shadow-md flex justify-between divide-x divide-white/10 mt-0.5">
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Expense")}</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Expense")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.e)}</p>
         </div>
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Income")}</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Income")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.i)}</p>
         </div>
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Given (Dr)")}</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Given (Dr)")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.dr)}</p>
         </div>
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Received")}</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Received")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.cr)}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl p-4 border border-theme-dark/10 shadow-sm space-y-4">
-        <h2 className="text-[10px] font-bold text-theme-dark uppercase tracking-widest">{t("Expense & Income Overview")}</h2>
+        <h2 className="text-[10px] font-bold text-theme-dark uppercase tracking-widest">{translate("Expense & Income Overview")}</h2>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#078A87]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#078A87]/25">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">{t("Total Inflow")}</span>
-              <span className="text-[8px] font-semibold text-[#078A87]/70">{t("(Inc + Recv)")}</span>
+              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">{translate("Total Inflow")}</span>
+              <span className="text-[8px] font-semibold text-[#078A87]/70">{translate("(Inc + Recv)")}</span>
             </div>
             <span className="text-base font-extrabold text-[#078A87] mt-0.5">{formatMoney(kpi.i + kpi.cr)}</span>
           </div>
           <div className="bg-[#D6455D]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#D6455D]/25">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">{t("Total Outflow")}</span>
-              <span className="text-[8px] font-semibold text-[#D6455D]/70">{t("(Exp + Given)")}</span>
+              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">{translate("Total Outflow")}</span>
+              <span className="text-[8px] font-semibold text-[#D6455D]/70">{translate("(Exp + Given)")}</span>
             </div>
             <span className="text-base font-extrabold text-[#D6455D] mt-0.5">{formatMoney(kpi.e + kpi.dr)}</span>
           </div>
         </div>
 
         <div className="pt-2 space-y-2.5">
-          <p className="text-[10px] font-bold text-theme-dark/50 uppercase tracking-wider">{t("Top Spending Categories")}</p>
+          <p className="text-[10px] font-bold text-theme-dark/50 uppercase tracking-wider">{translate("Top Spending Categories")}</p>
           {catData.slice(0, 3).map((c, i) => (
             <div key={i}>
               <div className="flex justify-between text-xs font-bold mb-1">
@@ -2424,22 +2424,22 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
 
       <div className="bg-white rounded-xl border border-theme-dark/10 overflow-hidden shadow-sm">
         <div className="px-3.5 py-3 border-b border-theme-dark/5">
-          <h2 className="text-[11px] font-black text-theme-dark uppercase tracking-wider">{t("Recent Transactions")}</h2>
+          <h2 className="text-[11px] font-black text-theme-dark uppercase tracking-wider">{translate("Recent Transactions")}</h2>
         </div>
         <TransactionTable transactions={filteredTransactions} maxRows={6} showViewAll={false} onSelectTransaction={onSelectTransaction} embedded={true} />
       </div>
 
       <div className="bg-white rounded-2xl p-4 border border-[#E4E1EA] shadow-xs space-y-3.5">
-        <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">{t("People Overview")}</h2>
+        <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">{translate("People Overview")}</h2>
 
         <div className="grid grid-cols-2 gap-3">
           <div
             onClick={() => { setDirectoryFilter('RECEIVABLE'); onNavigateTab && onNavigateTab('people'); }}
             className="bg-[#078A87]/10 p-3 rounded-xl flex flex-col border border-[#078A87]/20 cursor-pointer hover:bg-[#078A87]/15 active:scale-95 transition-all"
-            title={t("Click to view all Credit (Receivable) parties")}
+            title={translate("Click to view all Credit (Receivable) parties")}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">{t("Total Receivable")}</span>
+              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">{translate("Total Receivable")}</span>
               <i className="fa-solid fa-arrow-right text-[10px] text-[#078A87]"></i>
             </div>
             <span className="text-base font-black text-[#078A87] mt-0.5">+{formatMoney(totalReceivable)}</span>
@@ -2447,10 +2447,10 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
           <div
             onClick={() => { setDirectoryFilter('PAYABLE'); onNavigateTab && onNavigateTab('people'); }}
             className="bg-[#D6455D]/10 p-3 rounded-xl flex flex-col border border-[#D6455D]/20 cursor-pointer hover:bg-[#D6455D]/15 active:scale-95 transition-all"
-            title={t("Click to view all Debit (Payable) parties")}
+            title={translate("Click to view all Debit (Payable) parties")}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">{t("Total Payable")}</span>
+              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">{translate("Total Payable")}</span>
               <i className="fa-solid fa-arrow-right text-[10px] text-[#D6455D]"></i>
             </div>
             <span className="text-base font-black text-[#D6455D] mt-0.5">-{formatMoney(totalPayable)}</span>
@@ -2500,7 +2500,7 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
         return (
           <div className="bg-white rounded-2xl p-4 border border-[#E4E1EA] shadow-xs space-y-3.5">
             <div className="flex justify-between items-center">
-              <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">{t("Active Loans Overview")}</h2>
+              <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">{translate("Active Loans Overview")}</h2>
               <button
                 onClick={() => onNavigateTab && onNavigateTab('loans')}
                 className="text-[10px] font-black text-[#078A87] uppercase hover:underline"
@@ -2511,30 +2511,30 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
 
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-[#1E104B]/5 p-2.5 rounded-xl flex flex-col justify-between border border-[#1E104B]/15">
-                <span className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider truncate">{t("Total to Pay")}</span>
+                <span className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider truncate">{translate("Total to Pay")}</span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#1E104B] mt-1 truncate">{formatMoney(homeLoanToPay)}</span>
               </div>
               <div className="bg-[#078A87]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#078A87]/25">
-                <span className="text-[9px] font-bold text-[#078A87] uppercase tracking-wider truncate">{t("Paid So Far")}</span>
+                <span className="text-[9px] font-bold text-[#078A87] uppercase tracking-wider truncate">{translate("Paid So Far")}</span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#078A87] mt-1 truncate">{formatMoney(homeLoanPaid)}</span>
               </div>
               <div className="bg-[#D6455D]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#D6455D]/25">
-                <span className="text-[9px] font-bold text-[#D6455D] uppercase tracking-wider truncate">{t("Remaining")}</span>
+                <span className="text-[9px] font-bold text-[#D6455D] uppercase tracking-wider truncate">{translate("Remaining")}</span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#D6455D] mt-1 truncate">{formatMoney(homeLoanRem)}</span>
               </div>
             </div>
 
             {activeLoansList.length === 0 ? (
-              <p className="text-xs text-[#625E70] font-semibold text-center py-2">{t("No active loans.")}</p>
+              <p className="text-xs text-[#625E70] font-semibold text-center py-2">{translate("No active loans.")}</p>
             ) : (
               <div className="overflow-x-auto hide-scrollbar">
                 <table className="w-full table-fixed text-[10px]">
                   <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
                     <tr>
-                      <th className="w-[34%] px-2.5 py-1.5 text-left tracking-tight">{t("Loan / Person")}</th>
-                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{t("Loan Rs.")}</th>
-                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{t("EMI Rs.")}</th>
-                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{t("EMI Paid")}</th>
+                      <th className="w-[34%] px-2.5 py-1.5 text-left tracking-tight">{translate("Loan / Person")}</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{translate("Loan Rs.")}</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{translate("EMI Rs.")}</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{translate("EMI Paid")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
@@ -2643,7 +2643,7 @@ const PersonsView = ({ onSelectPerson }) => {
         <button
           onClick={handleSharePersonsSummary}
           disabled={isSharingPersons}
-          title={t("Share Directory Summary Image")}
+          title={translate("Share Directory Summary Image")}
           className={`w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs ${isSharingPersons ? 'opacity-50 cursor-wait' : ''}`}
         >
           <i className={`fa-solid ${isSharingPersons ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
@@ -2657,7 +2657,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'ALL' ? 'bg-white text-[#1E104B] shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            {t("All")}
+            {translate("All")}
           </button>
           <button
             type="button"
@@ -2666,7 +2666,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'RECEIVABLE' ? 'bg-[#078A87] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            {t("Credit")}
+            {translate("Credit")}
           </button>
           <button
             type="button"
@@ -2675,22 +2675,22 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'PAYABLE' ? 'bg-[#D6455D] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            {t("Debit")}
+            {translate("Debit")}
           </button>
         </div>
       </div>
 
       <div className="grad-kpi rounded-2xl p-3.5 shadow-md grid grid-cols-3 divide-x divide-white/10 text-center">
         <div className="px-1">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{t("RECEIVABLE")}</p>
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{translate("RECEIVABLE")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(totalReceivable)}</p>
         </div>
         <div className="px-1">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{t("PAYABLE")}</p>
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{translate("PAYABLE")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(totalPayable)}</p>
         </div>
         <div className="px-1">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{t("BALANCE")}</p>
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{translate("BALANCE")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(Math.abs(netBalance))}</p>
         </div>
       </div>
@@ -2700,10 +2700,10 @@ const PersonsView = ({ onSelectPerson }) => {
           <table className="w-full table-fixed text-[10px]">
             <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
               <tr>
-                <th className="w-[34%] px-2.5 py-2 text-left tracking-tight">{t("Person Name")}</th>
-                <th className="w-[22%] px-1.5 py-2 text-right tracking-tight">{t("Given")}</th>
-                <th className="w-[22%] px-1.5 py-1.5 text-right tracking-tight">{t("Recv")}</th>
-                <th className="w-[22%] px-2 py-2 text-right tracking-tight">{t("Balance")}</th>
+                <th className="w-[34%] px-2.5 py-2 text-left tracking-tight">{translate("Person Name")}</th>
+                <th className="w-[22%] px-1.5 py-2 text-right tracking-tight">{translate("Given")}</th>
+                <th className="w-[22%] px-1.5 py-1.5 text-right tracking-tight">{translate("Recv")}</th>
+                <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("Balance")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
@@ -2766,15 +2766,15 @@ const PersonsView = ({ onSelectPerson }) => {
 
             <div className="flex justify-between bg-[#F4F3F8] rounded-xl py-2 px-2 text-center mb-2">
               <div className="flex-1 px-1">
-                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{t("RECEIVABLE")}</p>
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("RECEIVABLE")}</p>
                 <p className="text-base font-black text-[#078A87]">+{formatMoney(totalReceivable)}</p>
               </div>
               <div className="flex-1 px-1">
-                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{t("PAYABLE")}</p>
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("PAYABLE")}</p>
                 <p className="text-base font-black text-[#D6455D]">-{formatMoney(totalPayable)}</p>
               </div>
               <div className="flex-1 px-1">
-                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{t("BALANCE")}</p>
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("BALANCE")}</p>
                 <p className="text-base font-black text-[#1E104B]">{netBalance >= 0 ? '+' : '-'}{formatMoney(Math.abs(netBalance))}</p>
               </div>
             </div>
@@ -2788,10 +2788,10 @@ const PersonsView = ({ onSelectPerson }) => {
               </colgroup>
               <thead className="bg-[#1E104B] text-white text-[11px]">
                 <tr>
-                  <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">{t("Person Name")}</th>
-                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{t("Given")}</th>
-                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{t("Recv")}</th>
-                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{t("Balance")}</th>
+                  <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Person Name")}</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Given")}</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Recv")}</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Balance")}</th>
                 </tr>
               </thead>
               <tbody className="text-[#1E104B] bg-transparent font-medium">
@@ -2815,10 +2815,10 @@ const PersonsView = ({ onSelectPerson }) => {
 
             <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
               <div className="flex flex-col justify-center text-left leading-tight">
-                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{t("STATEMENT BY -")}</span>
-                <span className="font-extrabold text-[11px] text-[#1E104B]">{t("Budget Bharat-Personal finance App")}</span>
-                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
-                <span className="text-[10px] font-medium text-[#625E70]">{t("Mo.No: 7218838122")}</span>
+                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
               </div>
 
               <div className="flex items-center justify-center">
@@ -2940,7 +2940,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
   const handleShareImage = async () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
-    const captionText = `${t('Dear')} ${person.name}, ${t(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${t('on or before date')} ${targetDateStr}.`;
+    const captionText = `${translate('Dear')} ${person.name}, ${translate(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${translate('on or before date')} ${targetDateStr}.`;
 
     if (txs.length > 10) {
       showFeedback('Loading fonts & generating PDF...');
@@ -2954,7 +2954,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
         const element = statementSlipRef.current || document.getElementById('whatsapp-share-slip');
         if (!element) throw new Error('Statement DOM node not found');
 
-        const fileName = `${person.name.replace(/\s+/g, '_')}_${t('Overall Statement')}.pdf`;
+        const fileName = `${person.name.replace(/\s+/g, '_')}_${translate('Overall Statement')}.pdf`;
         const opt = {
           margin: [8, 8, 10, 8],
           filename: fileName,
@@ -3021,14 +3021,14 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
       return;
     }
     const balanceDirection = person.remaining > 0 ? 'receivable' : 'payable';
-    const actionWord = t(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive').toLowerCase();
-    const captionText = `${t('Dear')} ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} ${t('on or before')} ${formatDisplayDate(targetDateStr)}.`;
+    const actionWord = translate(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive').toLowerCase();
+    const captionText = `${translate('Dear')} ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} ${translate('on or before')} ${formatDisplayDate(targetDateStr)}.`;
     setIsSharingStatement(true);
     showFeedback('Generating balance reminder...');
     try {
       const file = await createPaymentReminderImage({ personName: person.name, amount: Math.abs(person.remaining), dueDate: targetDateStr, admin, reminderType: 'ledger', balanceDirection });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: t('Budget Bharat Balance Reminder'), text: captionText });
+        await navigator.share({ files: [file], title: translate('Budget Bharat Balance Reminder'), text: captionText });
         showFeedback('Reminder ready to share');
       } else {
         const url = URL.createObjectURL(file);
@@ -3047,7 +3047,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
   const handleWhatsAppShare = () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
-    const textMsg = `${t('Dear')} ${person.name}, ${t(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${t('on or before date')} ${targetDateStr}.`;
+    const textMsg = `${translate('Dear')} ${person.name}, ${translate(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${translate('on or before date')} ${targetDateStr}.`;
     let phone = String(person.phone || '').replace(/\D/g, '');
     if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
     if (phone.length === 10) phone = '91' + phone;
@@ -3063,15 +3063,15 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
       {showLedgerShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={t("Close")}>×</button></div>
-            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share transaction statement")}</span></button>
-            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share balance reminder")}</span></button>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={translate("Close")}>×</button></div>
+            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share transaction statement")}</span></button>
+            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share balance reminder")}</span></button>
           </div>
         </div>
       )}
       <div className="flex-none grad-dark px-3.5 py-3 text-white flex items-center justify-between shadow-md z-30">
         <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
-          <button onClick={onBack} title={t("Exit to Directory")} className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
+          <button onClick={onBack} title={translate("Exit to Directory")} className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
             <i className="fa-solid fa-arrow-left text-base"></i>
           </button>
           <div className="flex flex-col min-w-0">
@@ -3139,11 +3139,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
         <div className="flex items-center gap-2 flex-none">
           {allPersons.length > 0 && (
             <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10 text-[11px] font-black">
-              <button onClick={goToPrev} title={t("Previous Person")} className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
+              <button onClick={goToPrev} title={translate("Previous Person")} className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
                 <i className="fa-solid fa-chevron-left text-[9px]"></i>
               </button>
               <span className="opacity-75 select-none">({currentIndex + 1}/{allPersons.length})</span>
-              <button onClick={goToNext} title={t("Next Person")} className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
+              <button onClick={goToNext} title={translate("Next Person")} className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
                 <i className="fa-solid fa-chevron-right text-[9px]"></i>
               </button>
             </div>
@@ -3181,14 +3181,14 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               </button>
               <button
                 onClick={() => setShowLedgerShareOptions(true)}
-                title={t("Share Statement or Reminder")}
+                title={translate("Share Statement or Reminder")}
                 className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
               >
                 <i className="fa-solid fa-share-nodes text-xs"></i>
               </button>
               <button
                 onClick={handleWhatsAppShare}
-                title={t("Open WhatsApp chat")}
+                title={translate("Open WhatsApp chat")}
                 className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:brightness-105 active:scale-95 transition-all shadow-xs"
               >
                 <i className="fa-brands fa-whatsapp text-base"></i>
@@ -3220,7 +3220,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               })()}
               <button
                 onClick={() => setShowDeletePersonConfirm(true)}
-                title={t("Delete Person & All Records")}
+                title={translate("Delete Person & All Records")}
                 className="w-9 h-9 rounded-full bg-[#D6455D]/15 text-[#D6455D] hover:bg-[#D6455D] hover:text-white active:bg-[#D6455D] active:text-white flex items-center justify-center transition-all border border-[#D6455D]/25 shadow-xs"
               >
                 <i className="fa-solid fa-trash-can text-xs"></i>
@@ -3233,7 +3233,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                 type="text"
                 value={ledgerSearch}
                 onChange={e => setLedgerSearch(e.target.value)}
-                placeholder={t("Search entry...")}
+                placeholder={translate("Search entry...")}
                 className="w-full bg-white border border-[#E4E1EA] rounded-full py-1.5 pl-8 pr-7 text-xs text-[#1E104B] placeholder-slate-400 focus:outline-none focus:border-[#078A87] transition-all font-semibold shadow-xs"
               />
               {ledgerSearch && (
@@ -3250,15 +3250,15 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
           <div className="grad-kpi py-3.5 px-3 rounded-2xl shadow-md grid grid-cols-3 divide-x divide-white/10 text-center">
             <div className="px-1">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{t("GIVEN (DR)")}</p>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{translate("GIVEN (DR)")}</p>
               <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(person.totalDr)}</p>
             </div>
             <div className="px-1">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{t("RECEIVED (CR)")}</p>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{translate("RECEIVED (CR)")}</p>
               <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(person.totalCr)}</p>
             </div>
             <div className="px-1">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{t("BALANCE")}</p>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{translate("BALANCE")}</p>
               <p className="text-sm font-black text-white mt-1 truncate">
                 {person.remaining > 0 ? '+' : person.remaining < 0 ? '-' : ''}{formatMoney(Math.abs(person.remaining))}
               </p>
@@ -3270,9 +3270,9 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               <table className="w-full text-left text-[10px] whitespace-nowrap">
                 <thead className="bg-[#E2DEEA] text-[#1E104B] font-black uppercase border-b border-[#CDC8DA] tracking-wider">
                   <tr>
-                    <th className="px-3.5 py-1.5">{t("Date")}</th>
-                    <th className="px-3.5 py-1.5">{t("Description")}</th>
-                    <th className="px-3.5 py-1.5 text-right">{t("Amount")}</th>
+                    <th className="px-3.5 py-1.5">{translate("Date")}</th>
+                    <th className="px-3.5 py-1.5">{translate("Description")}</th>
+                    <th className="px-3.5 py-1.5 text-right">{translate("Amount")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
@@ -3309,10 +3309,10 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                   <i className={isDeletingPerson ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
                 </div>
                 <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-                  {isDeletingPerson ? t('Deleting Person...') : t('Delete Person?')}
+                  {isDeletingPerson ? translate('Deleting Person...') : translate('Delete Person?')}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 mb-5">
-                  {isDeletingPerson ? `${t('Removing')} ${person.name} ${t('and all associated entries from sheet.')}` : <>{t("Delete")} <strong>{person.name}</strong> {t("and all associated transactions? This cannot be undone.")}</>}
+                  {isDeletingPerson ? `${translate('Removing')} ${person.name} ${translate('and all associated entries from sheet.')}` : <>{translate("Delete")} <strong>{person.name}</strong> {translate("and all associated transactions? This cannot be undone.")}</>}
                 </p>
                 <div className="flex gap-3 w-full">
                   <button
@@ -3321,7 +3321,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                     onClick={() => setShowDeletePersonConfirm(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
                   >
-                    {t("Cancel")}
+                    {translate("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -3399,11 +3399,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
                 <div className="flex justify-between py-1.5 px-2 text-center mb-2 divide-x divide-slate-200">
                   <div className="flex-1 px-1">
-                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">{t("GIVEN (DR)")}</p>
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">{translate("GIVEN (DR)")}</p>
                     <p className="text-xl font-black text-[#7B2B8C] leading-none">{formatMoney(person.totalDr)}</p>
                   </div>
                   <div className="flex-1 px-1">
-                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">{t("RECEIVED (CR)")}</p>
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">{translate("RECEIVED (CR)")}</p>
                     <p className="text-xl font-black text-[#078A87] leading-none">{formatMoney(person.totalCr)}</p>
                   </div>
                   <div className="flex-1 px-1">
@@ -3426,11 +3426,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                   </colgroup>
                   <thead className="bg-[#1E104B] text-white">
                     <tr>
-                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{t("Date")}</th>
-                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{t("Description")}</th>
-                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{t("Ref A/C")}</th>
-                      <th className="py-1.5 px-1.5 font-bold uppercase text-right border border-[#E4E1EA]">{t("Amount")}</th>
-                      <th className="py-1.5 px-1 font-bold uppercase text-center border border-[#E4E1EA]">{t("Promise")}</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Date")}</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Description")}</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Ref A/C")}</th>
+                      <th className="py-1.5 px-1.5 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Amount")}</th>
+                      <th className="py-1.5 px-1 font-bold uppercase text-center border border-[#E4E1EA]">{translate("Promise")}</th>
                     </tr>
                   </thead>
                   <tbody className="text-[#1E104B] bg-transparent">
@@ -3450,10 +3450,10 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
                 <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
                   <div className="flex flex-col justify-center text-left leading-tight">
-                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{t("STATEMENT BY -")}</span>
-                    <span className="font-extrabold text-[11px] text-[#1E104B]">{t("Budget Bharat-Personal finance App")}</span>
-                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
-                    <span className="text-[10px] font-medium text-[#625E70]">{t("Mo.No: 7218838122")}</span>
+                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                    <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
                   </div>
 
                   <div className="flex items-center justify-center">
@@ -3809,7 +3809,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
       showFeedback(borrower && borrower.phone ? 'Please check this person’s saved phone number (use a valid Indian mobile number).' : 'No phone number saved for this person. Add a phone number in Person Ledger first.');
       return;
     }
-    const textMsg = `${t('Hello')} ${currentLoan.person}, ${t('your')} ${currentLoan.loanName} ${t('EMI')} #${nextPending.emiNo} ${t('with amount')} ${formatMoney(nextPending.emiAmount)} ${t('is due on')} ${formatDisplayDate(nextPending.date)}. ${t('Please pay')}.`;
+    const textMsg = `${translate('Hello')} ${currentLoan.person}, ${translate('your')} ${currentLoan.loanName} ${translate('EMI')} #${nextPending.emiNo} ${translate('with amount')} ${formatMoney(nextPending.emiAmount)} ${translate('is due on')} ${formatDisplayDate(nextPending.date)}. ${translate('Please pay')}.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -3818,11 +3818,11 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     if (!currentLoan) return;
     const nextPending = (currentLoan.schedule || []).find(s => !s.paid && String(s.paid).toLowerCase() !== 'true');
     if (!nextPending) { showFeedback('All EMIs for this loan are cleared!'); return; }
-    const textMsg = `${t('Hello')} ${currentLoan.person}, ${t('your')} ${currentLoan.loanName} ${t('EMI')} #${nextPending.emiNo} ${t('with amount')} ${formatMoney(nextPending.emiAmount)} ${t('is due on')} ${formatDisplayDate(nextPending.date)}. ${t('Please pay')}.`;
+    const textMsg = `${translate('Hello')} ${currentLoan.person}, ${translate('your')} ${currentLoan.loanName} ${translate('EMI')} #${nextPending.emiNo} ${translate('with amount')} ${formatMoney(nextPending.emiAmount)} ${translate('is due on')} ${formatDisplayDate(nextPending.date)}. ${translate('Please pay')}.`;
     try {
       const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: t('Budget Bharat Payment Reminder'), text: textMsg });
+        await navigator.share({ files: [file], title: translate('Budget Bharat Payment Reminder'), text: textMsg });
         showFeedback('Reminder ready to share');
       } else {
         const url = URL.createObjectURL(file); const link = document.createElement('a'); link.href = url; link.download = file.name;
@@ -3849,7 +3849,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
       const safePerson = String(currentLoan.person || 'User').replace(/\s+/g, '_');
       const safeLoan = String(currentLoan.loanName || 'Loan').replace(/\s+/g, '_');
-      const fileName = `${safePerson}_${safeLoan}_${t('EMI Table')}.pdf`;
+      const fileName = `${safePerson}_${safeLoan}_${translate('EMI Table')}.pdf`;
 
       if (currentLoan.schedule.length > 12) {
         const opt = {
@@ -3945,7 +3945,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
           <button
             onClick={handleShareMasterLoans}
             disabled={isSharingMasterLoans}
-            title={t("Share Loans Summary Image")}
+            title={translate("Share Loans Summary Image")}
             className={`w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs ${isSharingMasterLoans ? 'opacity-50 cursor-wait' : ''}`}
           >
             <i className={`fa-solid ${isSharingMasterLoans ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
@@ -3964,21 +3964,21 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
             className="px-3.5 py-1.5 rounded-xl bg-[#078A87] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
             <i className="fa-solid fa-plus text-xs"></i>
-            <span>{t("New Loan")}</span>
+            <span>{translate("New Loan")}</span>
           </button>
         </div>
 
         <div className="grad-kpi rounded-2xl p-4 shadow-md grid grid-cols-3 divide-x divide-white/10 text-center text-white">
           <div className="px-1">
-            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Total to Pay")}</p>
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Total to Pay")}</p>
             <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(masterSummary.totalLoanToPay)}</p>
           </div>
           <div className="px-1">
-            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Paid So Far")}</p>
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Paid So Far")}</p>
             <p className="text-sm font-black text-emerald-400 mt-1 truncate">{formatMoney(masterSummary.totalPaidSoFar)}</p>
           </div>
           <div className="px-1">
-            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{t("Remaining")}</p>
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Remaining")}</p>
             <p className="text-sm font-black text-[#07C0BE] mt-1 truncate">{formatMoney(masterSummary.totalRemaining)}</p>
           </div>
         </div>
@@ -3987,17 +3987,17 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
           {loans.length === 0 ? (
             <div className="text-center py-12 px-4">
               <i className="fa-solid fa-hand-holding-dollar text-3xl text-gray-300 mb-2"></i>
-              <p className="text-xs font-bold text-gray-500">{t("No active loans found. Create your first loan above.")}</p>
+              <p className="text-xs font-bold text-gray-500">{translate("No active loans found. Create your first loan above.")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto hide-scrollbar">
               <table className="w-full table-fixed text-[10px]">
                 <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
                   <tr>
-                    <th className="w-[34%] px-3 py-2 text-left tracking-tight">{t("Loan / Person")}</th>
-                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{t("Loan Rs.")}</th>
-                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{t("EMI Rs.")}</th>
-                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{t("EMI Paid")}</th>
+                    <th className="w-[34%] px-3 py-2 text-left tracking-tight">{translate("Loan / Person")}</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("Loan Rs.")}</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("EMI Rs.")}</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("EMI Paid")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
@@ -4069,7 +4069,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
                   <h1 className="text-[10px] font-black text-[#7B2B8C] uppercase tracking-widest mb-0.5">
                     {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
                   </h1>
-                  <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">{t("Active Loans Statement")}</h2>
+                  <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">{translate("Active Loans Statement")}</h2>
                 </div>
                 <div className="text-right text-[10px] font-bold text-gray-500 leading-tight">
                   <p>Total Loans: {loans.length}</p>
@@ -4079,15 +4079,15 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
               <div className="flex justify-between bg-[#F4F3F8] rounded-xl py-2 px-2 text-center mb-2.5">
                 <div className="flex-1 px-1">
-                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{t("TOTAL TO PAY")}</p>
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("TOTAL TO PAY")}</p>
                   <p className="text-base font-black text-[#1E104B]">{formatMoney(masterSummary.totalLoanToPay)}</p>
                 </div>
                 <div className="flex-1 px-1 border-x border-[#E4E1EA]">
-                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{t("PAID SO FAR")}</p>
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("PAID SO FAR")}</p>
                   <p className="text-base font-black text-[#078A87]">{formatMoney(masterSummary.totalPaidSoFar)}</p>
                 </div>
                 <div className="flex-1 px-1">
-                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{t("REMAINING")}</p>
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("REMAINING")}</p>
                   <p className="text-base font-black text-[#D6455D]">{formatMoney(masterSummary.totalRemaining)}</p>
                 </div>
               </div>
@@ -4101,10 +4101,10 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
                 </colgroup>
                 <thead className="bg-[#1E104B] text-white text-[10px]">
                   <tr>
-                    <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">{t("Loan / Person")}</th>
-                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{t("Loan Rs.")}</th>
-                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{t("EMI Rs.")}</th>
-                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{t("EMI Paid")}</th>
+                    <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Loan / Person")}</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Loan Rs.")}</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("EMI Rs.")}</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("EMI Paid")}</th>
                   </tr>
                 </thead>
                 <tbody className="text-[#1E104B] bg-transparent font-medium">
@@ -4133,10 +4133,10 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
             <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
               <div className="flex flex-col justify-center text-left leading-tight">
-                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{t("STATEMENT BY -")}</span>
-                <span className="font-extrabold text-[11px] text-[#1E104B]">{t("Budget Bharat-Personal finance App")}</span>
-                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
-                <span className="text-[10px] font-medium text-[#625E70]">{t("Mo.No: 7218838122")}</span>
+                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
               </div>
 
               <div className="flex items-center justify-center">
@@ -4181,7 +4181,7 @@ return (
             setViewMode('master');
             setIsCreatingLoan(false);
           }}
-          title={t("Exit to Loans Directory")}
+          title={translate("Exit to Loans Directory")}
           className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95"
         >
           <i className="fa-solid fa-arrow-left text-base"></i>
@@ -4279,7 +4279,7 @@ return (
           <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10 text-[11px] font-black">
             <button
               onClick={goToPrevLoan}
-              title={t("Previous Loan")}
+              title={translate("Previous Loan")}
               className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs"
             >
               <i className="fa-solid fa-chevron-left text-[9px]"></i>
@@ -4287,7 +4287,7 @@ return (
             <span className="opacity-75 select-none">({currentLoanIndex + 1}/{loans.length})</span>
             <button
               onClick={goToNextLoan}
-              title={t("Next Loan")}
+              title={translate("Next Loan")}
               className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs"
             >
               <i className="fa-solid fa-chevron-right text-[9px]"></i>
@@ -4310,9 +4310,9 @@ return (
       {showEmiShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEmiShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={t("Close")}>×</button></div>
-            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share EMI table")}</span></button>
-            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share EMI reminder")}</span></button>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={translate("Close")}>×</button></div>
+            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share EMI table")}</span></button>
+            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share EMI reminder")}</span></button>
           </div>
         </div>
       )}
@@ -4322,7 +4322,7 @@ return (
             <button
               onClick={() => setShowEmiShareOptions(true)}
               disabled={isExportingSlip}
-              title={t("Share EMI Table or Reminder")}
+              title={translate("Share EMI Table or Reminder")}
               className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
             >
               <i className={`fa-solid ${isExportingSlip ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
@@ -4330,7 +4330,7 @@ return (
 
             <button
               onClick={handleSendWhatsAppReminder}
-              title={t("Send WhatsApp EMI Reminder")}
+              title={translate("Send WhatsApp EMI Reminder")}
               className="w-9 h-9 rounded-full bg-[#25D366] text-white hover:brightness-105 active:scale-95 flex items-center justify-center text-sm transition-all shadow-xs"
             >
               <i className="fa-brands fa-whatsapp"></i>
@@ -4338,7 +4338,7 @@ return (
 
             <button
               onClick={() => setShowDeleteLoanConfirm(true)}
-              title={t("Delete Loan")}
+              title={translate("Delete Loan")}
               className="w-9 h-9 rounded-full bg-[#D6455D]/15 text-[#D6455D] hover:bg-[#D6455D] hover:text-white active:bg-[#D6455D] active:text-white flex items-center justify-center transition-all border border-[#D6455D]/25 shadow-xs"
             >
               <i className="fa-solid fa-trash-can text-xs"></i>
@@ -4356,11 +4356,11 @@ return (
                 setForeclosingStatus('idle');
                 setForeclosureModalOpen(true);
               }}
-              title={t("Foreclose Loan")}
+              title={translate("Foreclose Loan")}
               className="px-3 py-1.5 rounded-xl bg-[#D6455D] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
               <i className="fa-solid fa-xmark text-xs font-black"></i>
-              <span>{t("Foreclose")}</span>
+              <span>{translate("Foreclose")}</span>
             </button>
 
             <button
@@ -4377,7 +4377,7 @@ return (
               className="px-3.5 py-1.5 rounded-xl bg-[#078A87] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
               <i className="fa-solid fa-plus text-xs"></i>
-              <span>{t("New Loan")}</span>
+              <span>{translate("New Loan")}</span>
             </button>
           </div>
         </div>
@@ -4394,8 +4394,8 @@ return (
           >
             <div className="flex justify-between items-center border-b border-gray-100 pb-2">
               <div>
-                <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">{t("New Loan Details")}</h3>
-                <p className="text-[10px] text-gray-400 font-bold">{t("Amortization Setup")}</p>
+                <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">{translate("New Loan Details")}</h3>
+                <p className="text-[10px] text-gray-400 font-bold">{translate("Amortization Setup")}</p>
               </div>
               <button
                 onClick={() => setIsCreatingLoan(false)}
@@ -4415,20 +4415,20 @@ return (
             <form onSubmit={handleCreateLoan} className="space-y-3">
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Borrower *")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Borrower *")}</label>
                   <SearchableDropdown
                     value={newPerson}
                     onChange={setNewPerson}
                     options={persons.map(p => p.name)}
-                    placeholder={t("Select person...")}
+                    placeholder={translate("Select person...")}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Loan Name *")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Loan Name *")}</label>
                   <input
                     type="text"
                     required
-                    placeholder={t("e.g. Phone EMI / Gold Loan")}
+                    placeholder={translate("e.g. Phone EMI / Gold Loan")}
                     value={newLoanName}
                     onChange={e => setNewLoanName(e.target.value)}
                     className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
@@ -4438,21 +4438,21 @@ return (
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Loan Taken (Disbursed) *")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Loan Taken (Disbursed) *")}</label>
                   <input
                     type="number"
-                    placeholder={t("Bank Disbursed Amount")}
+                    placeholder={translate("Bank Disbursed Amount")}
                     value={newLoanTaken}
                     onChange={e => setNewLoanTaken(e.target.value)}
                     className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Loan to Pay (Total) *")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Loan to Pay (Total) *")}</label>
                   <input
                     type="number"
                     required
-                    placeholder={t("Total Repayable")}
+                    placeholder={translate("Total Repayable")}
                     value={newLoanToPay}
                     onChange={e => setNewLoanToPay(e.target.value)}
                     className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
@@ -4462,7 +4462,7 @@ return (
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Monthly EMI (₹) *")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Monthly EMI (₹) *")}</label>
                   <input
                     type="number"
                     required
@@ -4473,7 +4473,7 @@ return (
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Tenure (Mo)")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Tenure (Mo)")}</label>
                   <input
                     type="number"
                     value={newTenure}
@@ -4482,7 +4482,7 @@ return (
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("First Date")}</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("First Date")}</label>
                   <AppDatePicker
                     value={newFirstDate}
                     onChange={setNewFirstDate}
@@ -4497,7 +4497,7 @@ return (
                   onClick={() => setIsCreatingLoan(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-xs uppercase"
                 >
-                  {t("Cancel")}
+                  {translate("Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -4513,7 +4513,7 @@ return (
                   {createStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
                   {createStatus === 'success' && <i className="fa-solid fa-check"></i>}
                   <span>
-                    {createStatus === 'loading' ? t('Creating...') : createStatus === 'success' ? t('Created') : t('Create Loan')}
+                    {createStatus === 'loading' ? translate('Creating...') : createStatus === 'success' ? translate('Created') : translate('Create Loan')}
                   </span>
                 </button>
               </div>
@@ -4527,32 +4527,32 @@ return (
           <div className="grad-kpi rounded-2xl p-3.5 shadow-md text-white space-y-2.5">
             <div className="grid grid-cols-3 divide-x divide-white/10 text-center pb-2 border-b border-white/10">
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{t("Total Loan Taken")}</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Total Loan Taken")}</p>
                 <p className="text-xs sm:text-sm font-black mt-0.5 truncate">{formatMoney(loanTakenVal)}</p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{t("Total Loan to Pay")}</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Total Loan to Pay")}</p>
                 <p className="text-xs sm:text-sm font-black text-[#07C0BE] mt-0.5 truncate">{formatMoney(loanToPayVal)}</p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{t("Interest")}</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Interest")}</p>
                 <p className="text-xs sm:text-sm font-black text-amber-300 mt-0.5 truncate">{formatMoney(loanInterestVal)}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{t("EMI Paid")}</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("EMI Paid")}</p>
                 <p className="text-xs sm:text-sm font-black text-emerald-400 mt-0.5 truncate">
                   {paidEmisList.length} / {currentLoan.schedule.length}
                 </p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{t("Payment Made")}</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Payment Made")}</p>
                 <p className="text-xs sm:text-sm font-black text-emerald-400 mt-0.5 truncate">{formatMoney(paymentMadeVal)}</p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{t("Remaining")}</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Remaining")}</p>
                 <p className="text-xs sm:text-sm font-black text-rose-300 mt-0.5 truncate">{formatMoney(remainingBalanceVal)}</p>
               </div>
             </div>
@@ -4563,11 +4563,11 @@ return (
               <table className="w-full text-left text-[11px] whitespace-nowrap">
                 <thead className="bg-[#1DA1D2] text-white uppercase font-black tracking-wider text-[10px]">
                   <tr>
-                    <th className="px-3 py-2.5">{t("DATE")}</th>
-                    <th className="px-3 py-2.5 text-right">{t("AMOUNT")}</th>
-                    <th className="px-3 py-2.5 text-right">{t("BALANCE")}</th>
-                    <th className="px-2.5 py-2.5 text-center">{t("Paid/ Not")}</th>
-                    <th className="px-3 py-2.5">{t("Txn. Id")}</th>
+                    <th className="px-3 py-2.5">{translate("DATE")}</th>
+                    <th className="px-3 py-2.5 text-right">{translate("AMOUNT")}</th>
+                    <th className="px-3 py-2.5 text-right">{translate("BALANCE")}</th>
+                    <th className="px-2.5 py-2.5 text-center">{translate("Paid/ Not")}</th>
+                    <th className="px-3 py-2.5">{translate("Txn. Id")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA] font-semibold text-[#1E104B]">
@@ -4614,7 +4614,7 @@ return (
               <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-slide-up space-y-4" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-start border-b border-gray-100 pb-2">
                   <div>
-                    <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">{t("Loan Foreclosure")}</h3>
+                    <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">{translate("Loan Foreclosure")}</h3>
                     <p className="text-[10px] font-bold text-[#625E70] mt-0.5">
                       {currentLoan.loanName} • <span className="text-[#078A87]">{currentLoan.person}</span>
                     </p>
@@ -4630,7 +4630,7 @@ return (
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Closure EMI / Date *")}</label>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Closure EMI / Date *")}</label>
                     <select
                       value={selectedClosureEmiNo}
                       disabled={foreclosingStatus === 'loading'}
@@ -4646,11 +4646,11 @@ return (
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{t("Closure Settlement Amount (₹) *")}</label>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Closure Settlement Amount (₹) *")}</label>
                     <input
                       type="number"
                       disabled={foreclosingStatus === 'loading'}
-                      placeholder={t("Enter final settlement amount")}
+                      placeholder={translate("Enter final settlement amount")}
                       value={closureAmountVal}
                       onChange={e => setClosureAmountVal(e.target.value)}
                       className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1E104B] outline-none"
@@ -4665,7 +4665,7 @@ return (
                     onClick={() => setForeclosureModalOpen(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
                   >
-                    {t("Cancel")}
+                    {translate("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -4741,10 +4741,10 @@ return (
                     {foreclosingStatus === 'success' && <i className="fa-solid fa-check text-xs"></i>}
                     <span>
                       {foreclosingStatus === 'loading'
-                        ? t('Closing...')
+                        ? translate('Closing...')
                         : foreclosingStatus === 'success'
-                        ? t('Closed')
-                        : t('Confirm Closure')}
+                        ? translate('Closed')
+                        : translate('Confirm Closure')}
                     </span>
                   </button>
                 </div>
@@ -4761,10 +4761,10 @@ return (
               <i className={isDeletingLoan ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
             </div>
             <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-              {isDeletingLoan ? t('Deleting Loan...') : t('Delete Loan?')}
+              {isDeletingLoan ? translate('Deleting Loan...') : translate('Delete Loan?')}
             </h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
-              {isDeletingLoan ? `Deleting "${currentLoan.loanName}" and all associated schedule records...` : <>{t("Are you sure you want to delete")} <strong>"{currentLoan.loanName}"</strong>{t("? This action cannot be undone.")}</>}
+              {isDeletingLoan ? `Deleting "${currentLoan.loanName}" and all associated schedule records...` : <>{translate("Are you sure you want to delete")} <strong>"{currentLoan.loanName}"</strong>{translate("? This action cannot be undone.")}</>}
             </p>
             <div className="flex gap-3 w-full">
               <button
@@ -4773,7 +4773,7 @@ return (
                 onClick={() => setShowDeleteLoanConfirm(false)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
               >
-                {t("Cancel")}
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -4805,7 +4805,7 @@ return (
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-slide-up space-y-4">
             <div className="flex justify-between items-center border-b border-gray-100 pb-2">
               <div>
-                <h3 className="text-sm font-black text-[#1E104B] uppercase">{t("Record EMI Payment")}</h3>
+                <h3 className="text-sm font-black text-[#1E104B] uppercase">{translate("Record EMI Payment")}</h3>
                 <p className="text-[10px] text-gray-500 font-bold">
                   {currentLoan.loanName} • {formatMoney(paymentModal.row.emiAmount)}
                 </p>
@@ -4827,7 +4827,7 @@ return (
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-[#625E70] uppercase">{t("Who Paid this EMI? *")}</label>
+              <label className="block text-[10px] font-bold text-[#625E70] uppercase">{translate("Who Paid this EMI? *")}</label>
               <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl text-xs font-black">
                 <button
                   type="button"
@@ -4836,7 +4836,7 @@ return (
                     paymentModal.who === 'ME' ? 'bg-[#1E104B] text-white shadow-xs' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  {t("I Paid (Me)")}
+                  {translate("I Paid (Me)")}
                 </button>
                 <button
                   type="button"
@@ -4845,27 +4845,27 @@ return (
                     paymentModal.who === 'PERSON' ? 'bg-[#078A87] text-white shadow-xs' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  {t("Borrower Paid")}
+                  {translate("Borrower Paid")}
                 </button>
               </div>
               {paymentModal.who === 'ME' ? (
                 <p className="text-[9px] text-[#078A87] font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  {t("Auto-logs a")} <strong>{t("GIVEN (LENT)")}</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
+                  {translate("Auto-logs a")} <strong>{translate("GIVEN (LENT)")}</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
                 </p>
               ) : (
                 <p className="text-[9px] text-gray-500 font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  {t("Marks installment cleared by borrower. Ledger balance remains unchanged.")}
+                  {translate("Marks installment cleared by borrower. Ledger balance remains unchanged.")}
                 </p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="block text-[10px] font-bold text-[#625E70] uppercase">{t("UTR / Payment ID / Note")}</label>
+              <label className="block text-[10px] font-bold text-[#625E70] uppercase">{translate("UTR / Payment ID / Note")}</label>
               <input
                 type="text"
-                placeholder={t("e.g. T2403050925367... or paid advance")}
+                placeholder={translate("e.g. T2403050925367... or paid advance")}
                 value={paymentModal.paymentId}
                 onChange={e => setPaymentModal({ ...paymentModal, paymentId: e.target.value })}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1E104B] outline-none focus:border-[#1E104B]"
@@ -4879,7 +4879,7 @@ return (
                 onClick={() => setPaymentModal({ open: false, row: null, who: 'ME', paymentId: '' })}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
               >
-                {t("Cancel")}
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -4896,7 +4896,7 @@ return (
                 {payStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
                 {payStatus === 'success' && <i className="fa-solid fa-check"></i>}
                 <span>
-                  {payStatus === 'loading' ? t('Saving...') : payStatus === 'success' ? t('Saved') : t('Confirm & Save')}
+                  {payStatus === 'loading' ? translate('Saving...') : payStatus === 'success' ? translate('Saved') : translate('Confirm & Save')}
                 </span>
               </button>
             </div>
@@ -4941,7 +4941,7 @@ return (
                       {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
                     </h1>
                     <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">{currentLoan.loanName}</h2>
-                    <p className="text-[10px] font-black text-[#078A87] uppercase tracking-wider mt-0.5">{t("EMI TABLE")}</p>
+                    <p className="text-[10px] font-black text-[#078A87] uppercase tracking-wider mt-0.5">{translate("EMI TABLE")}</p>
                     <p className="text-[9px] text-gray-500 font-bold mt-0.5">
                       Date: {formatDisplayDate(`${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`)}
                     </p>
@@ -4968,27 +4968,27 @@ return (
 
                 <div className="bg-[#1E104B] text-white rounded-xl py-3.5 px-3 mb-3 mx-2 grid grid-cols-3 gap-2.5 text-center">
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{t("TOTAL LOAN TAKEN")}</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("TOTAL LOAN TAKEN")}</p>
                     <p className="text-base font-black mt-0.5">{formatMoney(loanTakenVal)}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{t("TOTAL LOAN TO PAY")}</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("TOTAL LOAN TO PAY")}</p>
                     <p className="text-base font-black text-[#07C0BE] mt-0.5">{formatMoney(loanToPayVal)}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{t("INTEREST")}</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("INTEREST")}</p>
                     <p className="text-base font-black text-amber-300 mt-0.5">{formatMoney(loanInterestVal)}</p>
                   </div>
                   <div className="pt-2.5 border-t border-white/15">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{t("EMI PAID")}</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("EMI PAID")}</p>
                     <p className="text-base font-black text-emerald-400 mt-0.5">{paidEmisList.length} / {currentLoan.schedule.length}</p>
                   </div>
                   <div className="pt-2.5 border-t border-white/15">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{t("PAYMENT MADE")}</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("PAYMENT MADE")}</p>
                     <p className="text-base font-black text-emerald-400 mt-0.5">{formatMoney(paymentMadeVal)}</p>
                   </div>
                   <div className="pt-2.5 border-t border-white/15">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{t("REMAINING")}</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("REMAINING")}</p>
                     <p className="text-base font-black text-rose-300 mt-0.5">{formatMoney(remainingBalanceVal)}</p>
                   </div>
                 </div>
@@ -5004,12 +5004,12 @@ return (
                   </colgroup>
                   <thead className="bg-[#1DA1D2] text-white uppercase text-[10px]">
                     <tr>
-                      <th className="py-2 px-2 border">{t("DATE")}</th>
-                      <th className="py-2 px-2 text-right border">{t("AMOUNT")}</th>
-                      <th className="py-2 px-2 text-right border">{t("BALANCE")}</th>
-                      <th className="py-2 px-2 text-center border">{t("STATUS")}</th>
-                      <th className="py-2 px-2 text-center border">{t("WHO PAID")}</th>
-                      <th className="py-2 px-2 border">{t("TXN ID")}</th>
+                      <th className="py-2 px-2 border">{translate("DATE")}</th>
+                      <th className="py-2 px-2 text-right border">{translate("AMOUNT")}</th>
+                      <th className="py-2 px-2 text-right border">{translate("BALANCE")}</th>
+                      <th className="py-2 px-2 text-center border">{translate("STATUS")}</th>
+                      <th className="py-2 px-2 text-center border">{translate("WHO PAID")}</th>
+                      <th className="py-2 px-2 border">{translate("TXN ID")}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-transparent">
@@ -5032,10 +5032,10 @@ return (
 
                 <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
                   <div className="flex flex-col justify-center text-left leading-tight">
-                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{t("STATEMENT BY -")}</span>
-                    <span className="font-extrabold text-[11px] text-[#1E104B]">{t("Budget Bharat-Personal finance App")}</span>
-                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
-                    <span className="text-[10px] font-medium text-[#625E70]">{t("Mo.No: 7218838122")}</span>
+                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                    <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
                   </div>
 
                   <div className="flex items-center justify-center">
@@ -5098,17 +5098,17 @@ const RecordsView = ({ onSelectTransaction }) => {
         </div>
 
         {txs.length === 0 ? (
-          <p className="text-xs text-[#625E70] font-semibold px-3 py-3">{t("No records found.")}</p>
+          <p className="text-xs text-[#625E70] font-semibold px-3 py-3">{translate("No records found.")}</p>
         ) : (
           <>
             <div className="overflow-x-auto hide-scrollbar">
               <table className="w-full text-left text-[10px] whitespace-nowrap">
                 <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
                   <tr>
-                    <th className="px-3 py-1.5">{t("Date")}</th>
-                    <th className="px-3 py-1.5">{t("Description")}</th>
-                    {showType && <th className="px-3 py-1.5">{t("Type")}</th>}
-                    <th className="px-3 py-1.5 text-right">{t("Amount")}</th>
+                    <th className="px-3 py-1.5">{translate("Date")}</th>
+                    <th className="px-3 py-1.5">{translate("Description")}</th>
+                    {showType && <th className="px-3 py-1.5">{translate("Type")}</th>}
+                    <th className="px-3 py-1.5 text-right">{translate("Amount")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
@@ -5133,7 +5133,7 @@ const RecordsView = ({ onSelectTransaction }) => {
                         </td>
                         {showType && (
                           <td className="px-3 py-2.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                            {t(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
+                            {translate(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
                           </td>
                         )}
                         <td className="px-3 py-2.5 text-right font-black text-xs" style={{ color: txColor }}>
@@ -5181,11 +5181,11 @@ const RecordsView = ({ onSelectTransaction }) => {
       <div className="flex justify-end mb-2.5">
         <PeriodSelector />
       </div>
-      <Section title={t("Expense")} txs={expenses} showType={false} />
-      <Section title={t("Income")} txs={incomes} showType={false} />
-      <Section title={t("Given (Dr)")} txs={lents} showType={false} />
-      <Section title={t("Received (Cr)")} txs={borrows} showType={false} />
-      <Section title={t("Overall Records")} txs={filteredTransactions} showType={true} />
+      <Section title={translate("Expense")} txs={expenses} showType={false} />
+      <Section title={translate("Income")} txs={incomes} showType={false} />
+      <Section title={translate("Given (Dr)")} txs={lents} showType={false} />
+      <Section title={translate("Received (Cr)")} txs={borrows} showType={false} />
+      <Section title={translate("Overall Records")} txs={filteredTransactions} showType={true} />
       <AppBottomBranding />
     </div>
   );
@@ -5269,7 +5269,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
       <div className="bg-white w-full max-w-md rounded-t-3xl p-5 max-h-[90%] overflow-y-auto relative shadow-2xl animate-slide-up hide-scrollbar" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-sm font-extrabold text-[#1E104B] uppercase tracking-wider">{t("Edit Transaction")}</h2>
+            <h2 className="text-sm font-extrabold text-[#1E104B] uppercase tracking-wider">{translate("Edit Transaction")}</h2>
             <p className="text-[9px] font-mono text-[#8A8596]">ID: {String(tx.entryId || tx.id).slice(0, 8)}...</p>
           </div>
           <div className="flex items-center gap-2">
@@ -5277,7 +5277,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isSubmitting}
-              title={t("Delete Transaction")}
+              title={translate("Delete Transaction")}
               className="w-8 h-8 rounded-full bg-[#D6455D]/10 text-[#D6455D] hover:bg-[#D6455D] hover:text-white transition-all flex items-center justify-center text-xs"
             >
               <i className="fa-solid fa-trash-can"></i>
@@ -5313,7 +5313,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                 onClick={() => setType(item.key)}
                 className={`py-2 rounded-lg transition-all ${getActiveTabClass()}`}
               >
-                {t(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}
+                {translate(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}
               </button>
             );
           })}
@@ -5321,7 +5321,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
         <form onSubmit={handleUpdate} className="space-y-3.5">
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("AMOUNT (₹) *")}</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("AMOUNT (₹) *")}</label>
             <div className="relative flex items-center">
               <span className="absolute left-4 text-theme-dark/40 font-extrabold text-xl pointer-events-none select-none">₹</span>
               <input
@@ -5335,7 +5335,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               <button
                 type="button"
                 onClick={() => setShowCalculator(true)}
-                title={t("Open Calculator")}
+                title={translate("Open Calculator")}
                 className="absolute right-3.5 text-[#66419C] hover:text-[#523380] active:scale-90 transition-transform p-1 flex items-center justify-center"
               >
                 <i className="fa-solid fa-calculator text-xl"></i>
@@ -5353,7 +5353,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
           <div className="grid grid-cols-12 gap-2.5">
             <div className="col-span-5 space-y-1">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("DATE *")}</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("DATE *")}</label>
               <AppDatePicker
                 required={true}
                 value={date}
@@ -5364,7 +5364,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
             {(type === 'LENT' || type === 'BORROW') ? (
               <div className="col-span-7 space-y-1">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PROMISE DATE")}</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PROMISE DATE")}</label>
                 <AppDatePicker
                   value={promiseDate}
                   onChange={setPromiseDate}
@@ -5373,12 +5373,12 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               </div>
             ) : (
               <div className="col-span-7 space-y-1">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("CATEGORY")}</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("CATEGORY")}</label>
                 <SearchableDropdown
                   value={category}
                   onChange={setCategory}
                   options={categoryOptions}
-                  placeholder={t("Category...")}
+                  placeholder={translate("Category...")}
                 />
               </div>
             )}
@@ -5386,18 +5386,18 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
           {(type === 'LENT' || type === 'BORROW') && (
             <div className="space-y-1">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PERSON NAME *")}</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PERSON NAME *")}</label>
               <SearchableDropdown
                 value={personName}
                 onChange={setPersonName}
                 options={personOptions}
-                placeholder={t("Search person...")}
+                placeholder={translate("Search person...")}
               />
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("DESCRIPTION")}</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("DESCRIPTION")}</label>
             <input
               type="text"
               value={note}
@@ -5407,7 +5407,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("REFERENCE / A/C MODE")}</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("REFERENCE / A/C MODE")}</label>
             <input
               type="text"
               value={refAc}
@@ -5423,7 +5423,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               className="w-3/4 bg-theme-dark hover:brightness-110 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
             >
               {isSubmitting && <i className="fa-solid fa-spinner animate-spin"></i>}
-              <span>{isSubmitting ? t('Saving Changes...') : t('Update Transaction')}</span>
+              <span>{isSubmitting ? translate('Saving Changes...') : translate('Update Transaction')}</span>
             </button>
           </div>
         </form>
@@ -5435,10 +5435,10 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                 <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
               </div>
               <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-                {isSubmitting ? t('Delete Entry...') : t('Delete Transaction?')}
+                {isSubmitting ? translate('Delete Entry...') : translate('Delete Transaction?')}
               </h3>
               <p className="text-xs text-gray-500 mt-1 mb-5">
-                {isSubmitting ? t('Please wait while we update your sheet.') : t('This action cannot be undone.')}
+                {isSubmitting ? translate('Please wait while we update your sheet.') : translate('This action cannot be undone.')}
               </p>
               <div className="flex gap-3 w-full">
                 <button
@@ -5447,7 +5447,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
                 >
-                  {t("No")}
+                  {translate("No")}
                 </button>
                 <button
                   type="button"
@@ -5456,7 +5456,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                   className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-70 cursor-wait"
                 >
                   {isSubmitting ? <i className="fa-solid fa-spinner animate-spin text-xs"></i> : null}
-                  <span>{isSubmitting ? t('Deleting...') : t('Yes, Delete')}</span>
+                  <span>{isSubmitting ? translate('Deleting...') : translate('Yes, Delete')}</span>
                 </button>
               </div>
             </div>
@@ -5576,7 +5576,7 @@ const CalculatorModal = ({ initialValue, onApply, onClose }) => {
           <button type="button" onClick={() => handleDigit('7')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">7</button>
           <button type="button" onClick={() => handleDigit('8')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">8</button>
           <button type="button" onClick={() => handleDigit('9')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">9</button>
-          <button type="button" onClick={handleClear} className="h-11 rounded-xl bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 active:scale-95 text-[#7B2B8C] transition-all flex items-center justify-center font-bold">{t("AC")}</button>
+          <button type="button" onClick={handleClear} className="h-11 rounded-xl bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 active:scale-95 text-[#7B2B8C] transition-all flex items-center justify-center font-bold">{translate("AC")}</button>
           <button type="button" onClick={() => handleOp('÷')} className={`h-11 rounded-xl active:scale-95 transition-all flex items-center justify-center text-base ${operation === '÷' ? 'bg-[#1E104B] text-white' : 'bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 text-[#7B2B8C]'}`}>÷</button>
 
           <button type="button" onClick={() => handleDigit('4')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">4</button>
@@ -5603,13 +5603,13 @@ const CalculatorModal = ({ initialValue, onApply, onClose }) => {
           onClick={handleEnterResult}
           className="flex-1 bg-[#682496] hover:bg-[#571B80] text-white font-black py-3.5 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
         >
-          <span>{t("Enter Result")}</span>
+          <span>{translate("Enter Result")}</span>
         </button>
 
         <button
           type="button"
           onClick={onClose}
-          title={t("Close Calculator")}
+          title={translate("Close Calculator")}
           className="w-12 h-12 flex-none rounded-full bg-white text-gray-700 hover:text-black hover:bg-gray-100 active:scale-90 flex items-center justify-center shadow-xl border border-black/5 transition-all"
         >
           <i className="fa-solid fa-xmark text-lg"></i>
@@ -5690,7 +5690,7 @@ const InputModal = ({ onClose }) => {
     >
       <div className="bg-white w-full max-w-md rounded-t-3xl p-5 max-h-[85%] overflow-y-auto relative shadow-2xl animate-slide-up hide-scrollbar" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-sm font-extrabold text-theme-dark uppercase tracking-wider">{t("New Record")}</h2>
+          <h2 className="text-sm font-extrabold text-theme-dark uppercase tracking-wider">{translate("New Record")}</h2>
           <button onClick={onClose} className="w-8 h-8 bg-theme-gray rounded-full text-theme-dark/50 hover:bg-theme-dark hover:text-white active:scale-90 transition-all flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
         </div>
 
@@ -5709,14 +5709,14 @@ const InputModal = ({ onClose }) => {
               return 'bg-[#B7791F] text-white shadow-xs';
             };
             return (
-              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{t(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}</button>
+              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{translate(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}</button>
             );
           })}
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">{t("AMOUNT (₹) *")}</label>
+            <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">{translate("AMOUNT (₹) *")}</label>
             <div className="relative flex items-center">
               <span className="absolute left-4 text-[#8A8596] font-extrabold text-xl pointer-events-none select-none">₹</span>
               <input
@@ -5731,12 +5731,12 @@ const InputModal = ({ onClose }) => {
                     ? 'border-2 border-[#D6455D] bg-red-50/40 text-[#1E104B]'
                     : 'border border-[#E4E1EA] bg-[#F4F3F8] focus:bg-white focus:border-[#7B2B8C] focus:ring-2 focus:ring-[#7B2B8C]/15 text-[#1E104B]'
                 }`}
-                placeholder={t("0.00")}
+                placeholder={translate("0.00")}
               />
               <button
                 type="button"
                 onClick={() => setShowCalculator(true)}
-                title={t("Open Calculator")}
+                title={translate("Open Calculator")}
                 className="absolute right-3.5 text-[#7B2B8C] hover:text-[#5B1E68] active:scale-90 transition-transform p-1 flex items-center justify-center"
               >
                 <i className="fa-solid fa-calculator text-xl"></i>
@@ -5754,7 +5754,7 @@ const InputModal = ({ onClose }) => {
 
           <div className="grid grid-cols-12 gap-2.5">
             <div className="col-span-5 space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">{t("DATE *")}</label>
+              <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">{translate("DATE *")}</label>
               <AppDatePicker
                 required={true}
                 value={date}
@@ -5769,7 +5769,7 @@ const InputModal = ({ onClose }) => {
 
             {(type === 'LENT' || type === 'BORROW') ? (
               <div className="col-span-7 space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PROMISE DATE")}</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PROMISE DATE")}</label>
                 <AppDatePicker
                   value={promiseDate}
                   onChange={setPromiseDate}
@@ -5778,13 +5778,13 @@ const InputModal = ({ onClose }) => {
               </div>
             ) : (
               <div className="col-span-7 space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("CATEGORY")}</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("CATEGORY")}</label>
                 <div className="flex gap-1.5">
                   <SearchableDropdown
                     value={category}
                     onChange={setCategory}
                     options={type === 'INCOME' ? categories.income : categories.expense}
-                    placeholder={t("Category...")}
+                    placeholder={translate("Category...")}
                   />
                   <button type="button" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
                     <i className="fa-solid fa-plus text-sm"></i>
@@ -5796,13 +5796,13 @@ const InputModal = ({ onClose }) => {
 
           {(type === 'LENT' || type === 'BORROW') && (
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PERSON NAME *")}</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PERSON NAME *")}</label>
               <div className={`flex gap-2 rounded-xl ${touched && !isPersonValid ? 'ring-2 ring-[#D6455D]' : ''}`}>
                 <SearchableDropdown
                   value={personName}
                   onChange={setPersonName}
                   options={persons.map(p => p.name)}
-                  placeholder={t("Type or select person...")}
+                  placeholder={translate("Type or select person...")}
                 />
                 <button type="button" onClick={() => openAddMenu('addPerson')} className="w-10 h-10 flex-none rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] flex items-center justify-center text-[#7B2B8C] hover:bg-[#7B2B8C] hover:text-white transition-colors">
                   <i className="fa-solid fa-plus text-sm"></i>
@@ -5812,24 +5812,24 @@ const InputModal = ({ onClose }) => {
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PURPOSE / DESCRIPTION")}</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PURPOSE / DESCRIPTION")}</label>
             <input
               type="text"
               value={note}
               onChange={e => setNote(e.target.value)}
               className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white placeholder-theme-dark/30 text-theme-dark"
-              placeholder={t("e.g. for shopping, to EMI payment..")}
+              placeholder={translate("e.g. for shopping, to EMI payment..")}
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("REFERENCE / A/C MODE")}</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("REFERENCE / A/C MODE")}</label>
             <input
               type="text"
               value={refAc}
               onChange={e => setRefAc(e.target.value)}
               className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white placeholder-theme-dark/30 text-theme-dark"
-              placeholder={t("e.g. PhonePe, NetBanking, Cash...")}
+              placeholder={translate("e.g. PhonePe, NetBanking, Cash...")}
             />
           </div>
 
@@ -5846,7 +5846,7 @@ const InputModal = ({ onClose }) => {
               }`}
             >
               {isSubmitting && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
-              <span>{isSubmitting ? t('Saving...') : t('Save Entry')}</span>
+              <span>{isSubmitting ? translate('Saving...') : translate('Save Entry')}</span>
             </button>
           </div>
         </form>
@@ -5907,9 +5907,9 @@ const MainApp = () => {
       <div className="app-shell">
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 p-6">
           <i className="fa-solid fa-triangle-exclamation text-3xl text-red-400"></i>
-          <p className="text-sm font-bold text-theme-dark">{t("Couldn't load your data")}</p>
+          <p className="text-sm font-bold text-theme-dark">{translate("Couldn't load your data")}</p>
           <p className="text-xs text-theme-dark/60">{loadError}</p>
-          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">{t("Retry")}</button>
+          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">{translate("Retry")}</button>
         </div>
       </div>
     );
@@ -5954,7 +5954,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('home'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title={t("Home")}
+                title={translate("Home")}
               >
                 <i className="fa-solid fa-house text-lg"></i>
                 {tab === 'home' && (
@@ -5967,7 +5967,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('people'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title={t("Directory")}
+                title={translate("Directory")}
               >
                 <i className="fa-solid fa-users text-lg"></i>
                 {tab === 'people' && (
@@ -5980,7 +5980,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('loans'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title={t("Loans / EMIs")}
+                title={translate("Loans / EMIs")}
               >
                 <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
                 {tab === 'loans' && (
@@ -5993,7 +5993,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('records'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title={t("Records")}
+                title={translate("Records")}
               >
                 <i className="fa-solid fa-receipt text-lg"></i>
                 {tab === 'records' && (
@@ -6008,7 +6008,7 @@ const MainApp = () => {
 
           <button
             onClick={() => setShowInput(true)}
-            title={t("Add New Entry")}
+            title={translate("Add New Entry")}
             className="notched-fab"
           >
             <span className="relative w-8 h-8 flex items-center justify-center">
@@ -6106,7 +6106,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('home')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title={t("Home")}
+              title={translate("Home")}
             >
               <i className="fa-solid fa-house text-lg"></i>
               {tab === 'home' && (
@@ -6119,7 +6119,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('people')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title={t("Directory")}
+              title={translate("Directory")}
             >
               <i className="fa-solid fa-users text-lg"></i>
               {tab === 'people' && (
@@ -6132,7 +6132,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('loans')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title={t("Loans / EMIs")}
+              title={translate("Loans / EMIs")}
             >
               <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
               {tab === 'loans' && (
@@ -6145,7 +6145,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('records')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title={t("Records")}
+              title={translate("Records")}
             >
               <i className="fa-solid fa-receipt text-lg"></i>
               {tab === 'records' && (
@@ -6160,7 +6160,7 @@ const MainApp = () => {
 
         <button
           onClick={() => setShowInput(true)}
-          title={t("Add New Entry")}
+          title={translate("Add New Entry")}
           className="notched-fab"
         >
           <span className="relative w-8 h-8 flex items-center justify-center">
