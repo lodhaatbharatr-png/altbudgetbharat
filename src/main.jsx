@@ -971,7 +971,12 @@ const AppProvider = ({ children }) => {
   const [googleUser, setGoogleUser] = useState(null);
 
   const showFeedback = (msg) => {
-    setToast({ show: true, msg: t(msg) });
+    const exact = t(msg);
+    const prefixKey = exact === msg
+      ? Object.keys(UI_TRANSLATIONS).filter(key => key.endsWith(': ') && msg.startsWith(key)).sort((a, b) => b.length - a.length)[0]
+      : null;
+    const translatedMessage = exact !== msg ? exact : prefixKey ? t(prefixKey) + msg.slice(prefixKey.length) : msg;
+    setToast({ show: true, msg: translatedMessage });
     setTimeout(() => setToast({ show: false, msg: '' }), 3000);
   };
 
@@ -2918,10 +2923,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
   const targetDateStr = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 5);
-    const parts = new Intl.DateTimeFormat(LANGUAGE_LOCALES[language] || 'en-IN', { day: 'numeric', month: 'short', year: '2-digit' }).formatToParts(d);
+    const selectedLanguage = getSelectedLanguage();
+    const parts = new Intl.DateTimeFormat(LANGUAGE_LOCALES[selectedLanguage] || 'en-IN', { day: 'numeric', month: 'short', year: '2-digit' }).formatToParts(d);
     const part = type => parts.find(item => item.type === type)?.value || '';
     return `${part('day')}-${part('month')}-${part('year')}`;
-  }, [language]);
+  }, [getSelectedLanguage()]);
 
   const handleShareImage = async () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
