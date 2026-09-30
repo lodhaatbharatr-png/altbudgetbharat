@@ -3497,7 +3497,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     if (!currentLoan) return;
     const nextPending = (currentLoan.schedule || []).find(s => !s.paid && String(s.paid).toLowerCase() !== 'true');
     if (!nextPending) { showFeedback('All EMIs for this loan are cleared!'); return; }
-    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
+    const textMsg = `${t('Hello')} ${currentLoan.person}, ${t('your')} ${currentLoan.loanName} ${t('EMI')} #${nextPending.emiNo} ${t('with amount')} ${formatMoney(nextPending.emiAmount)} ${t('is due on')} ${formatDisplayDate(nextPending.date)}. ${t('Please pay')}.`;
     try {
       const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
