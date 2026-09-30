@@ -633,6 +633,10 @@ const UI_TRANSLATIONS = {
   "BAL (RECEIVABLE)": { "mr": "शिल्लक (येणे बाकी)", "hi": "शेष (प्राप्य)" },
   "and all associated transactions? This cannot be undone.": { "mr": "आणि सर्व संबंधित व्यवहार? ही कृती पूर्ववत करता येणार नाही.", "hi": "और सभी संबंधित लेन-देन? यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
   "Developed by - Bharat Rasve © 2026": { "mr": "निर्मिती - Bharat Rasve © 2026", "hi": "निर्माता - Bharat Rasve © 2026" },
+  "Removing": { "mr": "हटवत आहे", "hi": "हटाया जा रहा है" },
+  "and associated records.": { "mr": "आणि संबंधित नोंदी.", "hi": "और संबंधित रिकॉर्ड।" },
+  "and all associated entries from sheet.": { "mr": "आणि शीटमधील सर्व संबंधित नोंदी.", "hi": "और शीट के सभी संबंधित रिकॉर्ड।" },
+  "GIVEN (LENT)": { "mr": "दिलेले (कर्ज दिले)", "hi": "दिया (उधार दिया)" },
   "Language applied": {
     "mr": "लागू केलेली भाषा",
     "hi": "लागू की गई भाषा"
@@ -1671,7 +1675,7 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
     <div className="px-4 mt-4 pb-8 space-y-5">
       <div className="flex justify-between items-center px-1">
         <span className="text-xs text-theme-dark/60 font-bold">{t("Results for")} "<span className="text-theme-dark">{searchQuery}</span>"</span>
-        <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} matches</span>
+        <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} {t("matches")}</span>
       </div>
 
       {!hasResults ? (
@@ -2167,10 +2171,10 @@ const SideMenu = () => {
               <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
             </div>
             <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-              {isSubmitting ? 'Deleting Person...' : 'Delete Person?'}
+              {isSubmitting ? t('Deleting Person...') : t('Delete Person?')}
             </h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
-              {isSubmitting ? `Removing ${personToDelete} and associated records.` : <>{t("Delete")} <strong>{personToDelete}</strong> {t("and all linked transactions? This action cannot be undone.")}</>}
+              {isSubmitting ? `${t('Removing')} ${personToDelete} ${t('and associated records.')}` : <>{t("Delete")} <strong>{personToDelete}</strong> {t("and all linked transactions? This action cannot be undone.")}</>}
             </p>
             <div className="flex gap-3 w-full">
               <button
@@ -4769,7 +4773,7 @@ return (
               {paymentModal.who === 'ME' ? (
                 <p className="text-[9px] text-[#078A87] font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  {t("Auto-logs a")} <strong>GIVEN (LENT)</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
+                  {t("Auto-logs a")} <strong>{t("GIVEN (LENT)")}</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
                 </p>
               ) : (
                 <p className="text-[9px] text-gray-500 font-semibold mt-1">
