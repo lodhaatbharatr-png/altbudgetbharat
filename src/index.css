@@ -256,3 +256,13 @@ body {
   to { transform: rotate(360deg); }
 }
 .animate-spin { animation: spinRing 1s linear infinite; }
+
+
+/* Devanagari UI typography: avoid exaggerated Latin-style tracking. */
+html[lang="mr"] body,
+html[lang="hi"] body,
+html[lang="mr"] body *,
+html[lang="hi"] body * {
+  letter-spacing: -0.015em !important;
+  font-family: "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif;
+}
