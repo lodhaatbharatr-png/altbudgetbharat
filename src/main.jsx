@@ -63,7 +63,7 @@ const AppBottomBranding = () => {
   const handleWhatsAppDeveloper = (e) => {
     e.preventDefault();
     const phone = '917218838122';
-    const textMsg = 'Hi Bharat, i need help regarding..';
+    const textMsg = `${t('Hi Bharat, i need help regarding..')}`;
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
@@ -676,6 +676,21 @@ const UI_TRANSLATIONS = {
   "Transaction updated": { "mr": "व्यवहार अपडेट केला", "hi": "लेन-देन अपडेट किया गया" },
   "Failed to create loan": { "mr": "कर्ज तयार करता आले नाही", "hi": "लोन बनाने में विफल" },
   "Could not read that file": { "mr": "ही फाइल वाचता आली नाही", "hi": "यह फ़ाइल पढ़ी नहीं जा सकी" },
+  "Add New": { "mr": "नवीन जोडा", "hi": "नया जोड़ें" },
+  "Category": { "mr": "श्रेणी", "hi": "श्रेणी" },
+  "Target Ledger": { "mr": "लक्ष्य खातेवही", "hi": "लक्षित खाता-बही" },
+  "Configuration Setup": { "mr": "कॉन्फिगरेशन सेटअप", "hi": "कॉन्फ़िगरेशन सेटअप" },
+  "Edit Person": { "mr": "व्यक्ती संपादित करा", "hi": "व्यक्ति संपादित करें" },
+  "Edit Category": { "mr": "श्रेणी संपादित करा", "hi": "श्रेणी संपादित करें" },
+  "Delete Entry...": { "mr": "नोंद हटवत आहे...", "hi": "रिकॉर्ड हटाया जा रहा है" },
+  "Please wait while we update your sheet.": { "mr": "शीट अपडेट होईपर्यंत प्रतीक्षा करा.", "hi": "शीट अपडेट होने तक प्रतीक्षा करें।" },
+  "This action cannot be undone.": { "mr": "ही कृती पूर्ववत करता येणार नाही.", "hi": "यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
+  "No": { "mr": "नाही", "hi": "नहीं" },
+  "I Paid (Me)": { "mr": "मी भरले", "hi": "मैंने भुगतान किया" },
+  "entry saved": { "mr": "नोंद जतन झाली", "hi": "रिकॉर्ड सेव हुआ" },
+  "Save failed: ": { "mr": "जतन अयशस्वी: ", "hi": "सेव विफल: " },
+  "Transaction deleted": { "mr": "व्यवहार हटवला", "hi": "लेन-देन हटाया गया" },
+  "Failed to save payment": { "mr": "पेमेंट जतन करता आले नाही", "hi": "भुगतान सेव नहीं हुआ" },
   "Language applied": {
     "mr": "लागू केलेली भाषा",
     "hi": "लागू की गई भाषा"
@@ -1090,11 +1105,11 @@ const AppProvider = ({ children }) => {
   };
 
   const addTransaction = (tx) => {
-    const typeLabel = tx.type === 'BORROW' ? 'Received' : tx.type === 'LENT' ? 'Given' : tx.type === 'EXPENSE' ? 'Expense' : 'Income';
+    const typeLabel = t(tx.type === 'BORROW' ? 'Received' : tx.type === 'LENT' ? 'Given' : tx.type === 'EXPENSE' ? 'Expense' : 'Income');
     return gasRun('addTransaction', tx)
       .then((payload) => { 
         if (payload) applyPayload(payload); 
-        showFeedback(`${typeLabel} entry saved`); 
+        showFeedback(`${typeLabel} ${t('entry saved')}`); 
       })
       .catch((err) => { showFeedback('Save failed: ' + err.message); throw err; });
   };
@@ -2084,7 +2099,7 @@ const SideMenu = () => {
                     <p className="text-[9px] text-[#8A8596] font-medium">{p.phone || 'No phone'} • {p.address || 'Maharashtra'}</p>
                   </div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => openSubView('editPerson', p)} title="Edit Person" className="w-7 h-7 rounded-lg bg-white text-[#7B2B8C] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#7B2B8C] hover:text-white transition-all"><i className="fa-solid fa-pen"></i></button>
+                    <button onClick={() => openSubView('editPerson', p)} title={t("Edit Person")} className="w-7 h-7 rounded-lg bg-white text-[#7B2B8C] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#7B2B8C] hover:text-white transition-all"><i className="fa-solid fa-pen"></i></button>
                     <button onClick={() => setPersonToDelete(p.name)} title="Delete Person" className="w-7 h-7 rounded-lg bg-white text-[#D6455D] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#D6455D] hover:text-white transition-all"><i className="fa-solid fa-trash-can"></i></button>
                   </div>
                 </div>
@@ -4806,7 +4821,7 @@ return (
                     paymentModal.who === 'ME' ? 'bg-[#1E104B] text-white shadow-xs' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  I Paid (Me)
+                  {t("I Paid (Me)")}
                 </button>
                 <button
                   type="button"
@@ -5405,10 +5420,10 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                 <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
               </div>
               <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-                {isSubmitting ? 'Deleting Entry...' : 'Delete Transaction?'}
+                {isSubmitting ? t('Delete Entry...') : t('Delete Transaction?')}
               </h3>
               <p className="text-xs text-gray-500 mt-1 mb-5">
-                {isSubmitting ? 'Please wait while we update your sheet.' : 'This action cannot be undone.'}
+                {isSubmitting ? t('Please wait while we update your sheet.') : t('This action cannot be undone.')}
               </p>
               <div className="flex gap-3 w-full">
                 <button
@@ -5417,7 +5432,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
                 >
-                  No
+                  {t("No")}
                 </button>
                 <button
                   type="button"
