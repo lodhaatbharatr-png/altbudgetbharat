@@ -1745,49 +1745,6 @@ const SideMenu = () => {
           </div>
         </div>
       )}
-      {contactPickerOpen && (
-        <div className="fixed inset-0 z-[70] bg-[#1E104B]/65 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={() => setContactPickerOpen(false)}>
-          <div className="bg-white rounded-3xl w-full max-w-md max-h-[82vh] shadow-2xl overflow-hidden animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[#E4E1EA]">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div>
-                  <h3 className="text-sm font-black text-[#1E104B]">Select Device Contact</h3>
-                  <p className="text-[9px] text-[#8A8596] font-semibold mt-0.5">Choose a contact to fill name, phone and email.</p>
-                </div>
-                <button type="button" onClick={() => setContactPickerOpen(false)} className="w-8 h-8 rounded-full bg-[#F4F3F8] text-[#625E70] flex items-center justify-center">
-                  <i className="fa-solid fa-xmark text-xs"></i>
-                </button>
-              </div>
-              <div className="relative">
-                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8596] text-xs pointer-events-none"></i>
-                <input type="text" value={contactPickerSearch} onChange={e => setContactPickerSearch(e.target.value)} autoFocus placeholder="Search device contacts..." className="w-full bg-[#F4F3F8] border border-[#E4E1EA] rounded-xl py-2.5 pl-8 pr-3 text-xs font-semibold text-[#1E104B] outline-none focus:bg-white focus:border-[#078A87]" />
-              </div>
-            </div>
-            <div className="max-h-[58vh] overflow-y-auto hide-scrollbar p-2">.filter(contact => {
-                const q = contactPickerSearch.trim().toLowerCase();
-                if (!q) return true;
-                return `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
-              }).map((contact, index) => (
-                <button key={contact.contactId || contact.id || `${contact._name}-${contact._phone}-${index}`} type="button" onClick={() => selectDeviceContact(contact)} className="w-full text-left p-3 rounded-xl hover:bg-[#F4F3F8] active:bg-[#EDE9F6] transition-all flex items-center gap-3 border-b border-[#E4E1EA]/60 last:border-b-0">
-                  <span className="w-9 h-9 rounded-full bg-[#078A87]/12 text-[#078A87] flex items-center justify-center font-black text-xs flex-none">{(contact._name || '?').charAt(0).toUpperCase()}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-black text-[#1E104B] truncate">{contact._name || 'Unnamed contact'}</span>
-                    <span className="block text-[10px] text-[#625E70] font-semibold truncate mt-0.5">{contact._phone || contact._email || 'No phone/email'}</span>
-                  </span>
-                  <i className="fa-solid fa-chevron-right text-[9px] text-[#8A8596]"></i>
-                </button>
-              ))}.length > 0 && deviceContacts.filter(contact => {
-                const q = contactPickerSearch.trim().toLowerCase();
-                return !q || `${contact._name} ${contact._phone} ${contact._email}`.toLowerCase().includes(q);
-              }).length === 0 && (
-                <div className="text-center py-10 px-5"><i className="fa-solid fa-magnifying-glass text-2xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No matching contacts.</p></div>
-              )}.length === 0 && (
-                <div className="text-center py-10 px-5"><i className="fa-solid fa-address-book text-3xl text-[#7B2B8C]/25 mb-2"></i><p className="text-xs font-bold text-[#625E70]">No usable contacts found.</p></div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

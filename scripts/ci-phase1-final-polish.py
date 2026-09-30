@@ -6,43 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 main_path = ROOT / 'src' / 'main.jsx'
 text = main_path.read_text(encoding='utf-8')
 
-handler = re.compile(r"  const openDeviceContactPicker = async \(\) => \{.*?\n  \};\n\n  const selectDeviceContact", re.S)
-handler_replacement = '''  const openDeviceContactPicker = async () => {
-    if (contactPickerLoading) return;
-    setContactPickerLoading(true);
-    showFeedback('Opening device contacts…');
-    try {
-      let permission = null;
-      if (typeof Contacts.getPermissions === 'function') permission = await Contacts.getPermissions();
-      if (!permission || permission.granted !== true) {
-        showFeedback('Contacts permission is required. Please allow Contacts access and try again.');
-        return;
-      }
-      showFeedback('Loading device contacts…');
-      const result = await Contacts.getContacts();
-      const contacts = Array.isArray(result?.contacts) ? result.contacts : [];
-      const usable = contacts.map((contact) => {
-        const displayName = String(contact.displayName || contact.name?.display || [contact.name?.given, contact.name?.family].filter(Boolean).join(' ') || '').trim();
-        const phoneNumbers = Array.isArray(contact.phoneNumbers) ? contact.phoneNumbers : (Array.isArray(contact.phones) ? contact.phones : []);
-        const emails = Array.isArray(contact.emails) ? contact.emails : [];
-        return { ...contact, _name: displayName, _phone: String(phoneNumbers.find(p => p?.number)?.number || '').trim(), _email: String(emails.find(e => e?.address)?.address || '').trim() };
-      }).filter(contact => contact._name || contact._phone || contact._email)
-        .sort((a, b) => a._name.localeCompare(b._name, undefined, { sensitivity: 'base' }));
-      setDeviceContacts(usable);
-      setContactPickerSearch('');
-      setContactPickerOpen(true);
-      showFeedback(`${usable.length} device contacts loaded`);
-    } catch (err) {
-      console.error('Device contact picker error:', err);
-      showFeedback(`Unable to load device contacts: ${err?.message || 'Please allow Contacts permission and try again.'}`);
-    } finally {
-      setContactPickerLoading(false);
-    }
-  };
-
-  const selectDeviceContact'''
-text, count = handler.subn(handler_replacement, text, count=1)
-print(f'Contact handler updated: {count}')
+# Contact-picker transformations intentionally omitted.
 
 old_filter = """    return transactions.filter(t =>
       (t.note && t.note.toLowerCase().includes(query)) ||
@@ -93,4 +57,4 @@ index = re.sub(r'\n\s*<div id="bb-startup-splash".*?</script>', '', index, count
 index = index.replace('<html lang="en" style="background:#1E104B;">', '<html lang="en" style="background:#1E104B;">', 1)
 index = index.replace('<body style="margin:0;background:#1E104B;">', '<body style="margin:0;background:#1E104B;">', 1)
 index_path.write_text(index, encoding='utf-8')
-print(f'Phase 1 final polish source transformation complete. Contact handler updated: {count}. Web startup splash disabled.')
+print('Phase 1 final polish source transformation complete. Web startup splash disabled.')
