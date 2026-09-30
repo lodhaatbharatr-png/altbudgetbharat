@@ -2498,9 +2498,9 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
       {showLedgerShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-2"><h2 className="text-base font-extrabold text-[#1E104B]">Share Person Ledger</h2><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
-            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share transaction statement</span></button>
-            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share balance reminder</span></button>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">Share transaction statement</span></button>
+            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">Share balance reminder</span></button>
           </div>
         </div>
       )}
@@ -3744,10 +3744,10 @@ return (
     <div className="app-content px-4 mt-2 pb-32 space-y-3">
       {showEmiShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEmiShareOptions(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3"><h2 className="text-base font-extrabold text-[#1E104B]">Share EMI</h2><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
-            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share EMI table</span><span className="block text-xs text-slate-500 mt-1">Existing EMI table image or PDF</span></button>
-            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share EMI reminder</span><span className="block text-xs text-slate-500 mt-1">Reminder image with message caption</span></button>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">Share EMI table</span></button>
+            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">Share EMI reminder</span></button>
           </div>
         </div>
       )}
