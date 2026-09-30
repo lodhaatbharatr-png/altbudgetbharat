@@ -349,7 +349,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? (balanceDirection === 'receivable' ? 'You will receive' : 'You will pay') : `Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
+  ctx.fillText(reminderType === 'ledger' ? (balanceDirection === 'receivable' ? 'You will pay' : 'You will receive') : `Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
