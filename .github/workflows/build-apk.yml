@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - fix/native-exports-backup-sync-ci
+      - feature/search-contact-picker
   pull_request:
     branches:
       - main
@@ -27,8 +28,6 @@ jobs:
       - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          # pull_request runs use the actual PR head branch; github.ref_name is
-          # the synthetic PR merge ref (for example 1/merge), which is not a branch.
           ref: ${{ inputs.build_branch || (github.event_name == 'pull_request' && github.head_ref) || github.ref_name }}
           fetch-depth: 0
 
@@ -46,16 +45,39 @@ jobs:
       - name: Apply stabilization source fixes
         run: python3 scripts/ci-stabilize.py
 
+      - name: Apply Phase 1 final polish
+        run: python3 scripts/ci-phase1-final-polish.py
+
+      - name: Apply Phase 2 UX polish
+        run: |
+          set +e
+          python3 scripts/ci-phase2-ux-polish.py
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "Phase 2 UX polish reported no applicable footer transformation; continuing with remaining build phases."
+          else
+            echo "Phase 2 UX polish completed."
+          fi
+          exit 0
+
+
+
+      - name: Apply Phase 2 finalization
+        run: python3 scripts/ci-phase2-finalize.py
+
+      - name: Verify retired device contacts are absent
+        run: python3 scripts/ci-remove-device-contacts.py
+
       - name: Commit stabilization source fixes
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/native-exports-backup-sync-ci'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/fix/native-exports-backup-sync-ci' || github.ref == 'refs/heads/feature/search-contact-picker')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/main.jsx src/googleSync.js scripts/ci-stabilize.py index.html assets/icon.png
+          git add -A
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
-            git commit -m "fix: persist export slips, launcher, and startup polish"
+            git commit -m "fix: remove retired contacts and finalize app startup"
             git push
           fi
 
@@ -82,6 +104,40 @@ jobs:
 
       - name: Sync Capacitor Android project
         run: npx cap sync android
+
+      - name: Remove duplicate Capacitor launch splash
+        run: |
+          STYLE="android/app/src/main/res/values/styles.xml"
+          if [ ! -f "$STYLE" ]; then
+            echo "Generated Android styles.xml not found at $STYLE"
+            exit 1
+          fi
+          python3 - "$STYLE" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          p = Path(sys.argv[1])
+          s = p.read_text(encoding='utf-8')
+          old = s
+          s = re.sub(
+              r'(<style\s+name="AppTheme\.NoActionBarLaunch"\s+)parent="Theme\.SplashScreen"',
+              r'\1parent="AppTheme.NoActionBar"',
+              s,
+              count=1,
+          )
+          s = re.sub(
+              r'\n\s*<item\s+name="android:background">@drawable/splash</item>',
+              '',
+              s,
+              count=1,
+          )
+          if s == old:
+              print('Launch splash theme already normalized or not present.')
+          else:
+              p.write_text(s, encoding='utf-8')
+              print('Removed Capacitor launch splash overlay; Android OS splash may still briefly appear on Android 12+.')
+          PY
 
       - name: Generate Android launcher icon
         run: |

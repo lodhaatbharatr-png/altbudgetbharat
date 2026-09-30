@@ -1,5 +1,3 @@
-// --- START OF src/main.jsx (PART 1) ---
-
 import React, { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
 import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -52,7 +50,7 @@ class ErrorBoundary extends React.Component {
             {String((this.state.error && this.state.error.message) || this.state.error || 'Unknown error')}
           </p>
           <button onClick={this.handleReset} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all">
-            Try Again
+            {translate("Try Again")}
           </button>
         </div>
       );
@@ -65,7 +63,7 @@ const AppBottomBranding = () => {
   const handleWhatsAppDeveloper = (e) => {
     e.preventDefault();
     const phone = '917218838122';
-    const textMsg = 'Hi Bharat, i need help regarding..';
+    const textMsg = `${translate('Hi Bharat, i need help regarding..')}`;
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
@@ -78,7 +76,7 @@ const AppBottomBranding = () => {
         className="h-[31px] object-contain mb-1.5 drop-shadow-sm"
       />
       <p className="text-[10px] font-bold text-[#625E70] tracking-wide mb-2.5">
-        Developed by - Bharat Rasve © 2026
+        {translate("Developed by - Bharat Rasve © 2026")}
       </p>
       <div className="flex items-center justify-center gap-2">
         <button
@@ -140,8 +138,8 @@ const AppBottomBranding = () => {
   );
 };
 
-const formatMoney = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(val || 0);
-const formatTableNum = (val) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(val || 0));
+const formatMoney = (val) => new Intl.NumberFormat(({ en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' })[getSelectedLanguage()] || 'en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(val || 0);
+const formatTableNum = (val) => new Intl.NumberFormat(({ en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' })[getSelectedLanguage()] || 'en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(val || 0));
 const toProperCase = (str) => {
   if (!str) return '';
   return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
@@ -151,12 +149,23 @@ const parseDate = (dStr) => {
   if (!dStr) return new Date(0);
   if (dStr instanceof Date) return dStr;
   const s = String(dStr).trim();
-  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+
+  // Parse ISO dates first; otherwise YYYY-MM-DD is mistaken for DD-MM-YYYY.
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T|\s)/);
+  if (iso) {
+    const parsedIso = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    return isNaN(parsedIso.getTime()) ? new Date(0) : parsedIso;
+  }
+
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:$|T|\s)/);
   if (m) {
     const day = parseInt(m[1], 10);
     const month = parseInt(m[2], 10) - 1;
     const year = m[3].length === 2 ? parseInt('20' + m[3], 10) : parseInt(m[3], 10);
-    return new Date(year, month, day);
+    const parsedParts = new Date(year, month, day);
+    return parsedParts.getFullYear() === year && parsedParts.getMonth() === month && parsedParts.getDate() === day
+      ? parsedParts
+      : new Date(0);
   }
   const parsed = new Date(s);
   return isNaN(parsed.getTime()) ? new Date(0) : parsed;
@@ -189,30 +198,562 @@ const toInputDate_ = (dStr) => {
   return '';
 };
 
+const getSelectedLanguage = () => {
+  try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+};
+
+const LANGUAGE_LOCALES = { en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' };
+const LANGUAGE_NAMES = { en: 'English', mr: 'मराठी', hi: 'हिन्दी' };
+const UI_TRANSLATIONS = {
+  "Home": {
+    "mr": "मुख्यपृष्ठ",
+    "hi": "होम"
+  },
+  "Directory": {
+    "mr": "व्यक्ती",
+    "hi": "निर्देशिका"
+  },
+  "Loans / EMIs": {
+    "mr": "कर्ज / EMI",
+    "hi": "लोन / EMI"
+  },
+  "Records": {
+    "mr": "नोंदी",
+    "hi": "रिकॉर्ड"
+  },
+  "Choose Language": {
+    "mr": "भाषा निवडा",
+    "hi": "भाषा चुनें"
+  },
+  "Languages": {
+    "mr": "भाषा",
+    "hi": "भाषाएँ"
+  },
+  "Confirm": {
+    "mr": "पुष्टी करा",
+    "hi": "पुष्टि करें"
+  },
+  "Record Setup": {
+    "mr": "नोंद सेटअप",
+    "hi": "रिकॉर्ड सेटअप"
+  },
+  "Manage Persons": {
+    "mr": "व्यक्ती व्यवस्थापित करा",
+    "hi": "व्यक्तियों का प्रबंधन"
+  },
+  "Add New Entry": {
+    "mr": "नवीन नोंद जोडा",
+    "hi": "नई एंट्री जोड़ें"
+  },
+  "Save Entry": {
+    "mr": "नोंद जतन करा",
+    "hi": "एंट्री सेव करें"
+  },
+  "Saving...": {
+    "mr": "जतन करत आहे...",
+    "hi": "सेव हो रहा है..."
+  },
+  "PERSON NAME *": {
+    "mr": "व्यक्तीचे नाव *",
+    "hi": "व्यक्ति का नाम *"
+  },
+  "PURPOSE / DESCRIPTION": {
+    "mr": "कारण / वर्णन",
+    "hi": "उद्देश्य / विवरण"
+  },
+  "REFERENCE / A/C MODE": {
+    "mr": "संदर्भ / पेमेंट पद्धत",
+    "hi": "संदर्भ / भुगतान तरीका"
+  },
+  "CATEGORY": {
+    "mr": "श्रेणी",
+    "hi": "श्रेणी"
+  },
+  "PROMISE DATE": {
+    "mr": "वचनाची तारीख",
+    "hi": "वादा की तारीख"
+  },
+  "Share transaction statement": {
+    "mr": "व्यवहार विवरण शेअर करा",
+    "hi": "लेन-देन विवरण साझा करें"
+  },
+  "Share balance reminder": {
+    "mr": "शिल्लक रकमेची आठवण शेअर करा",
+    "hi": "बकाया राशि का रिमाइंडर साझा करें"
+  },
+  "Share EMI table": {
+    "mr": "EMI तक्ता शेअर करा",
+    "hi": "EMI तालिका साझा करें"
+  },
+  "Share EMI reminder": {
+    "mr": "EMI आठवण शेअर करा",
+    "hi": "EMI रिमाइंडर साझा करें"
+  },
+  "Outstanding balance": {
+    "mr": "बाकी रक्कम",
+    "hi": "बकाया राशि"
+  },
+  "Payment reminder for": {
+    "mr": "या पेमेंटची आठवण",
+    "hi": "इस भुगतान के लिए रिमाइंडर"
+  },
+  "You will pay": {
+    "mr": "तुम्ही पैसे द्याल",
+    "hi": "आप भुगतान करेंगे"
+  },
+  "You will receive": {
+    "mr": "तुम्हाला पैसे मिळतील",
+    "hi": "आपको भुगतान मिलेगा"
+  },
+  "On or before": {
+    "mr": "या तारखेपर्यंत",
+    "hi": "इस तारीख तक"
+  },
+  "Due on": {
+    "mr": "देय तारीख",
+    "hi": "देय तिथि"
+  },
+  "Sent by": {
+    "mr": "पाठवणारे",
+    "hi": "भेजने वाले"
+  },
+  "Using": {
+    "mr": "वापरत आहे",
+    "hi": "उपयोग कर रहे हैं"
+  },
+  "Your Personal Finance App": {
+    "mr": "तुमचे वैयक्तिक आर्थिक ॲप",
+    "hi": "आपका व्यक्तिगत वित्त ऐप"
+  },
+  "Developed by - Bharat Rasve": {
+    "mr": "निर्मिती - Bharat Rasve",
+    "hi": "निर्माता - Bharat Rasve"
+  },
+  "Loan updated": {
+    "mr": "कर्ज अपडेट केले",
+    "hi": "लोन अपडेट हुआ"
+  },
+  "Loan deleted": {
+    "mr": "कर्ज हटवले",
+    "hi": "लोन हटाया गया"
+  },
+  "Data synced locally": {
+    "mr": "डेटा स्थानिकरीत्या सिंक झाला",
+    "hi": "डेटा स्थानीय रूप से सिंक हुआ"
+  },
+  "Couldn't load your data": {
+    "mr": "तुमचा डेटा लोड होऊ शकला नाही",
+    "hi": "आपका डेटा लोड नहीं हो सका"
+  },
+  "Retry": {
+    "mr": "पुन्हा प्रयत्न करा",
+    "hi": "पुनः प्रयास करें"
+  },
+  "Try Again": {
+    "mr": "पुन्हा प्रयत्न करा",
+    "hi": "फिर से प्रयास करें"
+  },
+  "All EMIs for this loan are cleared!": {
+    "mr": "या कर्जाचे सर्व EMI पूर्ण झाले!",
+    "hi": "इस लोन की सभी EMI पूरी हो गई हैं!"
+  },
+  "Reminder ready to share": {
+    "mr": "आठवण शेअर करण्यासाठी तयार आहे",
+    "hi": "रिमाइंडर साझा करने के लिए तैयार है"
+  },
+  "Reminder image saved; share it in WhatsApp": {
+    "mr": "आठवणीची प्रतिमा जतन झाली; WhatsApp वर शेअर करा",
+    "hi": "रिमाइंडर इमेज सेव हुई; WhatsApp पर साझा करें"
+  },
+  "Hello": {
+    "mr": "नमस्कार",
+    "hi": "नमस्ते"
+  },
+  "there": {
+    "mr": "",
+    "hi": ""
+  },
+  "Loan EMI": {
+    "mr": "कर्ज EMI",
+    "hi": "लोन EMI"
+  },
+  "Dear": {
+    "mr": "प्रिय",
+    "hi": "प्रिय"
+  },
+  "on or before": {
+    "mr": "या तारखेपर्यंत",
+    "hi": "इस तारीख तक"
+  },
+  "Budget Bharat Balance Reminder": {
+    "mr": "Budget Bharat शिल्लक रकमेची आठवण",
+    "hi": "Budget Bharat बकाया राशि रिमाइंडर"
+  },
+  "Budget Bharat Payment Reminder": {
+    "mr": "Budget Bharat पेमेंट आठवण",
+    "hi": "Budget Bharat भुगतान रिमाइंडर"
+  },
+  "your": {
+    "mr": "तुमचा",
+    "hi": "आपकी"
+  },
+  "EMI": {
+    "mr": "EMI",
+    "hi": "EMI"
+  },
+  "with amount": {
+    "mr": "रक्कम",
+    "hi": "राशि"
+  },
+  "is due on": {
+    "mr": "देय तारीख",
+    "hi": "की देय तिथि"
+  },
+  "Please pay": {
+    "mr": "कृपया पैसे भरा",
+    "hi": "कृपया भुगतान करें"
+  },
+  "I am reminding you to pay": {
+    "mr": "तुम्हाला पैसे भरण्याची आठवण करून देत आहे",
+    "hi": "आपको भुगतान की याद दिला रहा हूँ"
+  },
+  "From": { "mr": "पासून", "hi": "से" },
+  "To": { "mr": "पर्यंत", "hi": "तक" },
+  "No records found.": { "mr": "कोणत्याही नोंदी आढळल्या नाहीत.", "hi": "कोई रिकॉर्ड नहीं मिला।" },
+  "Date": { "mr": "तारीख", "hi": "तारीख" },
+  "Description": { "mr": "वर्णन", "hi": "विवरण" },
+  "Type": { "mr": "प्रकार", "hi": "प्रकार" },
+  "Amount": { "mr": "रक्कम", "hi": "राशि" },
+  "No matches found": { "mr": "जुळणारे काहीही आढळले नाही", "hi": "कोई मिलान नहीं मिला" },
+  "Categories": { "mr": "श्रेण्या", "hi": "श्रेणियाँ" },
+  "Your Personal Finance Manager": { "mr": "तुमचे वैयक्तिक आर्थिक व्यवस्थापक", "hi": "आपका व्यक्तिगत वित्त प्रबंधक" },
+  "Manage Categories": { "mr": "श्रेण्या व्यवस्थापित करा", "hi": "श्रेणियाँ प्रबंधित करें" },
+  "Admin Setup": { "mr": "प्रशासकीय सेटअप", "hi": "व्यवस्थापक सेटअप" },
+  "Quick Create": { "mr": "त्वरित तयार करा", "hi": "त्वरित बनाएँ" },
+  "Add Person": { "mr": "व्यक्ती जोडा", "hi": "व्यक्ति जोड़ें" },
+  "Add Category": { "mr": "श्रेणी जोडा", "hi": "श्रेणी जोड़ें" },
+  "Data Backup & Restore": { "mr": "डेटाचा बॅकअप आणि पुनर्संचयित करा", "hi": "डेटा बैकअप और पुनर्स्थापना" },
+  "Connected Account": { "mr": "जोडलेले खाते", "hi": "कनेक्ट किया गया खाता" },
+  "Data Exports": { "mr": "डेटा निर्यात", "hi": "डेटा निर्यात" },
+  "Summaries": { "mr": "सारांश", "hi": "सारांश" },
+  "Income": { "mr": "उत्पन्न", "hi": "आय" },
+  "Expenses": { "mr": "खर्च", "hi": "व्यय" },
+  "Active Loans": { "mr": "सक्रिय कर्जे", "hi": "सक्रिय लोन" },
+  "Persons": { "mr": "व्यक्ती", "hi": "व्यक्ति" },
+  "Receivables": { "mr": "येणे बाकी", "hi": "प्राप्य राशि" },
+  "Payables": { "mr": "देणे बाकी", "hi": "देय राशि" },
+  "Transactions": { "mr": "व्यवहार", "hi": "लेन-देन" },
+  "Loans EMI Records": { "mr": "कर्ज EMI नोंदी", "hi": "लोन EMI रिकॉर्ड" },
+  "All Transactions": { "mr": "सर्व व्यवहार", "hi": "सभी लेन-देन" },
+  "Incomes": { "mr": "उत्पन्न", "hi": "आय" },
+  "Back": { "mr": "मागे", "hi": "वापस" },
+  "Add": { "mr": "जोडा", "hi": "जोड़ें" },
+  "Expense": { "mr": "खर्च", "hi": "व्यय" },
+  "Category Name *": { "mr": "श्रेणीचे नाव *", "hi": "श्रेणी का नाम *" },
+  "Name *": { "mr": "नाव *", "hi": "नाम *" },
+  "Phone": { "mr": "फोन", "hi": "फ़ोन" },
+  "Email Id": { "mr": "ईमेल आयडी", "hi": "ईमेल आईडी" },
+  "Address / Location": { "mr": "पत्ता / ठिकाण", "hi": "पता / स्थान" },
+  "Contact": { "mr": "संपर्क", "hi": "संपर्क" },
+  "Email id": { "mr": "ईमेल आयडी", "hi": "ईमेल आईडी" },
+  "Statement Header note": { "mr": "स्टेटमेंटच्या शीर्षकातील नोंद", "hi": "विवरण के शीर्षक की टिप्पणी" },
+  "Statement Footer note": { "mr": "स्टेटमेंटच्या तळटीपेतली नोंद", "hi": "विवरण के नीचे की टिप्पणी" },
+  "Delete": { "mr": "हटवा", "hi": "हटाएँ" },
+  "and all linked transactions? This action cannot be undone.": { "mr": "आणि सर्व संबंधित व्यवहार? ही कृती पूर्ववत करता येणार नाही.", "hi": "और सभी संबंधित लेन-देन? यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
+  "Delete Category?": { "mr": "श्रेणी हटवायची?", "hi": "श्रेणी हटाएँ?" },
+  "Given (Dr)": { "mr": "दिलेले (डेबिट)", "hi": "दिया (डेबिट)" },
+  "Received": { "mr": "मिळालेले", "hi": "प्राप्त" },
+  "Expense & Income Overview": { "mr": "खर्च आणि उत्पन्नाचा आढावा", "hi": "व्यय और आय का अवलोकन" },
+  "Total Inflow": { "mr": "एकूण आवक", "hi": "कुल आवक" },
+  "(Inc + Recv)": { "mr": "(उत्पन्न + मिळालेले)", "hi": "(आय + प्राप्त)" },
+  "Total Outflow": { "mr": "एकूण जावक", "hi": "कुल जावक" },
+  "(Exp + Given)": { "mr": "(खर्च + दिलेले)", "hi": "(व्यय + दिया)" },
+  "Top Spending Categories": { "mr": "सर्वाधिक खर्चाच्या श्रेण्या", "hi": "सबसे अधिक खर्च वाली श्रेणियाँ" },
+  "Recent Transactions": { "mr": "अलीकडील व्यवहार", "hi": "हाल के लेन-देन" },
+  "People Overview": { "mr": "व्यक्तींचा आढावा", "hi": "व्यक्तियों का अवलोकन" },
+  "Total Receivable": { "mr": "एकूण येणे बाकी", "hi": "कुल प्राप्य राशि" },
+  "Total Payable": { "mr": "एकूण देणे बाकी", "hi": "कुल देय राशि" },
+  "Active Loans Overview": { "mr": "सक्रिय कर्जांचा आढावा", "hi": "सक्रिय लोन का अवलोकन" },
+  "Total to Pay": { "mr": "एकूण देय", "hi": "कुल देय" },
+  "Paid So Far": { "mr": "आतापर्यंत भरलेले", "hi": "अब तक चुकाया" },
+  "Remaining": { "mr": "शिल्लक", "hi": "शेष" },
+  "No active loans.": { "mr": "कोणतेही सक्रिय कर्ज नाही.", "hi": "कोई सक्रिय लोन नहीं है।" },
+  "Loan / Person": { "mr": "कर्ज / व्यक्ती", "hi": "लोन / व्यक्ति" },
+  "Loan Rs.": { "mr": "कर्जाची रक्कम", "hi": "लोन राशि" },
+  "EMI Rs.": { "mr": "EMI रक्कम", "hi": "EMI राशि" },
+  "EMI Paid": { "mr": "भरलेले EMI", "hi": "चुकाई गई EMI" },
+  "RECEIVABLE": { "mr": "येणे बाकी", "hi": "प्राप्य" },
+  "PAYABLE": { "mr": "देणे बाकी", "hi": "देय" },
+  "BALANCE": { "mr": "शिल्लक", "hi": "शेष" },
+  "Person Name": { "mr": "व्यक्तीचे नाव", "hi": "व्यक्ति का नाम" },
+  "Given": { "mr": "दिले", "hi": "दिया" },
+  "Recv": { "mr": "मिळाले", "hi": "प्राप्त" },
+  "Balance": { "mr": "शिल्लक", "hi": "बकाया" },
+  "STATEMENT BY -": { "mr": "स्टेटमेंट तयार करणारे -", "hi": "विवरण तैयार करने वाले -" },
+  "Budget Bharat-Personal finance App": { "mr": "Budget Bharat-वैयक्तिक वित्त ॲप", "hi": "Budget Bharat-व्यक्तिगत वित्त ऐप" },
+  "Mo.No: 7218838122": { "mr": "मो. नं.: 7218838122", "hi": "मो. नं.: 7218838122" },
+  "GIVEN (DR)": { "mr": "दिलेले (डेबिट)", "hi": "दिया (डेबिट)" },
+  "RECEIVED (CR)": { "mr": "मिळालेले (क्रेडिट)", "hi": "प्राप्त (क्रेडिट)" },
+  "Ref A/C": { "mr": "संदर्भ / खाते", "hi": "संदर्भ / खाता" },
+  "Promise": { "mr": "वचन तारीख", "hi": "वादा तारीख" },
+  "New Loan": { "mr": "नवीन कर्ज", "hi": "नया लोन" },
+  "No active loans found. Create your first loan above.": { "mr": "सक्रिय कर्ज आढळले नाही. वर पहिले कर्ज तयार करा.", "hi": "कोई सक्रिय लोन नहीं मिला। ऊपर अपना पहला लोन बनाएँ।" },
+  "Active Loans Statement": { "mr": "सक्रिय कर्जांचे स्टेटमेंट", "hi": "सक्रिय लोन विवरण" },
+  "TOTAL TO PAY": { "mr": "एकूण देय", "hi": "कुल देय" },
+  "PAID SO FAR": { "mr": "आतापर्यंत भरलेले", "hi": "अब तक चुकाया" },
+  "REMAINING": { "mr": "शिल्लक", "hi": "शेष" },
+  "Foreclose": { "mr": "कर्ज बंद करा", "hi": "लोन बंद करें" },
+  "New Loan Details": { "mr": "नवीन कर्जाचा तपशील", "hi": "नए लोन का विवरण" },
+  "Amortization Setup": { "mr": "परतफेड नियोजन", "hi": "भुगतान योजना" },
+  "Borrower *": { "mr": "कर्जदार *", "hi": "उधारकर्ता *" },
+  "Loan Name *": { "mr": "कर्जाचे नाव *", "hi": "लोन का नाम *" },
+  "Loan Taken (Disbursed) *": { "mr": "घेतलेली कर्जरक्कम *", "hi": "प्राप्त लोन राशि *" },
+  "Loan to Pay (Total) *": { "mr": "एकूण परतफेड रक्कम *", "hi": "कुल चुकाने की राशि *" },
+  "Monthly EMI (₹) *": { "mr": "मासिक EMI (₹) *", "hi": "मासिक EMI (₹) *" },
+  "Tenure (Mo)": { "mr": "कालावधी (महिने)", "hi": "अवधि (महीने)" },
+  "First Date": { "mr": "पहिली तारीख", "hi": "पहली तारीख" },
+  "Total Loan Taken": { "mr": "एकूण घेतलेले कर्ज", "hi": "कुल लिया गया लोन" },
+  "Total Loan to Pay": { "mr": "एकूण परतफेड", "hi": "कुल चुकौती" },
+  "Interest": { "mr": "व्याज", "hi": "ब्याज" },
+  "Payment Made": { "mr": "केलेले पेमेंट", "hi": "किया गया भुगतान" },
+  "DATE": { "mr": "तारीख", "hi": "तारीख" },
+  "AMOUNT": { "mr": "रक्कम", "hi": "राशि" },
+  "Paid/ Not": { "mr": "भरले / नाही", "hi": "भुगतान / नहीं" },
+  "Txn. Id": { "mr": "व्यवहार आयडी", "hi": "लेन-देन आईडी" },
+  "Loan Foreclosure": { "mr": "कर्ज बंद करणे", "hi": "लोन बंद करना" },
+  "Closure EMI / Date *": { "mr": "शेवटचा EMI / तारीख *", "hi": "अंतिम EMI / तारीख *" },
+  "Closure Settlement Amount (₹) *": { "mr": "कर्ज बंद करण्याची अंतिम रक्कम (₹) *", "hi": "लोन बंद करने की अंतिम राशि (₹) *" },
+  "Are you sure you want to delete": { "mr": "तुम्हाला खरोखर हटवायचे आहे का", "hi": "क्या आप वाकई हटाना चाहते हैं" },
+  "? This action cannot be undone.": { "mr": "? ही कृती पूर्ववत करता येणार नाही.", "hi": "? यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
+  "Record EMI Payment": { "mr": "EMI पेमेंट नोंदवा", "hi": "EMI भुगतान दर्ज करें" },
+  "Who Paid this EMI? *": { "mr": "हा EMI कोणी भरला? *", "hi": "यह EMI किसने चुकाई? *" },
+  "UTR / Payment ID / Note": { "mr": "UTR / पेमेंट आयडी / नोंद", "hi": "UTR / भुगतान आईडी / टिप्पणी" },
+  "EMI TABLE": { "mr": "EMI तक्ता", "hi": "EMI तालिका" },
+  "TOTAL LOAN TAKEN": { "mr": "एकूण घेतलेले कर्ज", "hi": "कुल लिया गया लोन" },
+  "TOTAL LOAN TO PAY": { "mr": "एकूण परतफेड", "hi": "कुल चुकौती" },
+  "INTEREST": { "mr": "व्याज", "hi": "ब्याज" },
+  "EMI PAID": { "mr": "भरलेले EMI", "hi": "चुकाई गई EMI" },
+  "PAYMENT MADE": { "mr": "केलेले पेमेंट", "hi": "किया गया भुगतान" },
+  "STATUS": { "mr": "स्थिती", "hi": "स्थिति" },
+  "WHO PAID": { "mr": "कोणी भरले", "hi": "किसने भुगतान किया" },
+  "TXN ID": { "mr": "व्यवहार आयडी", "hi": "लेन-देन आईडी" },
+  "Edit Transaction": { "mr": "व्यवहार संपादित करा", "hi": "लेन-देन संपादित करें" },
+  "AMOUNT (₹) *": { "mr": "रक्कम (₹) *", "hi": "राशि (₹) *" },
+  "DATE *": { "mr": "तारीख *", "hi": "तारीख *" },
+  "DESCRIPTION": { "mr": "वर्णन", "hi": "विवरण" },
+  "AC": { "mr": "खाते", "hi": "खाता" },
+  "Enter Result": { "mr": "निकाल प्रविष्ट करा", "hi": "परिणाम दर्ज करें" },
+  "New Record": { "mr": "नवीन नोंद", "hi": "नया रिकॉर्ड" },
+  "NEW RECORD": { "mr": "नवीन नोंद", "hi": "नया रिकॉर्ड" },
+  "Optional": { "mr": "ऐच्छिक", "hi": "वैकल्पिक" },
+  "City or Village": { "mr": "शहर किंवा गाव", "hi": "शहर या गाँव" },
+  "Search people, note, category...": { "mr": "व्यक्ती, नोंद, श्रेणी शोधा...", "hi": "व्यक्ति, टिप्पणी, श्रेणी खोजें..." },
+  "Search entry...": { "mr": "नोंद शोधा...", "hi": "रिकॉर्ड खोजें..." },
+  "Search person...": { "mr": "व्यक्ती शोधा...", "hi": "व्यक्ति खोजें..." },
+  "Select person...": { "mr": "व्यक्ती निवडा...", "hi": "व्यक्ति चुनें..." },
+  "Type or select person...": { "mr": "व्यक्तीचे नाव लिहा किंवा निवडा...", "hi": "व्यक्ति का नाम लिखें या चुनें..." },
+  "Category...": { "mr": "श्रेणी...", "hi": "श्रेणी..." },
+  "e.g. for shopping, to EMI payment..": { "mr": "उदा. खरेदीसाठी, EMI पेमेंटसाठी...", "hi": "जैसे खरीदारी, EMI भुगतान..." },
+  "e.g. PhonePe, NetBanking, Cash...": { "mr": "उदा. PhonePe, NetBanking, रोख...", "hi": "जैसे PhonePe, NetBanking, नकद..." },
+  "e.g. Phone EMI / Gold Loan": { "mr": "उदा. फोन EMI / सोने कर्ज", "hi": "जैसे फोन EMI / गोल्ड लोन" },
+  "Bank Disbursed Amount": { "mr": "बँकेने वितरित केलेली रक्कम", "hi": "बैंक द्वारा वितरित राशि" },
+  "Total Repayable": { "mr": "एकूण परतफेड रक्कम", "hi": "कुल चुकाने योग्य राशि" },
+  "Enter final settlement amount": { "mr": "अंतिम सेटलमेंट रक्कम भरा", "hi": "अंतिम निपटान राशि दर्ज करें" },
+  "e.g. T2403050925367... or paid advance": { "mr": "उदा. T2403050925367... किंवा आगाऊ भरलेले", "hi": "जैसे T2403050925367... या अग्रिम भुगतान" },
+  "Received (Cr)": { "mr": "मिळालेले (क्रेडिट)", "hi": "प्राप्त (क्रेडिट)" },
+  "Overall Records": { "mr": "सर्व नोंदी", "hi": "सभी रिकॉर्ड" },
+  "Delete Transaction": { "mr": "व्यवहार हटवा", "hi": "लेन-देन हटाएँ" },
+  "Open Calculator": { "mr": "कॅल्क्युलेटर उघडा", "hi": "कैलकुलेटर खोलें" },
+  "Close Calculator": { "mr": "कॅल्क्युलेटर बंद करा", "hi": "कैलकुलेटर बंद करें" },
+  "0.00": { "mr": "०.००", "hi": "०.००" },
+  "Click to view all Credit (Receivable) parties": { "mr": "सर्व येणे बाकी असलेल्या व्यक्ती पाहण्यासाठी क्लिक करा", "hi": "सभी प्राप्य पक्षों को देखने के लिए क्लिक करें" },
+  "Click to view all Debit (Payable) parties": { "mr": "सर्व देणे बाकी असलेल्या व्यक्ती पाहण्यासाठी क्लिक करा", "hi": "सभी देय पक्षों को देखने के लिए क्लिक करें" },
+  "Share Directory Summary Image": { "mr": "व्यक्ती निर्देशिका सारांश प्रतिमा शेअर करा", "hi": "व्यक्ति निर्देशिका सारांश इमेज साझा करें" },
+  "Share Loans Summary Image": { "mr": "कर्ज सारांश प्रतिमा शेअर करा", "hi": "लोन सारांश इमेज साझा करें" },
+  "Share Statement or Reminder": { "mr": "स्टेटमेंट किंवा आठवण शेअर करा", "hi": "विवरण या रिमाइंडर साझा करें" },
+  "Open WhatsApp chat": { "mr": "WhatsApp चॅट उघडा", "hi": "WhatsApp चैट खोलें" },
+  "Delete Person & All Records": { "mr": "व्यक्ती आणि सर्व नोंदी हटवा", "hi": "व्यक्ति और सभी रिकॉर्ड हटाएँ" },
+  "Share EMI Table or Reminder": { "mr": "EMI तक्ता किंवा आठवण शेअर करा", "hi": "EMI तालिका या रिमाइंडर साझा करें" },
+  "Send WhatsApp EMI Reminder": { "mr": "WhatsApp EMI आठवण पाठवा", "hi": "WhatsApp EMI रिमाइंडर भेजें" },
+  "Delete Loan": { "mr": "कर्ज हटवा", "hi": "लोन हटाएँ" },
+  "Foreclose Loan": { "mr": "कर्ज बंद करा", "hi": "लोन बंद करें" },
+  "Exit to Directory": { "mr": "निर्देशिकेकडे परत जा", "hi": "निर्देशिका पर जाएँ" },
+  "Exit to Loans Directory": { "mr": "कर्ज निर्देशिकेकडे परत जा", "hi": "लोन निर्देशिका पर जाएँ" },
+  "Previous Person": { "mr": "मागील व्यक्ती", "hi": "पिछला व्यक्ति" },
+  "Next Person": { "mr": "पुढील व्यक्ती", "hi": "अगला व्यक्ति" },
+  "Previous Loan": { "mr": "मागील कर्ज", "hi": "पिछला लोन" },
+  "Next Loan": { "mr": "पुढील कर्ज", "hi": "अगला लोन" },
+  "Share transaction statement": { "mr": "व्यवहार विवरण शेअर करा", "hi": "लेन-देन विवरण साझा करें" },
+  "Share balance reminder": { "mr": "बाकी रकमेची आठवण शेअर करा", "hi": "बकाया राशि का रिमाइंडर साझा करें" },
+  "Share EMI table": { "mr": "EMI तक्ता शेअर करा", "hi": "EMI तालिका साझा करें" },
+  "Share EMI reminder": { "mr": "EMI आठवण शेअर करा", "hi": "EMI रिमाइंडर साझा करें" },
+  "Language applied: English": { "mr": "लागू केलेली भाषा: मराठी", "hi": "लागू की गई भाषा: हिन्दी" },
+  "Results for": { "mr": "यासाठी परिणाम", "hi": "परिणाम" },
+  "matches": { "mr": "जुळण्या", "hi": "मिलान" },
+  "People": { "mr": "व्यक्ती", "hi": "लोग" },
+  "Borrower Paid": { "mr": "कर्जदाराने भरले", "hi": "उधारकर्ता ने भुगतान किया" },
+  "Auto-logs a": { "mr": "आपोआप नोंदवते", "hi": "स्वतः दर्ज करता है" },
+  "entry of": { "mr": "इतकी नोंद", "hi": "की प्रविष्टि" },
+  "in": { "mr": "मध्ये", "hi": "में" },
+  "Marks installment cleared by borrower. Ledger balance remains unchanged.": { "mr": "कर्जदाराने हप्ता भरल्याची नोंद करते. खाते शिल्लक बदलत नाही.", "hi": "उधारकर्ता द्वारा किस्त चुकाने का रिकॉर्ड करता है। खाते का बैलेंस नहीं बदलता।" },
+  "Cancel": { "mr": "रद्द करा", "hi": "रद्द करें" },
+  "Save": { "mr": "जतन करा", "hi": "सेव करें" },
+  "Save Changes": { "mr": "बदल जतन करा", "hi": "बदलाव सेव करें" },
+  "Update": { "mr": "अपडेट करा", "hi": "अपडेट करें" },
+  "Edit": { "mr": "संपादित करा", "hi": "संपादित करें" },
+  "Delete Person?": { "mr": "व्यक्ती हटवायची?", "hi": "व्यक्ति हटाएँ?" },
+  "Deleting Person...": { "mr": "व्यक्ती हटवत आहे...", "hi": "व्यक्ति हटाई जा रही है..." },
+  "Delete Loan?": { "mr": "कर्ज हटवायचे?", "hi": "लोन हटाएँ?" },
+  "Deleting Loan...": { "mr": "कर्ज हटवत आहे...", "hi": "लोन हटाया जा रहा है..." },
+  "Delete Transaction?": { "mr": "व्यवहार हटवायचा?", "hi": "लेन-देन हटाएँ?" },
+  "Deleting...": { "mr": "हटवत आहे...", "hi": "हटाया जा रहा है..." },
+  "Loading...": { "mr": "लोड होत आहे...", "hi": "लोड हो रहा है..." },
+  "Preparing export...": { "mr": "निर्यात तयार करत आहे...", "hi": "निर्यात तैयार हो रहा है..." },
+  "Preparing full backup...": { "mr": "पूर्ण बॅकअप तयार करत आहे...", "hi": "पूरा बैकअप तैयार हो रहा है..." },
+  "Exported ": { "mr": "निर्यात केले: ", "hi": "निर्यात किया: " },
+  "Export canceled": { "mr": "निर्यात रद्द केले", "hi": "निर्यात रद्द किया गया" },
+  "Export failed: ": { "mr": "निर्यात अयशस्वी: ", "hi": "निर्यात विफल: " },
+  "Export Backup File": { "mr": "बॅकअप फाइल निर्यात करा", "hi": "बैकअप फ़ाइल निर्यात करें" },
+  "Restore from Backup": { "mr": "बॅकअपमधून पुनर्संचयित करा", "hi": "बैकअप से पुनर्स्थापित करें" },
+  "Sign in with Google": { "mr": "Google सह साइन इन करा", "hi": "Google से साइन इन करें" },
+  "No transactions found": { "mr": "कोणतेही व्यवहार आढळले नाहीत", "hi": "कोई लेन-देन नहीं मिला" },
+  "No persons found": { "mr": "कोणतीही व्यक्ती आढळली नाही", "hi": "कोई व्यक्ति नहीं मिली" },
+  "No categories found": { "mr": "कोणत्याही श्रेण्या आढळल्या नाहीत", "hi": "कोई श्रेणी नहीं मिली" },
+  "Please enter a name.": { "mr": "कृपया नाव प्रविष्ट करा.", "hi": "कृपया नाम दर्ज करें।" },
+  "Name is required": { "mr": "नाव आवश्यक आहे", "hi": "नाम आवश्यक है" },
+  "Phone is invalid": { "mr": "फोन क्रमांक अवैध आहे", "hi": "फ़ोन नंबर अमान्य है" },
+  "Required": { "mr": "आवश्यक", "hi": "आवश्यक" },
+  "Choose a category": { "mr": "श्रेणी निवडा", "hi": "श्रेणी चुनें" },
+  "Borrower": { "mr": "कर्जदार", "hi": "उधारकर्ता" },
+  "Loan": { "mr": "कर्ज", "hi": "लोन" },
+  "Payment": { "mr": "पेमेंट", "hi": "भुगतान" },
+  "Paid": { "mr": "भरले", "hi": "भुगतान किया" },
+  "Pending": { "mr": "प्रलंबित", "hi": "लंबित" },
+  "Cleared": { "mr": "पूर्ण", "hi": "चुकाया गया" },
+  "Open": { "mr": "उघडा", "hi": "खोलें" },
+  "Close": { "mr": "बंद करा", "hi": "बंद करें" },
+  "Share": { "mr": "शेअर करा", "hi": "साझा करें" },
+  "Statement": { "mr": "स्टेटमेंट", "hi": "विवरण" },
+  "Reminder": { "mr": "आठवण", "hi": "रिमाइंडर" },
+  "Download": { "mr": "डाउनलोड करा", "hi": "डाउनलोड करें" },
+  "Export": { "mr": "निर्यात", "hi": "निर्यात" },
+  "Import": { "mr": "आयात", "hi": "आयात" },
+  "Search": { "mr": "शोधा", "hi": "खोजें" },
+  "Filter": { "mr": "फिल्टर", "hi": "फ़िल्टर" },
+  "All": { "mr": "सर्व", "hi": "सभी" },
+  "Today": { "mr": "आज", "hi": "आज" },
+  "Week": { "mr": "आठवडा", "hi": "सप्ताह" },
+  "Month": { "mr": "महिना", "hi": "महीना" },
+  "Year": { "mr": "वर्ष", "hi": "वर्ष" },
+  "Custom": { "mr": "सानुकूल", "hi": "कस्टम" },
+  "Given (Lent)": { "mr": "दिलेले (कर्ज दिले)", "hi": "दिया (उधार दिया)" },
+  "you will pay": { "mr": "तुम्ही पैसे द्याल", "hi": "आप भुगतान करेंगे" },
+  "Receivable": { "mr": "येणे बाकी", "hi": "प्राप्य" },
+  "BAL (RECEIVABLE)": { "mr": "शिल्लक (येणे बाकी)", "hi": "शेष (प्राप्य)" },
+  "and all associated transactions? This cannot be undone.": { "mr": "आणि सर्व संबंधित व्यवहार? ही कृती पूर्ववत करता येणार नाही.", "hi": "और सभी संबंधित लेन-देन? यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
+  "Developed by - Bharat Rasve © 2026": { "mr": "निर्मिती - Bharat Rasve © 2026", "hi": "निर्माता - Bharat Rasve © 2026" },
+  "Removing": { "mr": "हटवत आहे", "hi": "हटाया जा रहा है" },
+  "and associated records.": { "mr": "आणि संबंधित नोंदी.", "hi": "और संबंधित रिकॉर्ड।" },
+  "and all associated entries from sheet.": { "mr": "आणि शीटमधील सर्व संबंधित नोंदी.", "hi": "और शीट के सभी संबंधित रिकॉर्ड।" },
+  "GIVEN (LENT)": { "mr": "दिलेले (कर्ज दिले)", "hi": "दिया (उधार दिया)" },
+  "Credit": { "mr": "जमा", "hi": "क्रेडिट" },
+  "Debit": { "mr": "नावे", "hi": "डेबिट" },
+  "Qtr": { "mr": "तिमाही", "hi": "तिमाही" },
+  "Create Loan": { "mr": "कर्ज तयार करा", "hi": "लोन बनाएँ" },
+  "Creating...": { "mr": "तयार करत आहे...", "hi": "बनाया जा रहा है..." },
+  "Created": { "mr": "तयार झाले", "hi": "बन गया" },
+  "Update Transaction": { "mr": "व्यवहार अपडेट करा", "hi": "लेन-देन अपडेट करें" },
+  "Saving Changes...": { "mr": "बदल जतन करत आहे...", "hi": "बदल सेव हो रहे हैं..." },
+  "Confirm Closure": { "mr": "कर्ज बंद करण्याची पुष्टी करा", "hi": "लोन बंद करने की पुष्टि करें" },
+  "Closing...": { "mr": "बंद करत आहे...", "hi": "बंद हो रहा है..." },
+  "Closed": { "mr": "बंद केले", "hi": "बंद हुआ" },
+  "Confirm & Save": { "mr": "पुष्टी करून जतन करा", "hi": "पुष्टि करें और सेव करें" },
+  "Saved": { "mr": "जतन झाले", "hi": "सेव हुआ" },
+  "I Paid": { "mr": "मी भरले", "hi": "मैंने भुगतान किया" },
+  "I paid": { "mr": "मी भरले", "hi": "मैंने भुगतान किया" },
+  "Yes, Delete": { "mr": "होय, हटवा", "hi": "हाँ, हटाएँ" },
+  "No, Cancel": { "mr": "नाही, रद्द करा", "hi": "नहीं, रद्द करें" },
+  "Are you sure you want to delete this transaction?": { "mr": "तुम्हाला हा व्यवहार हटवायचा आहे का?", "hi": "क्या आप यह लेन-देन हटाना चाहते हैं?" },
+  "Add New Person": { "mr": "नवीन व्यक्ती जोडा", "hi": "नया व्यक्ति जोड़ें" },
+  "Directory Party Entry": { "mr": "निर्देशिका व्यक्ती नोंद", "hi": "निर्देशिका पार्टी प्रविष्टि" },
+  "Directory Persons": { "mr": "निर्देशिकेतील व्यक्ती", "hi": "निर्देशिका के व्यक्ति" },
+  "All Time": { "mr": "संपूर्ण कालावधी", "hi": "सभी समय" },
+  "Loading fonts & generating PDF...": { "mr": "फॉन्ट लोड करून PDF तयार करत आहे...", "hi": "फ़ॉन्ट लोड करके PDF बनाया जा रहा है..." },
+  "Generating All Persons Ledger Image...": { "mr": "सर्व व्यक्तींच्या लेजरची प्रतिमा तयार करत आहे...", "hi": "सभी व्यक्तियों के लेजर की इमेज बनाई जा रही है..." },
+  "Ledger Ready": { "mr": "लेजर तयार आहे", "hi": "लेजर तैयार है" },
+  "Error: ": { "mr": "त्रुटी: ", "hi": "त्रुटि: " },
+  "Generating PDF failed": { "mr": "PDF तयार करणे अयशस्वी झाले", "hi": "PDF बनाना विफल हुआ" },
+  "Statement image generation failed.": { "mr": "स्टेटमेंट प्रतिमा तयार करणे अयशस्वी झाले.", "hi": "विवरण इमेज बनाना विफल हुआ।" },
+  "PDF shared successfully": { "mr": "PDF यशस्वीरित्या शेअर केली", "hi": "PDF सफलतापूर्वक साझा हुआ" },
+  "PDF downloaded successfully": { "mr": "PDF यशस्वीरित्या डाउनलोड केली", "hi": "PDF सफलतापूर्वक डाउनलोड हुआ" },
+  "EMI Table shared": { "mr": "EMI तक्ता शेअर केला", "hi": "EMI तालिका साझा की गई" },
+  "Overall Statement": { "mr": "एकूण_विवरण", "hi": "समग्र_विवरण" },
+  "EMI Table": { "mr": "EMI_तक्ता", "hi": "EMI_तालिका" },
+  "you will receive": { "mr": "तुम्हाला पैसे मिळतील", "hi": "आपको पैसे प्राप्त होंगे" },
+  "is settled at": { "mr": "पूर्णपणे निकाली निघाले आहे:", "hi": "का निपटान हुआ:" },
+  "on or before date": { "mr": "या तारखेपर्यंत", "hi": "इस तारीख तक" },
+  "Transaction updated": { "mr": "व्यवहार अपडेट केला", "hi": "लेन-देन अपडेट किया गया" },
+  "Failed to create loan": { "mr": "कर्ज तयार करता आले नाही", "hi": "लोन बनाने में विफल" },
+  "Could not read that file": { "mr": "ही फाइल वाचता आली नाही", "hi": "यह फ़ाइल पढ़ी नहीं जा सकी" },
+  "Add New": { "mr": "नवीन जोडा", "hi": "नया जोड़ें" },
+  "Category": { "mr": "श्रेणी", "hi": "श्रेणी" },
+  "Target Ledger": { "mr": "लक्ष्य खातेवही", "hi": "लक्षित खाता-बही" },
+  "Configuration Setup": { "mr": "कॉन्फिगरेशन सेटअप", "hi": "कॉन्फ़िगरेशन सेटअप" },
+  "Edit Person": { "mr": "व्यक्ती संपादित करा", "hi": "व्यक्ति संपादित करें" },
+  "Edit Category": { "mr": "श्रेणी संपादित करा", "hi": "श्रेणी संपादित करें" },
+  "Delete Entry...": { "mr": "नोंद हटवत आहे...", "hi": "रिकॉर्ड हटाया जा रहा है" },
+  "Please wait while we update your sheet.": { "mr": "शीट अपडेट होईपर्यंत प्रतीक्षा करा.", "hi": "शीट अपडेट होने तक प्रतीक्षा करें।" },
+  "This action cannot be undone.": { "mr": "ही कृती पूर्ववत करता येणार नाही.", "hi": "यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
+  "No": { "mr": "नाही", "hi": "नहीं" },
+  "I Paid (Me)": { "mr": "मी भरले", "hi": "मैंने भुगतान किया" },
+  "entry saved": { "mr": "नोंद जतन झाली", "hi": "रिकॉर्ड सेव हुआ" },
+  "Save failed: ": { "mr": "जतन अयशस्वी: ", "hi": "सेव विफल: " },
+  "Transaction deleted": { "mr": "व्यवहार हटवला", "hi": "लेन-देन हटाया गया" },
+  "Failed to save payment": { "mr": "पेमेंट जतन करता आले नाही", "hi": "भुगतान सेव नहीं हुआ" },
+  "Delete failed: ": { "mr": "हटवणे अयशस्वी: ", "hi": "हटाने में विफल: " },
+  "Restore failed: ": { "mr": "पुनर्संचयित करणे अयशस्वी: ", "hi": "पुनर्स्थापना विफल: " },
+  "Sync failed: ": { "mr": "सिंक अयशस्वी: ", "hi": "सिंक विफल: " },
+  "Person Added to Directory": { "mr": "व्यक्ती निर्देशिकेत जोडली", "hi": "व्यक्ति निर्देशिका में जोड़ा गया" },
+  "Delete failed": { "mr": "हटवणे अयशस्वी", "hi": "हटाने में विफल" },
+  "Expense entry saved": { "mr": "खर्चाची नोंद जतन झाली", "hi": "व्यय रिकॉर्ड सेव हुआ" },
+  "Income entry saved": { "mr": "उत्पन्नाची नोंद जतन झाली", "hi": "आय रिकॉर्ड सेव हुआ" },
+  "Received entry saved": { "mr": "मिळाल्याची नोंद जतन झाली", "hi": "प्राप्ति रिकॉर्ड सेव हुआ" },
+  "Given entry saved": { "mr": "दिल्याची नोंद जतन झाली", "hi": "दिया गया रिकॉर्ड सेव हुआ" },
+  "Loans": { "mr": "कर्जे", "hi": "लोन" },
+  "No Loans": { "mr": "कर्जे नाहीत", "hi": "कोई लोन नहीं" },
+  "Showing ": { "mr": "दाखवत आहे ", "hi": "दिखा रहे हैं " },
+  " of ": { "mr": " पैकी ", "hi": " में से " },
+  "Language applied": {
+    "mr": "लागू केलेली भाषा",
+    "hi": "लागू की गई भाषा"
+  }
+};
+const translate = (key) => {
+  const language = getSelectedLanguage();
+  return language === 'en' ? key : ((UI_TRANSLATIONS[key] && UI_TRANSLATIONS[key][language]) || key);
+};
+
 const formatDisplayDate = (dStr) => {
   if (!dStr) return '-';
-  let day, monthIdx, yy;
+  let date;
   if (dStr instanceof Date) {
-    day = dStr.getDate();
-    monthIdx = dStr.getMonth();
-    yy = String(dStr.getFullYear()).slice(-2);
+    date = new Date(dStr.getFullYear(), dStr.getMonth(), dStr.getDate());
   } else {
     const s = String(dStr).trim();
     const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     if (m) {
-      day = parseInt(m[1], 10);
-      monthIdx = parseInt(m[2], 10) - 1;
-      yy = m[3].length === 4 ? m[3].slice(-2) : m[3];
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10) - 1;
+      const year = m[3].length === 2 ? parseInt('20' + m[3], 10) : parseInt(m[3], 10);
+      date = new Date(year, month, day);
     } else {
-      const d = new Date(s);
-      if (isNaN(d.getTime())) return dStr;
-      day = d.getDate();
-      monthIdx = d.getMonth();
-      yy = String(d.getFullYear()).slice(-2);
+      date = new Date(s);
+      if (isNaN(date.getTime())) return dStr;
     }
   }
-  if (isNaN(day) || monthIdx < 0 || monthIdx > 11) return dStr;
-  return `${day}-${MONTHS_SHORT[monthIdx]}-${yy}`;
+  if (isNaN(date.getTime())) return dStr;
+  const locale = ({ en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' })[getSelectedLanguage()] || 'en-IN';
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
 };
 
 const gasRun = async (fnName, ...args) => {
@@ -278,10 +819,11 @@ const waitForPaint = () => new Promise(resolve => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
 });
 
-const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
-  const width = 900, height = 620;
+const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin, reminderType = 'emi', balanceDirection = 'receivable' }) => {
+  const width = 900, height = 650;
   const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available on this device.');
 
@@ -298,17 +840,24 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.fillStyle = '#F4F3F8';
   ctx.fillRect(0, 0, width, height);
 
-  const ticketX = 48, ticketY = 34, ticketW = width - 96, ticketH = height - 68;
+  const ticketX = 48, ticketY = 28, ticketW = width - 96, ticketH = height - 46;
   ctx.save();
   roundRect(ticketX, ticketY, ticketW, ticketH, 28);
   ctx.fillStyle = '#FFFFFF';
   ctx.fill();
   ctx.restore();
 
+  // Ticket cut-outs at the footer separator. Use the slip's outer
+  // background color so the semicircles never render black/transparent.
+  const separatorY = 414;
   ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath(); ctx.arc(ticketX, ticketY + ticketH * 0.62, 24, -Math.PI / 2, Math.PI / 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(ticketX + ticketW, ticketY + ticketH * 0.62, 24, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+  ctx.fillStyle = '#F4F3F8';
+  ctx.beginPath();
+  ctx.arc(ticketX, separatorY, 24, -Math.PI / 2, Math.PI / 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ticketX + ticketW, separatorY, 24, Math.PI / 2, Math.PI * 1.5);
+  ctx.fill();
   ctx.restore();
 
   ctx.save();
@@ -316,65 +865,96 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.lineWidth = 2;
   ctx.setLineDash([9, 10]);
   ctx.beginPath();
-  ctx.moveTo(ticketX + 34, ticketY + ticketH * 0.62);
-  ctx.lineTo(ticketX + ticketW - 34, ticketY + ticketH * 0.62);
+  ctx.moveTo(ticketX + 34, separatorY);
+  ctx.lineTo(ticketX + ticketW - 34, separatorY);
   ctx.stroke();
   ctx.restore();
-
-  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
-  if (logoSrc) await new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 330, maxH = 150;
-      const scale = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * scale, h = img.height * scale;
-      ctx.save();
-      ctx.globalAlpha = 0.055;
-      ctx.drawImage(img, (width - w) / 2, ticketY + 118, w, h);
-      ctx.restore();
-      resolve();
-    };
-    img.onerror = resolve;
-    img.src = logoSrc;
-  });
 
   const centerX = width / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 34px sans-serif';
-  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 95);
+  ctx.fillText(`${translate('Hello')} ${personName || translate('there')}!`, centerX, 100);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText('Payment reminder for', centerX, 140);
+  ctx.fillText(reminderType === 'ledger' ? translate('Outstanding balance') : translate('Payment reminder for'), centerX, 145);
 
-  roundRect(205, 166, 490, 86, 22);
-  ctx.fillStyle = '#F1EAF4'; ctx.fill();
+  roundRect(205, 172, 490, 86, 22);
+  ctx.fillStyle = '#F1EAF4';
+  ctx.fill();
   ctx.fillStyle = '#7B2B8C';
   ctx.font = '900 58px sans-serif';
-  ctx.fillText(formatMoney(amount), centerX, 211);
+  ctx.fillText(formatMoney(amount), centerX, 216);
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 285);
+  ctx.fillText(reminderType === 'ledger' ? translate(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive') : `${translate('Due on')} ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
-  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 322);
+  ctx.fillText(reminderType === 'ledger' ? `${translate('On or before')} ${formatDisplayDate(dueDate)}` : `${loanName || translate('Loan EMI')}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
+
+  // Footer is deliberately outside any background container.
+  const footerTop = separatorY + 24;
+  const dividerX = width / 2;
+
+  ctx.save();
+  ctx.strokeStyle = '#D8D3E0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(dividerX, footerTop + 8);
+  ctx.lineTo(dividerX, height - 28);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 16px sans-serif';
+  ctx.fillText(translate('Sent by'), 70, footerTop + 24);
+  ctx.fillStyle = '#1E104B';
+  ctx.font = '900 22px sans-serif';
+  ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
+  ctx.fillStyle = '#625E70';
+  ctx.font = '800 18px sans-serif';
+  ctx.fillText(String(admin?.contact || '7218838122'), 70, footerTop + 82);
+
+  const brandingCenterX = dividerX + (width - dividerX) / 2;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8A8596';
+  ctx.font = '800 15px sans-serif';
+  ctx.fillText(translate('Using'), brandingCenterX, footerTop + 18);
+
+  const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
+  if (logoSrc) {
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxLogoW = 170;
+        const maxLogoH = 46;
+        const scale = Math.min(maxLogoW / img.width, maxLogoH / img.height);
+        const logoW = Math.max(1, img.width * scale);
+        const logoH = Math.max(1, img.height * scale);
+        ctx.drawImage(img, brandingCenterX - logoW / 2, footerTop + 28 + (maxLogoH - logoH) / 2, logoW, logoH);
+        resolve();
+      };
+      img.onerror = resolve;
+      img.src = logoSrc;
+    });
+  }
 
   ctx.fillStyle = '#1E104B';
-  ctx.font = '800 21px sans-serif';
-  ctx.fillText(`Sent by ${admin?.name || 'Bharat Rasve'}`, centerX, 430);
+  ctx.font = '900 17px sans-serif';
+  ctx.fillText(translate('Your Personal Finance App'), brandingCenterX, footerTop + 88);
   ctx.fillStyle = '#625E70';
-  ctx.font = '700 19px sans-serif';
-  ctx.fillText(admin?.contact || '7218838122', centerX, 462);
+  ctx.font = '700 15px sans-serif';
+  ctx.fillText(translate('Developed by - Bharat Rasve'), brandingCenterX, footerTop + 112);
 
-  ctx.fillStyle = '#8A8596';
-  ctx.font = '700 16px sans-serif';
-  ctx.fillText('Budget Bharat • Personal Finance', centerX, 530);
-
-  const blob = await new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92));
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
+  });
   return new File([blob], `Budget_Bharat_Payment_Reminder_${Date.now()}.jpg`, { type: 'image/jpeg' });
 };
 
@@ -394,6 +974,27 @@ const AppProvider = ({ children }) => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState('menu');
+  // Language preference is device-local and defaults to English on a fresh install.
+  const [languageUpdating, setLanguageUpdating] = useState(false);
+  const [pendingLanguage, setPendingLanguage] = useState(() => {
+    try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+  });
+  const [language, setLanguageState] = useState(() => {
+    try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+  });
+  const setLanguage = (nextLanguage) => {
+    const supported = ['en', 'mr', 'hi'];
+    const next = supported.includes(nextLanguage) ? nextLanguage : 'en';
+    setLanguageUpdating(true);
+    setLanguageState(next);
+    try { localStorage.setItem('budgetBharat.language', next); } catch (_) {}
+    window.setTimeout(() => setLanguageUpdating(false), 1200);
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dataset.appLanguage = language;
+  }, [language]);
 
   const [toast, setToast] = useState({ show: false, msg: '' });
 
@@ -405,7 +1006,12 @@ const AppProvider = ({ children }) => {
   const [googleUser, setGoogleUser] = useState(null);
 
   const showFeedback = (msg) => {
-    setToast({ show: true, msg });
+    const exact = translate(msg);
+    const prefixKey = exact === msg
+      ? Object.keys(UI_TRANSLATIONS).filter(key => key.endsWith(': ') && msg.startsWith(key)).sort((a, b) => b.length - a.length)[0]
+      : null;
+    const translatedMessage = exact !== msg ? exact : prefixKey ? translate(prefixKey) + msg.slice(prefixKey.length) : msg;
+    setToast({ show: true, msg: translatedMessage });
     setTimeout(() => setToast({ show: false, msg: '' }), 3000);
   };
 
@@ -480,11 +1086,20 @@ const AppProvider = ({ children }) => {
     try {
       const currentLocalData = { transactions, persons, categories, loans, admin };
       await GoogleDriveSync.pushToCloud(currentLocalData);
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup uploaded successfully');
     } catch (err) {
       showFeedback('Upload failed: ' + (err.message || 'Error occurred'));
     } finally {
-      setSyncStatus('idle');
+      setTimeout(() => setSyncStatus(prev => prev === 'success' ? 'idle' : prev), 1400);
     }
   };
 
@@ -502,7 +1117,7 @@ const AppProvider = ({ children }) => {
       if (!confirmRestore) return;
     }
 
-    setSyncStatus('syncing');
+    setSyncStatus('restoring');
     showFeedback('Retrieving cloud backup...');
     try {
       const cloudData = await GoogleDriveSync.pullFromCloud();
@@ -512,20 +1127,29 @@ const AppProvider = ({ children }) => {
       }
       applyPayload(cloudData);
       await gasRun('restoreFullBackup', cloudData);
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
+      setSyncStatus('success');
       showFeedback('Backup restored from Google Drive');
     } catch (err) {
       showFeedback('Restore failed: ' + (err.message || 'Error occurred'));
     } finally {
-      setSyncStatus('idle');
+      setTimeout(() => setSyncStatus(prev => prev === 'success' ? 'idle' : prev), 1400);
     }
   };
 
   const addTransaction = (tx) => {
-    const typeLabel = tx.type === 'BORROW' ? 'Received' : tx.type === 'LENT' ? 'Given' : tx.type === 'EXPENSE' ? 'Expense' : 'Income';
+    const typeLabel = translate(tx.type === 'BORROW' ? 'Received' : tx.type === 'LENT' ? 'Given' : tx.type === 'EXPENSE' ? 'Expense' : 'Income');
     return gasRun('addTransaction', tx)
       .then((payload) => { 
         if (payload) applyPayload(payload); 
-        showFeedback(`${typeLabel} entry saved`); 
+        showFeedback(`${typeLabel} ${translate('entry saved')}`); 
       })
       .catch((err) => { showFeedback('Save failed: ' + err.message); throw err; });
   };
@@ -797,6 +1421,7 @@ const AppProvider = ({ children }) => {
       transactions, filteredTransactions, persons, loans, categories, admin, loading, loadError, syncStatus,
       searchQuery, setSearchQuery,
       isMenuOpen, setIsMenuOpen, menuView, setMenuView,
+      language, setLanguage, languageUpdating,
       filterPeriod, setFilterPeriod, customFrom, setCustomFrom, customTo, setCustomTo,
       directoryFilter, setDirectoryFilter,
       googleUser, handleGoogleLogin, handleGoogleLogout,
@@ -953,7 +1578,7 @@ const PeriodSelector = () => {
                     : 'text-slate-500 font-semibold hover:text-slate-800'
                 }`}
               >
-                {opt}
+                {translate(opt === 'Qtr' ? 'Qtr' : opt)}
               </button>
             );
           })}
@@ -963,11 +1588,11 @@ const PeriodSelector = () => {
       {filterPeriod === 'Custom' && (
         <div className="flex space-x-2 mt-1.5 bg-white p-2 rounded-xl border border-theme-dark/15 shadow-sm animate-slide-up origin-top text-[10px] font-bold items-center">
           <div className="flex flex-col w-28">
-            <span className="text-theme-dark/60 uppercase text-[8px]">From</span>
+            <span className="text-theme-dark/60 uppercase text-[8px]">{translate("From")}</span>
             <AppDatePicker value={customFrom} onChange={setCustomFrom} className="outline-none text-theme-dark bg-transparent text-[10px] w-full cursor-pointer" />
           </div>
           <div className="flex flex-col border-l border-theme-dark/20 pl-2 w-28">
-            <span className="text-theme-dark/60 uppercase text-[8px]">To</span>
+            <span className="text-theme-dark/60 uppercase text-[8px]">{translate("To")}</span>
             <AppDatePicker value={customTo} onChange={setCustomTo} className="outline-none text-theme-dark bg-transparent text-[10px] w-full cursor-pointer" />
           </div>
         </div>
@@ -981,7 +1606,7 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
   const sortedTransactions = sortTransactionsByDateDesc(transactions);
   const displayTxs = expanded ? sortedTransactions : sortedTransactions.slice(0, maxRows);
 
-  if (transactions.length === 0) return <p className="text-xs text-theme-dark/60 font-semibold px-3 py-3">No records found.</p>;
+  if (transactions.length === 0) return <p className="text-xs text-theme-dark/60 font-semibold px-3 py-3">{translate("No records found.")}</p>;
 
   return (
     <div className={embedded ? 'w-full' : 'bg-white rounded-lg border border-theme-dark/10 overflow-hidden shadow-sm'}>
@@ -989,10 +1614,10 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
         <table className="w-full text-left text-[10px] whitespace-nowrap">
           <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
             <tr>
-              <th className="px-3 py-1.5">Date</th>
-              <th className="px-3 py-1.5">Description</th>
-              <th className="px-3 py-1.5">Type</th>
-              <th className="px-3 py-1.5 text-right">Amount</th>
+              <th className="px-3 py-1.5">{translate("Date")}</th>
+              <th className="px-3 py-1.5">{translate("Description")}</th>
+              <th className="px-3 py-1.5">{translate("Type")}</th>
+              <th className="px-3 py-1.5 text-right">{translate("Amount")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-theme-dark/5 font-medium text-theme-dark">
@@ -1017,7 +1642,7 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
                     )}
                   </td>
                   <td className="px-3 py-3.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                    {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
+                    {translate(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
                   </td>
                   <td className="px-3 py-3.5 text-right font-black text-xs" style={{ color: txColor }}>
                     {isPos ? '+' : '-'}{formatTableNum(t.amount)}
@@ -1042,6 +1667,8 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
 const Header = () => {
   const { searchQuery, setSearchQuery, setIsMenuOpen, setMenuView, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
   const isSyncing = syncStatus === 'syncing';
+  const isRestoring = syncStatus === 'restoring';
+  const isSuccess = syncStatus === 'success';
   const isError = loadError !== '';
   const [isFocused, setIsFocused] = useState(false);
 
@@ -1074,7 +1701,7 @@ const Header = () => {
         ></i>
         <input
           type="text"
-          placeholder="Search people, note, category..."
+          placeholder={translate("Search people, note, category...")}
           value={searchQuery}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -1095,16 +1722,16 @@ const Header = () => {
         onClick={uploadBackupToCloud}
         disabled={isSyncing}
         className={`sync-header-btn ${isSyncing ? 'is-syncing' : ''} ${isError ? 'is-error' : ''}`}
-        title={isSyncing ? 'Syncing...' : isError ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+        title={isSyncing ? 'Uploading backup...' : isError ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
       >
-        <i className={`fa-solid fa-rotate text-sm ${isSyncing ? 'animate-spin' : ''}`}></i>
+        <i className={`fa-solid ${isSyncing ? 'fa-cloud-arrow-up animate-pulse' : isRestoring ? 'fa-cloud-arrow-down animate-pulse' : isSuccess ? 'fa-cloud-check' : 'fa-cloud'} text-sm`}></i>
       </button>
     </div>
   );
 };
 
-const SearchView = ({ onSelectPerson }) => {
-  const { searchQuery, transactions, persons, categories } = useContext(AppContext);
+const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
+  const { searchQuery, setSearchQuery, transactions, persons, categories } = useContext(AppContext);
   const query = searchQuery.trim().toLowerCase();
 
   const matchedPersons = useMemo(() => {
@@ -1117,18 +1744,31 @@ const SearchView = ({ onSelectPerson }) => {
 
   const matchedTransactions = useMemo(() => {
     if (!query) return [];
-    return transactions.filter(t =>
-      (t.note && t.note.toLowerCase().includes(query)) ||
-      (t.category && t.category.toLowerCase().includes(query)) ||
-      (t.person && t.person.toLowerCase().includes(query)) ||
-      (t.ref && t.ref.toLowerCase().includes(query))
-    );
+    return transactions.filter(t => {
+      const amount = String(t.amount ?? '').replace(/,/g, '');
+      const amountFormatted = formatTableNum(t.amount).replace(/,/g, '');
+      const note = String(t.note || '').toLowerCase();
+      const category = String(t.category || '').trim().toLowerCase();
+      const person = String(t.person || '').toLowerCase();
+      const ref = String(t.ref || '').toLowerCase();
+      return (
+        note.includes(query) ||
+        category.includes(query) ||
+        person.includes(query) ||
+        ref.includes(query) ||
+        amount.includes(query) ||
+        amountFormatted.includes(query)
+      );
+    });
   }, [transactions, query]);
 
   const matchedCategories = useMemo(() => {
     if (!query) return [];
-    const allCats = [...categories.expense, ...categories.income];
-    return allCats.filter(c => c.toLowerCase().includes(query));
+    const allCats = [...(categories.expense || []), ...(categories.income || [])]
+      .map(c => typeof c === 'string' ? c : String(c?.name || c?.label || ''))
+      .map(c => c.trim())
+      .filter(Boolean);
+    return [...new Set(allCats)].filter(c => c.toLowerCase().includes(query));
   }, [categories, query]);
 
   const hasResults = matchedPersons.length > 0 || matchedTransactions.length > 0 || matchedCategories.length > 0;
@@ -1136,20 +1776,20 @@ const SearchView = ({ onSelectPerson }) => {
   return (
     <div className="px-4 mt-4 pb-8 space-y-5">
       <div className="flex justify-between items-center px-1">
-        <span className="text-xs text-theme-dark/60 font-bold">Results for "<span className="text-theme-dark">{searchQuery}</span>"</span>
-        <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} matches</span>
+        <span className="text-xs text-theme-dark/60 font-bold">{translate("Results for")} "<span className="text-theme-dark">{searchQuery}</span>"</span>
+        <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} {translate("matches")}</span>
       </div>
 
       {!hasResults ? (
         <div className="text-center py-12">
           <i className="fa-solid fa-magnifying-glass text-3xl text-theme-dark/20 mb-2"></i>
-          <p className="text-sm font-bold text-theme-dark/60">No matches found</p>
+          <p className="text-sm font-bold text-theme-dark/60">{translate("No matches found")}</p>
         </div>
       ) : (
         <>
           {matchedPersons.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">People ({matchedPersons.length})</h3>
+              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{translate("People")} ({matchedPersons.length})</h3>
               <div className="space-y-2">
                 {matchedPersons.map(p => {
                   let dr = 0, cr = 0;
@@ -1188,12 +1828,12 @@ const SearchView = ({ onSelectPerson }) => {
 
           {matchedCategories.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">Categories</h3>
+              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{translate("Categories")}</h3>
               <div className="flex flex-wrap gap-1.5">
                 {matchedCategories.map((c, i) => (
-                  <span key={i} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center">
+                  <button key={i} type="button" onClick={() => setSearchQuery(String(c).trim())} title={`Filter transactions by ${c}`} className="px-3 py-1 bg-white border border-[#E4E1EA] rounded-full text-xs font-bold text-[#1E104B] shadow-xs flex items-center hover:bg-[#7B2B8C] hover:text-white active:scale-95 transition-all">
                     <i className="fa-solid fa-tag mr-1.5 text-[#7B2B8C] text-[10px]"></i>{c}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1202,7 +1842,7 @@ const SearchView = ({ onSelectPerson }) => {
           {matchedTransactions.length > 0 && (
             <div>
               <h3 className="text-[10px] font-bold text-theme-dark uppercase tracking-wider mb-2 px-1">Transactions ({matchedTransactions.length})</h3>
-              <TransactionTable transactions={matchedTransactions} maxRows={100} showViewAll={false} />
+              <TransactionTable transactions={matchedTransactions} maxRows={100} showViewAll={false} onSelectTransaction={onSelectTransaction} />
             </div>
           )}
         </>
@@ -1218,7 +1858,7 @@ const SideMenuBranding = () => (
       alt="Budget Bharat"
       className="h-6 object-contain mb-1.5"
     />
-    <p className="text-[9px] font-bold text-[#8A8596]">Developed by - Bharat Rasve © 2026</p>
+    <p className="text-[9px] font-bold text-[#8A8596]">{translate("Developed by - Bharat Rasve © 2026")}</p>
   </div>
 );
 // --- START OF src/main.jsx (PART 3) ---
@@ -1226,6 +1866,7 @@ const SideMenuBranding = () => (
 const SideMenu = () => {
   const {
     isMenuOpen, setIsMenuOpen, menuView, setMenuView,
+    language, setLanguage, languageUpdating,
     persons, categories, admin,
     addPerson, updatePerson, deletePerson,
     addCategory, updateCategory, deleteCategory,
@@ -1247,6 +1888,8 @@ const SideMenu = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
+  const [pendingLanguage, setPendingLanguage] = useState(language);
+  const [exportGroup, setExportGroup] = useState('');
 
   if (!isMenuOpen) return null;
 
@@ -1346,7 +1989,7 @@ const SideMenu = () => {
             />
             <div>
               <h2 className="text-lg font-black tracking-tight text-white">Budget Bharat</h2>
-              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">Console Setup & Master Config</p>
+              <p className="text-[10px] text-white/80 uppercase tracking-wider font-bold">{translate("Your Personal Finance Manager")}</p>
             </div>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white flex-none">
@@ -1356,29 +1999,38 @@ const SideMenu = () => {
 
         {menuView === 'menu' && (
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
-            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Backend Management</div>
+            <div className="px-6 pb-2 mb-2 border-b border-[#E4E1EA]">
+              <button type="button" onClick={() => { setPendingLanguage(language); setMenuView('languageSettings'); }} className="w-full text-left py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between rounded-lg" aria-label={translate("Languages")}>
+                <span className="flex items-center gap-3 min-w-0">
+                  <i className="fa-solid fa-language w-7 text-[#7B2B8C]"></i>
+                  <span className="truncate">{translate("Languages")}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</span>
+                </span>
+                <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
+              </button>
+            </div>
+            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Record Setup")}</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> Manage Persons ({persons.length})</span>
+              <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> {translate('Manage Persons')} ({persons.length})</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
             <button onClick={() => openSubView('manageCategories')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-tags w-7 text-[#7B2B8C]"></i> Manage Categories</span>
+              <span><i className="fa-solid fa-tags w-7 text-[#7B2B8C]"></i> {translate("Manage Categories")}</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
             <button onClick={() => openSubView('manageAdmin')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-user-gear w-7 text-[#7B2B8C]"></i> Admin Setup</span>
+              <span><i className="fa-solid fa-user-gear w-7 text-[#7B2B8C]"></i> {translate("Admin Setup")}</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Quick Create</div>
-            <button onClick={() => openSubView('addPerson')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-user-plus w-7 text-[#078A87]"></i> Add Person</button>
-            <button onClick={() => openSubView('addCategory')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-tag w-7 text-[#078A87]"></i> Add Category</button>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Quick Create")}</div>
+            <button onClick={() => openSubView('addPerson')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-user-plus w-7 text-[#078A87]"></i> {translate("Add Person")}</button>
+            <button onClick={() => openSubView('addCategory')} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]"><i className="fa-solid fa-tag w-7 text-[#078A87]"></i> {translate("Add Category")}</button>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Google Drive Backup</div>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Data Backup & Restore")}</div>
             {googleUser ? (
               <>
                 <div className="px-6 py-2 bg-[#F4F3F8] rounded-xl mx-4 my-1 border border-[#E4E1EA]">
-                  <p className="text-[9px] font-bold text-[#625E70] uppercase">Connected Account</p>
+                  <p className="text-[9px] font-bold text-[#625E70] uppercase">{translate("Connected Account")}</p>
                   <p className="text-xs font-black text-[#1E104B] truncate">{googleUser.email || googleUser.name}</p>
                 </div>
                 <button onClick={() => { setIsMenuOpen(false); uploadBackupToCloud(); }} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#078A87]">
@@ -1393,15 +2045,15 @@ const SideMenu = () => {
               </>
             ) : (
               <button onClick={handleGoogleLogin} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]">
-                <i className="fa-brands fa-google w-7 text-[#7B2B8C]"></i> Sign in with Google
+                <i className="fa-brands fa-google w-7 text-[#7B2B8C]"></i> {translate("Sign in with Google")}
               </button>
             )}
 
-            <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] mt-2">
-              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> Full Data Backup (CSV)
+            <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]">
+              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> {translate("Export Backup File")}
             </button>
-            <label className="w-full flex items-center px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] cursor-pointer">
-              <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> Restore from Backup
+            <label className="w-full flex items-center px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] cursor-pointer">
+              <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> {translate("Restore from Backup")}
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -1417,29 +2069,84 @@ const SideMenu = () => {
               />
             </label>
 
-            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Export CSV</div>
-            <button onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> Active Loans Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-table-list w-7 text-[#7B2B8C]"></i> All Loan EMI Records</button>
-            <button onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-export w-7 text-[#625E70]"></i> All Transactions</button>
-            <button onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-arrow-trend-up w-7 text-[#078A87]"></i> Income Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-arrow-trend-down w-7 text-[#D6455D]"></i> Expense Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-users-viewfinder w-7 text-[#625E70]"></i> Persons Summary</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-receipt w-7 text-[#D6455D]"></i> All Expenses</button>
-            <button onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-money-bill-trend-up w-7 text-[#078A87]"></i> All Incomes</button>
-            <button onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-hand-holding-dollar w-7 text-[#078A87]"></i> All Receivables</button>
-            <button onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B]"><i className="fa-solid fa-file-invoice-dollar w-7 text-[#D6455D]"></i> All Payables</button>
+            <div className="px-6 mt-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Data Exports")}</div>
+            <div className="px-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setExportGroup(exportGroup === 'summaries' ? '' : 'summaries')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
+              >
+                <span><i className="fa-solid fa-chart-pie w-7 text-[#078A87]"></i>{translate("Summaries")}</span>
+                <i className={`fa-solid fa-chevron-${exportGroup === 'summaries' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
+              </button>
+              {exportGroup === 'summaries' && (
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportIncomeSummaryCsv', 'income_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Income")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportExpenseSummaryCsv', 'expense_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Expenses")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportActiveLoansSummaryCsv', 'active_loans_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Active Loans")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPersonsSummaryCsv', 'persons_summary.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Persons")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportReceivablesCsv', 'receivables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Receivables")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportPayablesCsv', 'payables_report.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Payables")}</button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setExportGroup(exportGroup === 'transactions' ? '' : 'transactions')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] text-xs font-black text-[#1E104B]"
+              >
+                <span><i className="fa-solid fa-list-check w-7 text-[#7B2B8C]"></i>{translate("Transactions")}</span>
+                <i className={`fa-solid fa-chevron-${exportGroup === 'transactions' ? 'up' : 'down'} text-[10px] text-[#8A8596]`}></i>
+              </button>
+              {exportGroup === 'transactions' && (
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllLoanEmiRecordsCsv', 'all_loan_emi_records.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Loans EMI Records")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportTransactionsCsv', 'transactions_export.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("All Transactions")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllIncomesCsv', 'all_incomes.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Incomes")}</button>
+                  <button type="button" onClick={() => handleAction(() => exportCsv('exportAllExpensesCsv', 'all_expenses.csv'))} className="px-2.5 py-2 rounded-lg bg-white border border-[#E4E1EA] text-[10px] font-bold text-[#1E104B]">{translate("Expenses")}</button>
+                </div>
+              )}
+            </div>
 
             <SideMenuBranding />
           </div>
         )}
 
-        {menuView === 'managePersons' && (
+        {menuView === 'languageSettings' && (
+          <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
+            <div className="flex justify-between items-center mb-5">
+              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]">
+                <i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}
+              </button>
+            </div>
+            <h3 className="text-base font-black text-[#1E104B] mb-1">{translate("Choose Language")}</h3>
+            <p className="text-xs text-[#8A8596] mb-4">{language === 'mr' ? 'अॅपसाठी तुमची भाषा निवडा.' : language === 'hi' ? 'ऐप के लिए अपनी भाषा चुनें।' : 'Select the language for the app.'}</p>
+            <div className="relative">
+              <i className="fa-solid fa-language absolute left-4 top-1/2 -translate-y-1/2 w-5 text-[#078A87] pointer-events-none"></i>
+              <select value={pendingLanguage} onChange={(e) => setPendingLanguage(e.target.value)} aria-label={translate("Choose Language")} className="w-full appearance-none rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] pl-11 pr-10 py-3 text-xs font-black text-[#1E104B] focus:outline-none focus:border-[#7B2B8C]">
+                <option value="en">English</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+              </select>
+              <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-[#8A8596] pointer-events-none"></i>
+            </div>
+            <button type="button" disabled={languageUpdating || pendingLanguage === language} onClick={() => { setLanguage(pendingLanguage); setMenuView('menu'); }} className="w-full mt-4 rounded-xl bg-[#21104F] px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+              {languageUpdating ? (language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...') : translate("Confirm")}
+            </button>
+            <p className="mt-3 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
+              {languageUpdating ? <><i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}</> : <><i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</>}
+            </p>
+            <div className="mt-auto pt-8"><SideMenuBranding /></div>
+          </div>
+        )}
+
+                {menuView === 'managePersons' && (
           <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
             <div className="flex justify-between items-center mb-4">
-              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> Back</button>
-              <button onClick={() => openSubView('addPerson')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> Add</button>
+              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
+              <button onClick={() => openSubView('addPerson')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {translate("Add")}</button>
             </div>
-            <h3 className="text-base font-black text-[#1E104B] mb-3">Directory Persons ({persons.length})</h3>
+            <h3 className="text-base font-black text-[#1E104B] mb-3">{translate('Directory Persons')} ({persons.length})</h3>
             <div className="space-y-2 flex-1 overflow-y-auto hide-scrollbar">
               {persons.map(p => (
                 <div key={p.id || p.name} className="p-3 bg-[#F4F3F8] rounded-xl border border-[#E4E1EA] flex justify-between items-center">
@@ -1448,7 +2155,7 @@ const SideMenu = () => {
                     <p className="text-[9px] text-[#8A8596] font-medium">{p.phone || 'No phone'} • {p.address || 'Maharashtra'}</p>
                   </div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => openSubView('editPerson', p)} title="Edit Person" className="w-7 h-7 rounded-lg bg-white text-[#7B2B8C] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#7B2B8C] hover:text-white transition-all"><i className="fa-solid fa-pen"></i></button>
+                    <button onClick={() => openSubView('editPerson', p)} title={translate("Edit Person")} className="w-7 h-7 rounded-lg bg-white text-[#7B2B8C] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#7B2B8C] hover:text-white transition-all"><i className="fa-solid fa-pen"></i></button>
                     <button onClick={() => setPersonToDelete(p.name)} title="Delete Person" className="w-7 h-7 rounded-lg bg-white text-[#D6455D] border border-[#E4E1EA] flex items-center justify-center text-xs hover:bg-[#D6455D] hover:text-white transition-all"><i className="fa-solid fa-trash-can"></i></button>
                   </div>
                 </div>
@@ -1461,12 +2168,12 @@ const SideMenu = () => {
         {menuView === 'manageCategories' && (
           <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
             <div className="flex justify-between items-center mb-4">
-              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> Back</button>
-              <button onClick={() => openSubView('addCategory')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> Add</button>
+              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
+              <button onClick={() => openSubView('addCategory')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {translate("Add")}</button>
             </div>
             <div className="flex gap-2 mb-4">
-              <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>
-              <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>
+              <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Expense")}</button>
+              <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Income")}</button>
             </div>
             <div className="space-y-2 flex-1 overflow-y-auto hide-scrollbar">
               {(catType === 'expense' ? categories.expense : categories.income).map((c, idx) => (
@@ -1485,45 +2192,61 @@ const SideMenu = () => {
 
         {(menuView === 'addPerson' || menuView === 'editPerson' || menuView === 'addCategory' || menuView === 'editCategory' || menuView === 'manageAdmin') && (
           <div className="flex-1 p-6 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
-            <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] mb-3 active:scale-95 self-start hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> Back</button>
+            <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] mb-3 active:scale-95 self-start hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
             <h3 className="text-base font-black text-[#1E104B] mb-1">
-              {menuView === 'addPerson' ? 'Add New Person' : menuView === 'editPerson' ? 'Edit Person' : menuView === 'addCategory' ? `Add New ${catType === 'expense' ? 'Expense' : 'Income'} Category` : menuView === 'editCategory' ? 'Edit Category' : 'Admin Setup'}
+              {menuView === 'addPerson' ? translate('Add New Person') : menuView === 'editPerson' ? translate('Edit Person') : menuView === 'addCategory' ? `${translate('Add New')} ${translate(catType === 'expense' ? 'Expense' : 'Income')} ${translate('Category')}` : menuView === 'editCategory' ? translate('Edit Category') : translate('Admin Setup')}
             </h3>
             <p className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4">
-              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}
+              {menuView === 'addCategory' ? `${translate('Target Ledger')}: ${translate(catType === 'expense' ? 'Expense' : 'Income')}` : menuView === 'addPerson' ? translate('Directory Party Entry') : translate('Configuration Setup')}
             </p>
             {menuView === 'addCategory' && (
               <div className="flex gap-2 mb-4">
-                <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Expense</button>
-                <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>Income</button>
+                <button type="button" onClick={() => setCatType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'expense' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Expense")}</button>
+                <button type="button" onClick={() => setCatType('income')} className={`flex-1 py-2 rounded-lg text-xs font-black ${catType === 'income' ? 'bg-[#1E104B] text-white' : 'bg-[#F4F3F8] text-[#625E70]'}`}>{translate("Income")}</button>
               </div>
             )}
             <form onSubmit={handleFormSubmit} className="space-y-4 pb-12">
               <div className="space-y-4">
                 {(menuView === 'addCategory' || menuView === 'editCategory') && (
                   <div>
-                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Category Name *</label>
-                    <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Category Name *")}</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name || ''}
+                      autoComplete="off"
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                    />
                   </div>
                 )}
 
                 {(menuView === 'addPerson' || menuView === 'editPerson') && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Name *</label>
-                      <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-bold text-[#625E70] uppercase">{translate("Name *")}</label>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name || ''}
+                        autoComplete="off"
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
+                      />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Phone</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Phone")}</label>
                       <input type="tel" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Email Id</label>
-                      <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="Optional" />
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Email Id")}</label>
+                      <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder={translate("Optional")} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-1">Address / Location</label>
-                      <input type="text" value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="City or Village" />
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-1">{translate("Address / Location")}</label>
+                      <input type="text" value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder={translate("City or Village")} />
                     </div>
                   </>
                 )}
@@ -1531,23 +2254,23 @@ const SideMenu = () => {
                 {menuView === 'manageAdmin' && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Name *</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Name *")}</label>
                       <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. Bharat Rasve" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Contact</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Contact")}</label>
                       <input type="tel" value={formData.contact || ''} onChange={e => setFormData({ ...formData, contact: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. 9876543210" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Email id</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Email id")}</label>
                       <input type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. user@example.com" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Statement Header note</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Statement Header note")}</label>
                       <input type="text" value={formData.headerNote || formData.note || ''} onChange={e => setFormData({ ...formData, headerNote: e.target.value, note: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. Official Accounting Summary" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Statement Footer note</label>
+                      <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Statement Footer note")}</label>
                       <input type="text" value={formData.footerNote || ''} onChange={e => setFormData({ ...formData, footerNote: e.target.value })} className="w-full border border-[#E4E1EA] rounded-xl px-3.5 py-2.5 font-bold text-sm bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none" placeholder="e.g. Thank you for your business" />
                     </div>
                   </>
@@ -1556,7 +2279,7 @@ const SideMenu = () => {
               <div className="pt-4 flex justify-center">
                 <button type="submit" disabled={isSubmitting} className="w-2/3 min-w-[160px] bg-[#1E104B] hover:bg-[#2A186B] text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-all uppercase text-xs flex items-center justify-center gap-2">
                   {isSubmitting ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-check"></i>}
-                  <span>{isSubmitting ? 'Saving...' : (menuView === 'addPerson' || menuView === 'addCategory') ? 'Save' : 'Save Changes'}</span>
+                  <span>{isSubmitting ? translate('Saving...') : translate((menuView === 'addPerson' || menuView === 'addCategory') ? 'Save' : 'Save Changes')}</span>
                 </button>
               </div>
               <SideMenuBranding />
@@ -1572,10 +2295,10 @@ const SideMenu = () => {
               <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
             </div>
             <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-              {isSubmitting ? 'Deleting Person...' : 'Delete Person?'}
+              {isSubmitting ? translate('Deleting Person...') : translate('Delete Person?')}
             </h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
-              {isSubmitting ? `Removing ${personToDelete} and associated records.` : <>Delete <strong>{personToDelete}</strong> and all linked transactions? This action cannot be undone.</>}
+              {isSubmitting ? `${translate('Removing')} ${personToDelete} ${translate('and associated records.')}` : <>{translate("Delete")} <strong>{personToDelete}</strong> {translate("and all linked transactions? This action cannot be undone.")}</>}
             </p>
             <div className="flex gap-3 w-full">
               <button
@@ -1584,7 +2307,7 @@ const SideMenu = () => {
                 onClick={() => setPersonToDelete(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
               >
-                Cancel
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -1606,7 +2329,7 @@ const SideMenu = () => {
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xl mx-auto mb-3">
               <i className="fa-solid fa-tag"></i>
             </div>
-            <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">Delete Category?</h3>
+            <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">{translate("Delete Category?")}</h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
               Delete category <strong>"{catToDelete.name}"</strong>?
             </p>
@@ -1617,7 +2340,7 @@ const SideMenu = () => {
                 onClick={() => setCatToDelete(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all"
               >
-                Cancel
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -1626,12 +2349,13 @@ const SideMenu = () => {
                 className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5"
               >
                 {isSubmitting && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
-                <span>Delete</span>
+                <span>{translate("Delete")}</span>
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
@@ -1642,10 +2366,10 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
   const kpi = useMemo(() => {
     let e = 0, i = 0, dr = 0, cr = 0;
     filteredTransactions.forEach(t => {
-      if (t.type === 'EXPENSE') e += t.amount;
-      else if (t.type === 'INCOME') i += t.amount;
-      else if (t.type === 'LENT') dr += t.amount;
-      else if (t.type === 'BORROW') cr += t.amount;
+      if (t.type === 'EXPENSE') e += Number(t.amount) || 0;
+      else if (t.type === 'INCOME') i += Number(t.amount) || 0;
+      else if (t.type === 'LENT') dr += Number(t.amount) || 0;
+      else if (t.type === 'BORROW') cr += Number(t.amount) || 0;
     });
     return { e, i, dr, cr };
   }, [filteredTransactions]);
@@ -1655,8 +2379,8 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
     let totalExp = 0;
     filteredTransactions.filter(t => t.type === 'EXPENSE').forEach(t => {
       const key = t.category || '(Uncategorized)';
-      map[key] = (map[key] || 0) + t.amount;
-      totalExp += t.amount;
+      map[key] = (map[key] || 0) + (Number(t.amount) || 0);
+      totalExp += Number(t.amount) || 0;
     });
     return Object.keys(map).map(k => ({ name: k, val: map[k], pct: totalExp ? (map[k] / totalExp) * 100 : 0 })).sort((a, b) => b.val - a.val);
   }, [filteredTransactions]);
@@ -1687,45 +2411,45 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
 
       <div className="grad-kpi rounded-2xl p-3.5 shadow-md flex justify-between divide-x divide-white/10 mt-0.5">
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Expense</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Expense")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.e)}</p>
         </div>
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Income</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Income")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.i)}</p>
         </div>
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Given (Dr)</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Given (Dr)")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.dr)}</p>
         </div>
         <div className="flex-1 text-center px-1">
-          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Received</p>
+          <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Received")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(kpi.cr)}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl p-4 border border-theme-dark/10 shadow-sm space-y-4">
-        <h2 className="text-[10px] font-bold text-theme-dark uppercase tracking-widest">Expense & Income Overview</h2>
+        <h2 className="text-[10px] font-bold text-theme-dark uppercase tracking-widest">{translate("Expense & Income Overview")}</h2>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#078A87]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#078A87]/25">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">Total Inflow</span>
-              <span className="text-[8px] font-semibold text-[#078A87]/70">(Inc + Recv)</span>
+              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">{translate("Total Inflow")}</span>
+              <span className="text-[8px] font-semibold text-[#078A87]/70">{translate("(Inc + Recv)")}</span>
             </div>
             <span className="text-base font-extrabold text-[#078A87] mt-0.5">{formatMoney(kpi.i + kpi.cr)}</span>
           </div>
           <div className="bg-[#D6455D]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#D6455D]/25">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">Total Outflow</span>
-              <span className="text-[8px] font-semibold text-[#D6455D]/70">(Exp + Given)</span>
+              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">{translate("Total Outflow")}</span>
+              <span className="text-[8px] font-semibold text-[#D6455D]/70">{translate("(Exp + Given)")}</span>
             </div>
             <span className="text-base font-extrabold text-[#D6455D] mt-0.5">{formatMoney(kpi.e + kpi.dr)}</span>
           </div>
         </div>
 
         <div className="pt-2 space-y-2.5">
-          <p className="text-[10px] font-bold text-theme-dark/50 uppercase tracking-wider">Top Spending Categories</p>
+          <p className="text-[10px] font-bold text-theme-dark/50 uppercase tracking-wider">{translate("Top Spending Categories")}</p>
           {catData.slice(0, 3).map((c, i) => (
             <div key={i}>
               <div className="flex justify-between text-xs font-bold mb-1">
@@ -1742,22 +2466,22 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
 
       <div className="bg-white rounded-xl border border-theme-dark/10 overflow-hidden shadow-sm">
         <div className="px-3.5 py-3 border-b border-theme-dark/5">
-          <h2 className="text-[11px] font-black text-theme-dark uppercase tracking-wider">Recent Transactions</h2>
+          <h2 className="text-[11px] font-black text-theme-dark uppercase tracking-wider">{translate("Recent Transactions")}</h2>
         </div>
         <TransactionTable transactions={filteredTransactions} maxRows={6} showViewAll={false} onSelectTransaction={onSelectTransaction} embedded={true} />
       </div>
 
       <div className="bg-white rounded-2xl p-4 border border-[#E4E1EA] shadow-xs space-y-3.5">
-        <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">People Overview</h2>
+        <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">{translate("People Overview")}</h2>
 
         <div className="grid grid-cols-2 gap-3">
           <div
             onClick={() => { setDirectoryFilter('RECEIVABLE'); onNavigateTab && onNavigateTab('people'); }}
             className="bg-[#078A87]/10 p-3 rounded-xl flex flex-col border border-[#078A87]/20 cursor-pointer hover:bg-[#078A87]/15 active:scale-95 transition-all"
-            title="Click to view all Credit (Receivable) parties"
+            title={translate("Click to view all Credit (Receivable) parties")}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">Total Receivable</span>
+              <span className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider">{translate("Total Receivable")}</span>
               <i className="fa-solid fa-arrow-right text-[10px] text-[#078A87]"></i>
             </div>
             <span className="text-base font-black text-[#078A87] mt-0.5">+{formatMoney(totalReceivable)}</span>
@@ -1765,10 +2489,10 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
           <div
             onClick={() => { setDirectoryFilter('PAYABLE'); onNavigateTab && onNavigateTab('people'); }}
             className="bg-[#D6455D]/10 p-3 rounded-xl flex flex-col border border-[#D6455D]/20 cursor-pointer hover:bg-[#D6455D]/15 active:scale-95 transition-all"
-            title="Click to view all Debit (Payable) parties"
+            title={translate("Click to view all Debit (Payable) parties")}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">Total Payable</span>
+              <span className="text-[10px] font-bold text-[#D6455D] uppercase tracking-wider">{translate("Total Payable")}</span>
               <i className="fa-solid fa-arrow-right text-[10px] text-[#D6455D]"></i>
             </div>
             <span className="text-base font-black text-[#D6455D] mt-0.5">-{formatMoney(totalPayable)}</span>
@@ -1818,7 +2542,7 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
         return (
           <div className="bg-white rounded-2xl p-4 border border-[#E4E1EA] shadow-xs space-y-3.5">
             <div className="flex justify-between items-center">
-              <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">Active Loans Overview</h2>
+              <h2 className="text-[10px] font-bold text-[#625E70] uppercase tracking-widest">{translate("Active Loans Overview")}</h2>
               <button
                 onClick={() => onNavigateTab && onNavigateTab('loans')}
                 className="text-[10px] font-black text-[#078A87] uppercase hover:underline"
@@ -1829,30 +2553,30 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
 
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-[#1E104B]/5 p-2.5 rounded-xl flex flex-col justify-between border border-[#1E104B]/15">
-                <span className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider truncate">Total to Pay</span>
+                <span className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider truncate">{translate("Total to Pay")}</span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#1E104B] mt-1 truncate">{formatMoney(homeLoanToPay)}</span>
               </div>
               <div className="bg-[#078A87]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#078A87]/25">
-                <span className="text-[9px] font-bold text-[#078A87] uppercase tracking-wider truncate">Paid So Far</span>
+                <span className="text-[9px] font-bold text-[#078A87] uppercase tracking-wider truncate">{translate("Paid So Far")}</span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#078A87] mt-1 truncate">{formatMoney(homeLoanPaid)}</span>
               </div>
               <div className="bg-[#D6455D]/10 p-2.5 rounded-xl flex flex-col justify-between border border-[#D6455D]/25">
-                <span className="text-[9px] font-bold text-[#D6455D] uppercase tracking-wider truncate">Remaining</span>
+                <span className="text-[9px] font-bold text-[#D6455D] uppercase tracking-wider truncate">{translate("Remaining")}</span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#D6455D] mt-1 truncate">{formatMoney(homeLoanRem)}</span>
               </div>
             </div>
 
             {activeLoansList.length === 0 ? (
-              <p className="text-xs text-[#625E70] font-semibold text-center py-2">No active loans.</p>
+              <p className="text-xs text-[#625E70] font-semibold text-center py-2">{translate("No active loans.")}</p>
             ) : (
               <div className="overflow-x-auto hide-scrollbar">
                 <table className="w-full table-fixed text-[10px]">
                   <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
                     <tr>
-                      <th className="w-[34%] px-2.5 py-1.5 text-left tracking-tight">Loan / Person</th>
-                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">Loan Rs.</th>
-                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">EMI Rs.</th>
-                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">EMI Paid</th>
+                      <th className="w-[34%] px-2.5 py-1.5 text-left tracking-tight">{translate("Loan / Person")}</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{translate("Loan Rs.")}</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{translate("EMI Rs.")}</th>
+                      <th className="w-[22%] px-2 py-1.5 text-right tracking-tight">{translate("EMI Paid")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
@@ -1961,7 +2685,7 @@ const PersonsView = ({ onSelectPerson }) => {
         <button
           onClick={handleSharePersonsSummary}
           disabled={isSharingPersons}
-          title="Share Directory Summary Image"
+          title={translate("Share Directory Summary Image")}
           className={`w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs ${isSharingPersons ? 'opacity-50 cursor-wait' : ''}`}
         >
           <i className={`fa-solid ${isSharingPersons ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
@@ -1975,7 +2699,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'ALL' ? 'bg-white text-[#1E104B] shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            All
+            {translate("All")}
           </button>
           <button
             type="button"
@@ -1984,7 +2708,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'RECEIVABLE' ? 'bg-[#078A87] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Credit
+            {translate("Credit")}
           </button>
           <button
             type="button"
@@ -1993,22 +2717,22 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'PAYABLE' ? 'bg-[#D6455D] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Debit
+            {translate("Debit")}
           </button>
         </div>
       </div>
 
       <div className="grad-kpi rounded-2xl p-3.5 shadow-md grid grid-cols-3 divide-x divide-white/10 text-center">
         <div className="px-1">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">RECEIVABLE</p>
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{translate("RECEIVABLE")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(totalReceivable)}</p>
         </div>
         <div className="px-1">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">PAYABLE</p>
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{translate("PAYABLE")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(totalPayable)}</p>
         </div>
         <div className="px-1">
-          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">BALANCE</p>
+          <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{translate("BALANCE")}</p>
           <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(Math.abs(netBalance))}</p>
         </div>
       </div>
@@ -2018,10 +2742,10 @@ const PersonsView = ({ onSelectPerson }) => {
           <table className="w-full table-fixed text-[10px]">
             <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
               <tr>
-                <th className="w-[34%] px-2.5 py-2 text-left tracking-tight">Person Name</th>
-                <th className="w-[22%] px-1.5 py-2 text-right tracking-tight">Given</th>
-                <th className="w-[22%] px-1.5 py-1.5 text-right tracking-tight">Recv</th>
-                <th className="w-[22%] px-2 py-2 text-right tracking-tight">Balance</th>
+                <th className="w-[34%] px-2.5 py-2 text-left tracking-tight">{translate("Person Name")}</th>
+                <th className="w-[22%] px-1.5 py-2 text-right tracking-tight">{translate("Given")}</th>
+                <th className="w-[22%] px-1.5 py-1.5 text-right tracking-tight">{translate("Recv")}</th>
+                <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("Balance")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
@@ -2084,15 +2808,15 @@ const PersonsView = ({ onSelectPerson }) => {
 
             <div className="flex justify-between bg-[#F4F3F8] rounded-xl py-2 px-2 text-center mb-2">
               <div className="flex-1 px-1">
-                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">RECEIVABLE</p>
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("RECEIVABLE")}</p>
                 <p className="text-base font-black text-[#078A87]">+{formatMoney(totalReceivable)}</p>
               </div>
               <div className="flex-1 px-1">
-                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">PAYABLE</p>
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("PAYABLE")}</p>
                 <p className="text-base font-black text-[#D6455D]">-{formatMoney(totalPayable)}</p>
               </div>
               <div className="flex-1 px-1">
-                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">BALANCE</p>
+                <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("BALANCE")}</p>
                 <p className="text-base font-black text-[#1E104B]">{netBalance >= 0 ? '+' : '-'}{formatMoney(Math.abs(netBalance))}</p>
               </div>
             </div>
@@ -2106,10 +2830,10 @@ const PersonsView = ({ onSelectPerson }) => {
               </colgroup>
               <thead className="bg-[#1E104B] text-white text-[11px]">
                 <tr>
-                  <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">Person Name</th>
-                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Given</th>
-                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Recv</th>
-                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Balance</th>
+                  <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Person Name")}</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Given")}</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Recv")}</th>
+                  <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Balance")}</th>
                 </tr>
               </thead>
               <tbody className="text-[#1E104B] bg-transparent font-medium">
@@ -2133,10 +2857,10 @@ const PersonsView = ({ onSelectPerson }) => {
 
             <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
               <div className="flex flex-col justify-center text-left leading-tight">
-                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
-                <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
-                <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
               </div>
 
               <div className="flex items-center justify-center">
@@ -2175,6 +2899,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
   const { transactions, loans, showFeedback, admin, deletePerson, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [isSharingStatement, setIsSharingStatement] = useState(false);
+  const [showLedgerShareOptions, setShowLedgerShareOptions] = useState(false);
   const [showDeletePersonConfirm, setShowDeletePersonConfirm] = useState(false);
   const [isDeletingPerson, setIsDeletingPerson] = useState(false);
   const [isLoanDropdownOpen, setIsLoanDropdownOpen] = useState(false);
@@ -2249,15 +2974,15 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
   const targetDateStr = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 5);
-    const day = d.getDate();
-    const mIdx = d.getMonth();
-    const yy = String(d.getFullYear()).slice(-2);
-    return `${day}-${MONTHS_SHORT[mIdx]}-${yy}`;
-  }, []);
+    const selectedLanguage = getSelectedLanguage();
+    const parts = new Intl.DateTimeFormat(LANGUAGE_LOCALES[selectedLanguage] || 'en-IN', { day: 'numeric', month: 'short', year: '2-digit' }).formatToParts(d);
+    const part = type => parts.find(item => item.type === type)?.value || '';
+    return `${part('day')}-${part('month')}-${part('year')}`;
+  }, [getSelectedLanguage()]);
 
   const handleShareImage = async () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
-    const captionText = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    const captionText = `${translate('Dear')} ${person.name}, ${translate(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${translate('on or before date')} ${targetDateStr}.`;
 
     if (txs.length > 10) {
       showFeedback('Loading fonts & generating PDF...');
@@ -2271,7 +2996,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
         const element = statementSlipRef.current || document.getElementById('whatsapp-share-slip');
         if (!element) throw new Error('Statement DOM node not found');
 
-        const fileName = `${person.name.replace(/\s+/g, '_')}_Overall Statement.pdf`;
+        const fileName = `${person.name.replace(/\s+/g, '_')}_${translate('Overall Statement')}.pdf`;
         const opt = {
           margin: [8, 8, 10, 8],
           filename: fileName,
@@ -2331,9 +3056,40 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
     }
   };
 
+  const handleShareLedgerReminder = async () => {
+    setShowLedgerShareOptions(false);
+    if (!person || !person.remaining) {
+      showFeedback('This person has no outstanding balance to remind about.');
+      return;
+    }
+    const balanceDirection = person.remaining > 0 ? 'receivable' : 'payable';
+    const actionWord = translate(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive').toLowerCase();
+    const captionText = `${translate('Dear')} ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} ${translate('on or before')} ${formatDisplayDate(targetDateStr)}.`;
+    setIsSharingStatement(true);
+    showFeedback('Generating balance reminder...');
+    try {
+      const file = await createPaymentReminderImage({ personName: person.name, amount: Math.abs(person.remaining), dueDate: targetDateStr, admin, reminderType: 'ledger', balanceDirection });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: translate('Budget Bharat Balance Reminder'), text: captionText });
+        showFeedback('Reminder ready to share');
+      } else {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        showFeedback('Reminder image saved; share it in WhatsApp');
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.error('Ledger balance reminder error:', err);
+      showFeedback('Reminder failed: ' + (err && err.message ? err.message : 'image generation failed'));
+    } finally {
+      setIsSharingStatement(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
-    const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    const textMsg = `${translate('Dear')} ${person.name}, ${translate(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${translate('on or before date')} ${targetDateStr}.`;
     let phone = String(person.phone || '').replace(/\D/g, '');
     if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
     if (phone.length === 10) phone = '91' + phone;
@@ -2346,9 +3102,18 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
   return (
     <React.Fragment>
+      {showLedgerShareOptions && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={translate("Close")}>×</button></div>
+            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share transaction statement")}</span></button>
+            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share balance reminder")}</span></button>
+          </div>
+        </div>
+      )}
       <div className="flex-none grad-dark px-3.5 py-3 text-white flex items-center justify-between shadow-md z-30">
         <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
-          <button onClick={onBack} title="Exit to Directory" className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
+          <button onClick={onBack} title={translate("Exit to Directory")} className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
             <i className="fa-solid fa-arrow-left text-base"></i>
           </button>
           <div className="flex flex-col min-w-0">
@@ -2368,7 +3133,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                 style={{ height: '22px' }}
               >
                 <span className="px-2.5 py-0.5 leading-none tracking-wide whitespace-nowrap">
-                  {personActiveLoans.length > 0 ? `${personActiveLoans.length} Loans` : 'No Loans'}
+                  {personActiveLoans.length > 0 ? `${formatTableNum(personActiveLoans.length)} ${translate('Loans')}` : translate('No Loans')}
                 </span>
                 {personActiveLoans.length > 0 && (
                   <span className="flex items-center justify-center border-l border-white/25 px-2 h-full bg-white/10 rounded-r-lg">
@@ -2380,7 +3145,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               {isLoanDropdownOpen && personActiveLoans.length > 0 && (
                 <div className="absolute top-full left-0 mt-1.5 w-52 bg-[#241457] border border-[#7B2B8C]/40 rounded-xl shadow-2xl py-1 z-50 animate-slide-up">
                   <div className="px-3 py-1.5 text-[9px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10">
-                    Active Loans ({personActiveLoans.length})
+                    {translate('Active Loans')} ({formatTableNum(personActiveLoans.length)})
                   </div>
                   <div className="max-h-48 overflow-y-auto hide-scrollbar divide-y divide-white/5">
                     {personActiveLoans.map((l) => {
@@ -2416,11 +3181,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
         <div className="flex items-center gap-2 flex-none">
           {allPersons.length > 0 && (
             <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10 text-[11px] font-black">
-              <button onClick={goToPrev} title="Previous Person" className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
+              <button onClick={goToPrev} title={translate("Previous Person")} className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
                 <i className="fa-solid fa-chevron-left text-[9px]"></i>
               </button>
               <span className="opacity-75 select-none">({currentIndex + 1}/{allPersons.length})</span>
-              <button onClick={goToNext} title="Next Person" className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
+              <button onClick={goToNext} title={translate("Next Person")} className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs">
                 <i className="fa-solid fa-chevron-right text-[9px]"></i>
               </button>
             </div>
@@ -2430,9 +3195,9 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
             onClick={uploadBackupToCloud}
             disabled={syncStatus === 'syncing'}
             className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
-            title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+            title={syncStatus === 'syncing' ? 'Uploading backup...' : syncStatus === 'restoring' ? 'Restoring backup...' : syncStatus === 'success' ? 'Backup synced' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
           >
-            <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+            <i className={`fa-solid ${syncStatus === 'syncing' ? 'fa-cloud-arrow-up animate-pulse' : syncStatus === 'restoring' ? 'fa-cloud-arrow-down animate-pulse' : syncStatus === 'success' ? 'fa-cloud-check' : 'fa-cloud-arrow-up'} text-sm`}></i>
           </button>
         </div>
       </div>
@@ -2457,15 +3222,15 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                 <i className="fa-solid fa-phone text-xs"></i>
               </button>
               <button
-                onClick={handleShareImage}
-                title="Share Statement Image"
+                onClick={() => setShowLedgerShareOptions(true)}
+                title={translate("Share Statement or Reminder")}
                 className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
               >
                 <i className="fa-solid fa-share-nodes text-xs"></i>
               </button>
               <button
                 onClick={handleWhatsAppShare}
-                title="Open WhatsApp chat"
+                title={translate("Open WhatsApp chat")}
                 className="w-9 h-9 rounded-full bg-[#25D366] flex items-center justify-center text-white hover:brightness-105 active:scale-95 transition-all shadow-xs"
               >
                 <i className="fa-brands fa-whatsapp text-base"></i>
@@ -2497,7 +3262,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               })()}
               <button
                 onClick={() => setShowDeletePersonConfirm(true)}
-                title="Delete Person & All Records"
+                title={translate("Delete Person & All Records")}
                 className="w-9 h-9 rounded-full bg-[#D6455D]/15 text-[#D6455D] hover:bg-[#D6455D] hover:text-white active:bg-[#D6455D] active:text-white flex items-center justify-center transition-all border border-[#D6455D]/25 shadow-xs"
               >
                 <i className="fa-solid fa-trash-can text-xs"></i>
@@ -2510,7 +3275,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                 type="text"
                 value={ledgerSearch}
                 onChange={e => setLedgerSearch(e.target.value)}
-                placeholder="Search entry..."
+                placeholder={translate("Search entry...")}
                 className="w-full bg-white border border-[#E4E1EA] rounded-full py-1.5 pl-8 pr-7 text-xs text-[#1E104B] placeholder-slate-400 focus:outline-none focus:border-[#078A87] transition-all font-semibold shadow-xs"
               />
               {ledgerSearch && (
@@ -2527,15 +3292,15 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
           <div className="grad-kpi py-3.5 px-3 rounded-2xl shadow-md grid grid-cols-3 divide-x divide-white/10 text-center">
             <div className="px-1">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">GIVEN (DR)</p>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{translate("GIVEN (DR)")}</p>
               <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(person.totalDr)}</p>
             </div>
             <div className="px-1">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">RECEIVED (CR)</p>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{translate("RECEIVED (CR)")}</p>
               <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(person.totalCr)}</p>
             </div>
             <div className="px-1">
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">BALANCE</p>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wide">{translate("BALANCE")}</p>
               <p className="text-sm font-black text-white mt-1 truncate">
                 {person.remaining > 0 ? '+' : person.remaining < 0 ? '-' : ''}{formatMoney(Math.abs(person.remaining))}
               </p>
@@ -2547,9 +3312,9 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               <table className="w-full text-left text-[10px] whitespace-nowrap">
                 <thead className="bg-[#E2DEEA] text-[#1E104B] font-black uppercase border-b border-[#CDC8DA] tracking-wider">
                   <tr>
-                    <th className="px-3.5 py-1.5">Date</th>
-                    <th className="px-3.5 py-1.5">Description</th>
-                    <th className="px-3.5 py-1.5 text-right">Amount</th>
+                    <th className="px-3.5 py-1.5">{translate("Date")}</th>
+                    <th className="px-3.5 py-1.5">{translate("Description")}</th>
+                    <th className="px-3.5 py-1.5 text-right">{translate("Amount")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
@@ -2586,10 +3351,10 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                   <i className={isDeletingPerson ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
                 </div>
                 <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-                  {isDeletingPerson ? 'Deleting Person...' : 'Delete Person?'}
+                  {isDeletingPerson ? translate('Deleting Person...') : translate('Delete Person?')}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 mb-5">
-                  {isDeletingPerson ? `Removing ${person.name} and all associated entries from sheet.` : <>Delete <strong>{person.name}</strong> and all associated transactions? This cannot be undone.</>}
+                  {isDeletingPerson ? `${translate('Removing')} ${person.name} ${translate('and all associated entries from sheet.')}` : <>{translate("Delete")} <strong>{person.name}</strong> {translate("and all associated transactions? This cannot be undone.")}</>}
                 </p>
                 <div className="flex gap-3 w-full">
                   <button
@@ -2598,7 +3363,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                     onClick={() => setShowDeletePersonConfirm(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
                   >
-                    Cancel
+                    {translate("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -2676,11 +3441,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
                 <div className="flex justify-between py-1.5 px-2 text-center mb-2 divide-x divide-slate-200">
                   <div className="flex-1 px-1">
-                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">GIVEN (DR)</p>
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">{translate("GIVEN (DR)")}</p>
                     <p className="text-xl font-black text-[#7B2B8C] leading-none">{formatMoney(person.totalDr)}</p>
                   </div>
                   <div className="flex-1 px-1">
-                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">RECEIVED (CR)</p>
+                    <p className="text-[9px] font-bold text-[#625E70] uppercase tracking-wider mb-0.5">{translate("RECEIVED (CR)")}</p>
                     <p className="text-xl font-black text-[#078A87] leading-none">{formatMoney(person.totalCr)}</p>
                   </div>
                   <div className="flex-1 px-1">
@@ -2703,11 +3468,11 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                   </colgroup>
                   <thead className="bg-[#1E104B] text-white">
                     <tr>
-                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">Date</th>
-                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">Description</th>
-                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">Ref A/C</th>
-                      <th className="py-1.5 px-1.5 font-bold uppercase text-right border border-[#E4E1EA]">Amount</th>
-                      <th className="py-1.5 px-1 font-bold uppercase text-center border border-[#E4E1EA]">Promise</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Date")}</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Description")}</th>
+                      <th className="py-1.5 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Ref A/C")}</th>
+                      <th className="py-1.5 px-1.5 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Amount")}</th>
+                      <th className="py-1.5 px-1 font-bold uppercase text-center border border-[#E4E1EA]">{translate("Promise")}</th>
                     </tr>
                   </thead>
                   <tbody className="text-[#1E104B] bg-transparent">
@@ -2727,10 +3492,10 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
                 <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
                   <div className="flex flex-col justify-center text-left leading-tight">
-                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
-                    <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
-                    <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                    <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
                   </div>
 
                   <div className="flex items-center justify-center">
@@ -2795,6 +3560,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
   const [paymentModal, setPaymentModal] = useState({ open: false, row: null, who: 'ME', paymentId: '' });
   const loanSlipRef = useRef(null);
   const [isExportingSlip, setIsExportingSlip] = useState(false);
+  const [showEmiShareOptions, setShowEmiShareOptions] = useState(false);
   const [isLoanDropdownOpen, setIsLoanDropdownOpen] = useState(false);
   const loanDropdownRef = useRef(null);
 
@@ -3073,22 +3839,35 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     }
   };
 
-  const handleSendWhatsAppReminder = async () => {
+  const handleSendWhatsAppReminder = () => {
     if (!currentLoan) return;
-    const nextPending = currentLoan.schedule.find(s => !s.paid);
-    if (!nextPending) {
-      showFeedback('All EMIs for this loan are cleared!');
+    const nextPending = (currentLoan.schedule || []).find(s => !s.paid && String(s.paid).toLowerCase() !== 'true');
+    if (!nextPending) { showFeedback('All EMIs for this loan are cleared!'); return; }
+    const borrower = borrowerPersonObj || (persons || []).find(p => String(p.name || '').trim().replace(/\s+/g, ' ').toLowerCase() === String(currentLoan.person || '').trim().replace(/\s+/g, ' ').toLowerCase());
+    let phone = String(borrower && borrower.phone || '').replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+    if (phone.length === 10) phone = '91' + phone;
+    if (!phone || !/^91[6-9]\d{9}$/.test(phone)) {
+      showFeedback(borrower && borrower.phone ? 'Please check this person’s saved phone number (use a valid Indian mobile number).' : 'No phone number saved for this person. Add a phone number in Person Ledger first.');
       return;
     }
-    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
+    const textMsg = `${translate('Hello')} ${currentLoan.person}, ${translate('your')} ${currentLoan.loanName} ${translate('EMI')} #${nextPending.emiNo} ${translate('with amount')} ${formatMoney(nextPending.emiAmount)} ${translate('is due on')} ${formatDisplayDate(nextPending.date)}. ${translate('Please pay')}.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareEmiReminder = async () => {
+    setShowEmiShareOptions(false);
+    if (!currentLoan) return;
+    const nextPending = (currentLoan.schedule || []).find(s => !s.paid && String(s.paid).toLowerCase() !== 'true');
+    if (!nextPending) { showFeedback('All EMIs for this loan are cleared!'); return; }
+    const textMsg = `${translate('Hello')} ${currentLoan.person}, ${translate('your')} ${currentLoan.loanName} ${translate('EMI')} #${nextPending.emiNo} ${translate('with amount')} ${formatMoney(nextPending.emiAmount)} ${translate('is due on')} ${formatDisplayDate(nextPending.date)}. ${translate('Please pay')}.`;
     try {
       const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Budget Bharat Payment Reminder', text: textMsg });
+        await navigator.share({ files: [file], title: translate('Budget Bharat Payment Reminder'), text: textMsg });
         showFeedback('Reminder ready to share');
       } else {
-        const url = URL.createObjectURL(file);
-        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        const url = URL.createObjectURL(file); const link = document.createElement('a'); link.href = url; link.download = file.name;
         document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
         showFeedback('Reminder image saved; share it in WhatsApp');
       }
@@ -3112,7 +3891,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
       const safePerson = String(currentLoan.person || 'User').replace(/\s+/g, '_');
       const safeLoan = String(currentLoan.loanName || 'Loan').replace(/\s+/g, '_');
-      const fileName = `${safePerson}_${safeLoan}_EMI_Table.pdf`;
+      const fileName = `${safePerson}_${safeLoan}_${translate('EMI Table')}.pdf`;
 
       if (currentLoan.schedule.length > 12) {
         const opt = {
@@ -3208,7 +3987,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
           <button
             onClick={handleShareMasterLoans}
             disabled={isSharingMasterLoans}
-            title="Share Loans Summary Image"
+            title={translate("Share Loans Summary Image")}
             className={`w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs ${isSharingMasterLoans ? 'opacity-50 cursor-wait' : ''}`}
           >
             <i className={`fa-solid ${isSharingMasterLoans ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
@@ -3227,21 +4006,21 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
             className="px-3.5 py-1.5 rounded-xl bg-[#078A87] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
             <i className="fa-solid fa-plus text-xs"></i>
-            <span>New Loan</span>
+            <span>{translate("New Loan")}</span>
           </button>
         </div>
 
         <div className="grad-kpi rounded-2xl p-4 shadow-md grid grid-cols-3 divide-x divide-white/10 text-center text-white">
           <div className="px-1">
-            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Total to Pay</p>
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Total to Pay")}</p>
             <p className="text-sm font-black text-white mt-1 truncate">{formatMoney(masterSummary.totalLoanToPay)}</p>
           </div>
           <div className="px-1">
-            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Paid So Far</p>
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Paid So Far")}</p>
             <p className="text-sm font-black text-emerald-400 mt-1 truncate">{formatMoney(masterSummary.totalPaidSoFar)}</p>
           </div>
           <div className="px-1">
-            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Remaining</p>
+            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{translate("Remaining")}</p>
             <p className="text-sm font-black text-[#07C0BE] mt-1 truncate">{formatMoney(masterSummary.totalRemaining)}</p>
           </div>
         </div>
@@ -3250,17 +4029,17 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
           {loans.length === 0 ? (
             <div className="text-center py-12 px-4">
               <i className="fa-solid fa-hand-holding-dollar text-3xl text-gray-300 mb-2"></i>
-              <p className="text-xs font-bold text-gray-500">No active loans found. Create your first loan above.</p>
+              <p className="text-xs font-bold text-gray-500">{translate("No active loans found. Create your first loan above.")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto hide-scrollbar">
               <table className="w-full table-fixed text-[10px]">
                 <thead className="bg-[#E8E6F0] text-[#1E104B] uppercase font-black border-b border-[#D6D2E0]">
                   <tr>
-                    <th className="w-[34%] px-3 py-2 text-left tracking-tight">Loan / Person</th>
-                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">Loan Rs.</th>
-                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">EMI Rs.</th>
-                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">EMI Paid</th>
+                    <th className="w-[34%] px-3 py-2 text-left tracking-tight">{translate("Loan / Person")}</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("Loan Rs.")}</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("EMI Rs.")}</th>
+                    <th className="w-[22%] px-2 py-2 text-right tracking-tight">{translate("EMI Paid")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA]/60 font-semibold text-[#1E104B]">
@@ -3332,7 +4111,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
                   <h1 className="text-[10px] font-black text-[#7B2B8C] uppercase tracking-widest mb-0.5">
                     {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
                   </h1>
-                  <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">Active Loans Statement</h2>
+                  <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">{translate("Active Loans Statement")}</h2>
                 </div>
                 <div className="text-right text-[10px] font-bold text-gray-500 leading-tight">
                   <p>Total Loans: {loans.length}</p>
@@ -3342,15 +4121,15 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
               <div className="flex justify-between bg-[#F4F3F8] rounded-xl py-2 px-2 text-center mb-2.5">
                 <div className="flex-1 px-1">
-                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">TOTAL TO PAY</p>
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("TOTAL TO PAY")}</p>
                   <p className="text-base font-black text-[#1E104B]">{formatMoney(masterSummary.totalLoanToPay)}</p>
                 </div>
                 <div className="flex-1 px-1 border-x border-[#E4E1EA]">
-                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">PAID SO FAR</p>
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("PAID SO FAR")}</p>
                   <p className="text-base font-black text-[#078A87]">{formatMoney(masterSummary.totalPaidSoFar)}</p>
                 </div>
                 <div className="flex-1 px-1">
-                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">REMAINING</p>
+                  <p className="text-[8px] font-bold text-[#625E70] uppercase tracking-widest mb-0.5">{translate("REMAINING")}</p>
                   <p className="text-base font-black text-[#D6455D]">{formatMoney(masterSummary.totalRemaining)}</p>
                 </div>
               </div>
@@ -3364,10 +4143,10 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
                 </colgroup>
                 <thead className="bg-[#1E104B] text-white text-[10px]">
                   <tr>
-                    <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">Loan / Person</th>
-                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">Loan Rs.</th>
-                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">EMI Rs.</th>
-                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">EMI Paid</th>
+                    <th className="py-2 px-2 font-bold uppercase border border-[#E4E1EA]">{translate("Loan / Person")}</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("Loan Rs.")}</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("EMI Rs.")}</th>
+                    <th className="py-2 px-2 font-bold uppercase text-right border border-[#E4E1EA]">{translate("EMI Paid")}</th>
                   </tr>
                 </thead>
                 <tbody className="text-[#1E104B] bg-transparent font-medium">
@@ -3396,10 +4175,10 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
             <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
               <div className="flex flex-col justify-center text-left leading-tight">
-                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
-                <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
-                <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+                <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
               </div>
 
               <div className="flex items-center justify-center">
@@ -3444,7 +4223,7 @@ return (
             setViewMode('master');
             setIsCreatingLoan(false);
           }}
-          title="Exit to Loans Directory"
+          title={translate("Exit to Loans Directory")}
           className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95"
         >
           <i className="fa-solid fa-arrow-left text-base"></i>
@@ -3486,7 +4265,7 @@ return (
                   style={{ height: '22px' }}
                 >
                   <span className="px-2.5 py-0.5 leading-none tracking-wide whitespace-nowrap">
-                    {borrowerActiveLoans.length > 0 ? `${borrowerActiveLoans.length} Loans` : 'No Loans'}
+                    {borrowerActiveLoans.length > 0 ? `${formatTableNum(borrowerActiveLoans.length)} ${translate('Loans')}` : translate('No Loans')}
                   </span>
                   {borrowerActiveLoans.length > 0 && (
                     <span className="flex items-center justify-center border-l border-white/25 px-2 h-full bg-white/10 rounded-r-lg">
@@ -3498,7 +4277,7 @@ return (
                 {isLoanDropdownOpen && borrowerActiveLoans.length > 0 && (
                   <div className="absolute top-full left-0 mt-1.5 w-56 bg-[#241457] border border-[#7B2B8C]/40 rounded-xl shadow-2xl py-1 z-50 animate-slide-up">
                     <div className="px-3 py-1.5 text-[9px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10">
-                      Active Loans ({borrowerActiveLoans.length})
+                      {translate('Active Loans')} ({formatTableNum(borrowerActiveLoans.length)})
                     </div>
                     <div className="max-h-48 overflow-y-auto hide-scrollbar divide-y divide-white/5">
                       {borrowerActiveLoans.map((l) => {
@@ -3542,7 +4321,7 @@ return (
           <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10 text-[11px] font-black">
             <button
               onClick={goToPrevLoan}
-              title="Previous Loan"
+              title={translate("Previous Loan")}
               className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs"
             >
               <i className="fa-solid fa-chevron-left text-[9px]"></i>
@@ -3550,7 +4329,7 @@ return (
             <span className="opacity-75 select-none">({currentLoanIndex + 1}/{loans.length})</span>
             <button
               onClick={goToNextLoan}
-              title="Next Loan"
+              title={translate("Next Loan")}
               className="w-5 h-5 flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-[#1E104B]/60 rounded-full active:scale-90 transition-all shadow-xs"
             >
               <i className="fa-solid fa-chevron-right text-[9px]"></i>
@@ -3562,21 +4341,30 @@ return (
           onClick={uploadBackupToCloud}
           disabled={syncStatus === 'syncing'}
           className={`sync-header-btn flex-none ${syncStatus === 'syncing' ? 'is-syncing' : ''} ${loadError !== '' ? 'is-error' : ''}`}
-          title={syncStatus === 'syncing' ? 'Syncing...' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload Backup to Google Drive'}
+          title={syncStatus === 'syncing' ? 'Uploading backup...' : syncStatus === 'restoring' ? 'Restoring backup...' : syncStatus === 'success' ? 'Backup synced' : loadError !== '' ? 'Error. Tap to retry.' : 'Upload backup to Google Drive'}
         >
-          <i className={`fa-solid fa-rotate text-sm ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}></i>
+          <i className={`fa-solid ${syncStatus === 'syncing' ? 'fa-cloud-arrow-up animate-pulse' : syncStatus === 'restoring' ? 'fa-cloud-arrow-down animate-pulse' : syncStatus === 'success' ? 'fa-cloud-check' : 'fa-cloud-arrow-up'} text-sm`}></i>
         </button>
       </div>
     </div>
 
     <div className="app-content px-4 mt-2 pb-32 space-y-3">
+      {showEmiShareOptions && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEmiShareOptions(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={translate("Close")}>×</button></div>
+            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share EMI table")}</span></button>
+            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{translate("Share EMI reminder")}</span></button>
+          </div>
+        </div>
+      )}
       {!isCreatingLoan && currentLoan && (
         <div className="flex items-center justify-between gap-2 py-1 px-1">
           <div className="flex items-center gap-2 flex-none">
             <button
-              onClick={handleShareLoanSchedule}
+              onClick={() => setShowEmiShareOptions(true)}
               disabled={isExportingSlip}
-              title="Share Schedule (Image / PDF)"
+              title={translate("Share EMI Table or Reminder")}
               className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
             >
               <i className={`fa-solid ${isExportingSlip ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
@@ -3584,7 +4372,7 @@ return (
 
             <button
               onClick={handleSendWhatsAppReminder}
-              title="Send WhatsApp EMI Reminder"
+              title={translate("Send WhatsApp EMI Reminder")}
               className="w-9 h-9 rounded-full bg-[#25D366] text-white hover:brightness-105 active:scale-95 flex items-center justify-center text-sm transition-all shadow-xs"
             >
               <i className="fa-brands fa-whatsapp"></i>
@@ -3592,7 +4380,7 @@ return (
 
             <button
               onClick={() => setShowDeleteLoanConfirm(true)}
-              title="Delete Loan"
+              title={translate("Delete Loan")}
               className="w-9 h-9 rounded-full bg-[#D6455D]/15 text-[#D6455D] hover:bg-[#D6455D] hover:text-white active:bg-[#D6455D] active:text-white flex items-center justify-center transition-all border border-[#D6455D]/25 shadow-xs"
             >
               <i className="fa-solid fa-trash-can text-xs"></i>
@@ -3610,11 +4398,11 @@ return (
                 setForeclosingStatus('idle');
                 setForeclosureModalOpen(true);
               }}
-              title="Foreclose Loan"
+              title={translate("Foreclose Loan")}
               className="px-3 py-1.5 rounded-xl bg-[#D6455D] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
               <i className="fa-solid fa-xmark text-xs font-black"></i>
-              <span>Foreclose</span>
+              <span>{translate("Foreclose")}</span>
             </button>
 
             <button
@@ -3631,7 +4419,7 @@ return (
               className="px-3.5 py-1.5 rounded-xl bg-[#078A87] text-white text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
               <i className="fa-solid fa-plus text-xs"></i>
-              <span>New Loan</span>
+              <span>{translate("New Loan")}</span>
             </button>
           </div>
         </div>
@@ -3648,8 +4436,8 @@ return (
           >
             <div className="flex justify-between items-center border-b border-gray-100 pb-2">
               <div>
-                <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">New Loan Details</h3>
-                <p className="text-[10px] text-gray-400 font-bold">Amortization Setup</p>
+                <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">{translate("New Loan Details")}</h3>
+                <p className="text-[10px] text-gray-400 font-bold">{translate("Amortization Setup")}</p>
               </div>
               <button
                 onClick={() => setIsCreatingLoan(false)}
@@ -3669,20 +4457,20 @@ return (
             <form onSubmit={handleCreateLoan} className="space-y-3">
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Borrower *</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Borrower *")}</label>
                   <SearchableDropdown
                     value={newPerson}
                     onChange={setNewPerson}
                     options={persons.map(p => p.name)}
-                    placeholder="Select person..."
+                    placeholder={translate("Select person...")}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Loan Name *</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Loan Name *")}</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Phone EMI / Gold Loan"
+                    placeholder={translate("e.g. Phone EMI / Gold Loan")}
                     value={newLoanName}
                     onChange={e => setNewLoanName(e.target.value)}
                     className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
@@ -3692,21 +4480,21 @@ return (
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Loan Taken (Disbursed) *</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Loan Taken (Disbursed) *")}</label>
                   <input
                     type="number"
-                    placeholder="Bank Disbursed Amount"
+                    placeholder={translate("Bank Disbursed Amount")}
                     value={newLoanTaken}
                     onChange={e => setNewLoanTaken(e.target.value)}
                     className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Loan to Pay (Total) *</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Loan to Pay (Total) *")}</label>
                   <input
                     type="number"
                     required
-                    placeholder="Total Repayable"
+                    placeholder={translate("Total Repayable")}
                     value={newLoanToPay}
                     onChange={e => setNewLoanToPay(e.target.value)}
                     className="w-full border border-[#E4E1EA] rounded-xl px-3 py-2.5 font-bold text-xs bg-[#F4F3F8] focus:bg-white text-[#1E104B] outline-none"
@@ -3716,7 +4504,7 @@ return (
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Monthly EMI (₹) *</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Monthly EMI (₹) *")}</label>
                   <input
                     type="number"
                     required
@@ -3727,7 +4515,7 @@ return (
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Tenure (Mo)</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Tenure (Mo)")}</label>
                   <input
                     type="number"
                     value={newTenure}
@@ -3736,7 +4524,7 @@ return (
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">First Date</label>
+                  <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("First Date")}</label>
                   <AppDatePicker
                     value={newFirstDate}
                     onChange={setNewFirstDate}
@@ -3751,7 +4539,7 @@ return (
                   onClick={() => setIsCreatingLoan(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-xs uppercase"
                 >
-                  Cancel
+                  {translate("Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -3767,11 +4555,7 @@ return (
                   {createStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
                   {createStatus === 'success' && <i className="fa-solid fa-check"></i>}
                   <span>
-                    {createStatus === 'loading'
-                      ? 'Creating...'
-                      : createStatus === 'success'
-                      ? 'Created'
-                      : 'Create Loan'}
+                    {createStatus === 'loading' ? translate('Creating...') : createStatus === 'success' ? translate('Created') : translate('Create Loan')}
                   </span>
                 </button>
               </div>
@@ -3785,32 +4569,32 @@ return (
           <div className="grad-kpi rounded-2xl p-3.5 shadow-md text-white space-y-2.5">
             <div className="grid grid-cols-3 divide-x divide-white/10 text-center pb-2 border-b border-white/10">
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Total Loan Taken</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Total Loan Taken")}</p>
                 <p className="text-xs sm:text-sm font-black mt-0.5 truncate">{formatMoney(loanTakenVal)}</p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Total Loan to Pay</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Total Loan to Pay")}</p>
                 <p className="text-xs sm:text-sm font-black text-[#07C0BE] mt-0.5 truncate">{formatMoney(loanToPayVal)}</p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Interest</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Interest")}</p>
                 <p className="text-xs sm:text-sm font-black text-amber-300 mt-0.5 truncate">{formatMoney(loanInterestVal)}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">EMI Paid</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("EMI Paid")}</p>
                 <p className="text-xs sm:text-sm font-black text-emerald-400 mt-0.5 truncate">
                   {paidEmisList.length} / {currentLoan.schedule.length}
                 </p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Payment Made</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Payment Made")}</p>
                 <p className="text-xs sm:text-sm font-black text-emerald-400 mt-0.5 truncate">{formatMoney(paymentMadeVal)}</p>
               </div>
               <div className="px-1">
-                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">Remaining</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">{translate("Remaining")}</p>
                 <p className="text-xs sm:text-sm font-black text-rose-300 mt-0.5 truncate">{formatMoney(remainingBalanceVal)}</p>
               </div>
             </div>
@@ -3821,11 +4605,11 @@ return (
               <table className="w-full text-left text-[11px] whitespace-nowrap">
                 <thead className="bg-[#1DA1D2] text-white uppercase font-black tracking-wider text-[10px]">
                   <tr>
-                    <th className="px-3 py-2.5">DATE</th>
-                    <th className="px-3 py-2.5 text-right">AMOUNT</th>
-                    <th className="px-3 py-2.5 text-right">BALANCE</th>
-                    <th className="px-2.5 py-2.5 text-center">Paid/ Not</th>
-                    <th className="px-3 py-2.5">Txn. Id</th>
+                    <th className="px-3 py-2.5">{translate("DATE")}</th>
+                    <th className="px-3 py-2.5 text-right">{translate("AMOUNT")}</th>
+                    <th className="px-3 py-2.5 text-right">{translate("BALANCE")}</th>
+                    <th className="px-2.5 py-2.5 text-center">{translate("Paid/ Not")}</th>
+                    <th className="px-3 py-2.5">{translate("Txn. Id")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA] font-semibold text-[#1E104B]">
@@ -3872,7 +4656,7 @@ return (
               <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-slide-up space-y-4" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-start border-b border-gray-100 pb-2">
                   <div>
-                    <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">Loan Foreclosure</h3>
+                    <h3 className="text-sm font-black text-[#1E104B] uppercase tracking-wide">{translate("Loan Foreclosure")}</h3>
                     <p className="text-[10px] font-bold text-[#625E70] mt-0.5">
                       {currentLoan.loanName} • <span className="text-[#078A87]">{currentLoan.person}</span>
                     </p>
@@ -3888,7 +4672,7 @@ return (
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Closure EMI / Date *</label>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Closure EMI / Date *")}</label>
                     <select
                       value={selectedClosureEmiNo}
                       disabled={foreclosingStatus === 'loading'}
@@ -3904,11 +4688,11 @@ return (
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">Closure Settlement Amount (₹) *</label>
+                    <label className="block text-[10px] font-bold text-[#625E70] uppercase mb-1">{translate("Closure Settlement Amount (₹) *")}</label>
                     <input
                       type="number"
                       disabled={foreclosingStatus === 'loading'}
-                      placeholder="Enter final settlement amount"
+                      placeholder={translate("Enter final settlement amount")}
                       value={closureAmountVal}
                       onChange={e => setClosureAmountVal(e.target.value)}
                       className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1E104B] outline-none"
@@ -3923,7 +4707,7 @@ return (
                     onClick={() => setForeclosureModalOpen(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
                   >
-                    Cancel
+                    {translate("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -3999,10 +4783,10 @@ return (
                     {foreclosingStatus === 'success' && <i className="fa-solid fa-check text-xs"></i>}
                     <span>
                       {foreclosingStatus === 'loading'
-                        ? 'Closing...'
+                        ? translate('Closing...')
                         : foreclosingStatus === 'success'
-                        ? 'Closed'
-                        : 'Confirm Closure'}
+                        ? translate('Closed')
+                        : translate('Confirm Closure')}
                     </span>
                   </button>
                 </div>
@@ -4019,10 +4803,10 @@ return (
               <i className={isDeletingLoan ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
             </div>
             <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-              {isDeletingLoan ? 'Deleting Loan...' : 'Delete Loan?'}
+              {isDeletingLoan ? translate('Deleting Loan...') : translate('Delete Loan?')}
             </h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
-              {isDeletingLoan ? `Deleting "${currentLoan.loanName}" and all associated schedule records...` : <>Are you sure you want to delete <strong>"{currentLoan.loanName}"</strong>? This action cannot be undone.</>}
+              {isDeletingLoan ? `Deleting "${currentLoan.loanName}" and all associated schedule records...` : <>{translate("Are you sure you want to delete")} <strong>"{currentLoan.loanName}"</strong>{translate("? This action cannot be undone.")}</>}
             </p>
             <div className="flex gap-3 w-full">
               <button
@@ -4031,7 +4815,7 @@ return (
                 onClick={() => setShowDeleteLoanConfirm(false)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
               >
-                Cancel
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -4063,7 +4847,7 @@ return (
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-slide-up space-y-4">
             <div className="flex justify-between items-center border-b border-gray-100 pb-2">
               <div>
-                <h3 className="text-sm font-black text-[#1E104B] uppercase">Record EMI Payment</h3>
+                <h3 className="text-sm font-black text-[#1E104B] uppercase">{translate("Record EMI Payment")}</h3>
                 <p className="text-[10px] text-gray-500 font-bold">
                   {currentLoan.loanName} • {formatMoney(paymentModal.row.emiAmount)}
                 </p>
@@ -4085,7 +4869,7 @@ return (
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold text-[#625E70] uppercase">Who Paid this EMI? *</label>
+              <label className="block text-[10px] font-bold text-[#625E70] uppercase">{translate("Who Paid this EMI? *")}</label>
               <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl text-xs font-black">
                 <button
                   type="button"
@@ -4094,7 +4878,7 @@ return (
                     paymentModal.who === 'ME' ? 'bg-[#1E104B] text-white shadow-xs' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  I Paid (Me)
+                  {translate("I Paid (Me)")}
                 </button>
                 <button
                   type="button"
@@ -4103,27 +4887,27 @@ return (
                     paymentModal.who === 'PERSON' ? 'bg-[#078A87] text-white shadow-xs' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  Borrower Paid
+                  {translate("Borrower Paid")}
                 </button>
               </div>
               {paymentModal.who === 'ME' ? (
                 <p className="text-[9px] text-[#078A87] font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  Auto-logs a <strong>GIVEN (LENT)</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
+                  {translate("Auto-logs a")} <strong>{translate("GIVEN (LENT)")}</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
                 </p>
               ) : (
                 <p className="text-[9px] text-gray-500 font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  Marks installment cleared by borrower. Ledger balance remains unchanged.
+                  {translate("Marks installment cleared by borrower. Ledger balance remains unchanged.")}
                 </p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="block text-[10px] font-bold text-[#625E70] uppercase">UTR / Payment ID / Note</label>
+              <label className="block text-[10px] font-bold text-[#625E70] uppercase">{translate("UTR / Payment ID / Note")}</label>
               <input
                 type="text"
-                placeholder="e.g. T2403050925367... or paid advance"
+                placeholder={translate("e.g. T2403050925367... or paid advance")}
                 value={paymentModal.paymentId}
                 onChange={e => setPaymentModal({ ...paymentModal, paymentId: e.target.value })}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-[#1E104B] outline-none focus:border-[#1E104B]"
@@ -4137,7 +4921,7 @@ return (
                 onClick={() => setPaymentModal({ open: false, row: null, who: 'ME', paymentId: '' })}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
               >
-                Cancel
+                {translate("Cancel")}
               </button>
               <button
                 type="button"
@@ -4154,7 +4938,7 @@ return (
                 {payStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
                 {payStatus === 'success' && <i className="fa-solid fa-check"></i>}
                 <span>
-                  {payStatus === 'loading' ? 'Saving...' : payStatus === 'success' ? 'Saved' : 'Confirm & Save'}
+                  {payStatus === 'loading' ? translate('Saving...') : payStatus === 'success' ? translate('Saved') : translate('Confirm & Save')}
                 </span>
               </button>
             </div>
@@ -4199,7 +4983,7 @@ return (
                       {admin && admin.headerNote ? admin.headerNote : 'Budget Bharat'}
                     </h1>
                     <h2 className="text-xl font-black text-[#1E104B] tracking-tight leading-tight">{currentLoan.loanName}</h2>
-                    <p className="text-[10px] font-black text-[#078A87] uppercase tracking-wider mt-0.5">EMI TABLE</p>
+                    <p className="text-[10px] font-black text-[#078A87] uppercase tracking-wider mt-0.5">{translate("EMI TABLE")}</p>
                     <p className="text-[9px] text-gray-500 font-bold mt-0.5">
                       Date: {formatDisplayDate(`${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`)}
                     </p>
@@ -4226,27 +5010,27 @@ return (
 
                 <div className="bg-[#1E104B] text-white rounded-xl py-3.5 px-3 mb-3 mx-2 grid grid-cols-3 gap-2.5 text-center">
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">TOTAL LOAN TAKEN</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("TOTAL LOAN TAKEN")}</p>
                     <p className="text-base font-black mt-0.5">{formatMoney(loanTakenVal)}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">TOTAL LOAN TO PAY</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("TOTAL LOAN TO PAY")}</p>
                     <p className="text-base font-black text-[#07C0BE] mt-0.5">{formatMoney(loanToPayVal)}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">INTEREST</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("INTEREST")}</p>
                     <p className="text-base font-black text-amber-300 mt-0.5">{formatMoney(loanInterestVal)}</p>
                   </div>
                   <div className="pt-2.5 border-t border-white/15">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">EMI PAID</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("EMI PAID")}</p>
                     <p className="text-base font-black text-emerald-400 mt-0.5">{paidEmisList.length} / {currentLoan.schedule.length}</p>
                   </div>
                   <div className="pt-2.5 border-t border-white/15">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">PAYMENT MADE</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("PAYMENT MADE")}</p>
                     <p className="text-base font-black text-emerald-400 mt-0.5">{formatMoney(paymentMadeVal)}</p>
                   </div>
                   <div className="pt-2.5 border-t border-white/15">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">REMAINING</p>
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">{translate("REMAINING")}</p>
                     <p className="text-base font-black text-rose-300 mt-0.5">{formatMoney(remainingBalanceVal)}</p>
                   </div>
                 </div>
@@ -4262,12 +5046,12 @@ return (
                   </colgroup>
                   <thead className="bg-[#1DA1D2] text-white uppercase text-[10px]">
                     <tr>
-                      <th className="py-2 px-2 border">DATE</th>
-                      <th className="py-2 px-2 text-right border">AMOUNT</th>
-                      <th className="py-2 px-2 text-right border">BALANCE</th>
-                      <th className="py-2 px-2 text-center border">STATUS</th>
-                      <th className="py-2 px-2 text-center border">WHO PAID</th>
-                      <th className="py-2 px-2 border">TXN ID</th>
+                      <th className="py-2 px-2 border">{translate("DATE")}</th>
+                      <th className="py-2 px-2 text-right border">{translate("AMOUNT")}</th>
+                      <th className="py-2 px-2 text-right border">{translate("BALANCE")}</th>
+                      <th className="py-2 px-2 text-center border">{translate("STATUS")}</th>
+                      <th className="py-2 px-2 text-center border">{translate("WHO PAID")}</th>
+                      <th className="py-2 px-2 border">{translate("TXN ID")}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-transparent">
@@ -4290,10 +5074,10 @@ return (
 
                 <div className="pt-2 border-t border-gray-300 flex justify-between items-center relative z-10">
                   <div className="flex flex-col justify-center text-left leading-tight">
-                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
-                    <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
-                    <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
+                    <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">{translate("STATEMENT BY -")}</span>
+                    <span className="font-extrabold text-[11px] text-[#1E104B]">{translate("Budget Bharat-Personal finance App")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{translate("Developed by - Bharat Rasve")}</span>
+                    <span className="text-[10px] font-medium text-[#625E70]">{translate("Mo.No: 7218838122")}</span>
                   </div>
 
                   <div className="flex items-center justify-center">
@@ -4356,17 +5140,17 @@ const RecordsView = ({ onSelectTransaction }) => {
         </div>
 
         {txs.length === 0 ? (
-          <p className="text-xs text-[#625E70] font-semibold px-3 py-3">No records found.</p>
+          <p className="text-xs text-[#625E70] font-semibold px-3 py-3">{translate("No records found.")}</p>
         ) : (
           <>
             <div className="overflow-x-auto hide-scrollbar">
               <table className="w-full text-left text-[10px] whitespace-nowrap">
                 <thead className="bg-[#E2DEEA] text-[#1E104B] uppercase font-black border-b border-[#CDC8DA] tracking-wider">
                   <tr>
-                    <th className="px-3 py-1.5">Date</th>
-                    <th className="px-3 py-1.5">Description</th>
-                    {showType && <th className="px-3 py-1.5">Type</th>}
-                    <th className="px-3 py-1.5 text-right">Amount</th>
+                    <th className="px-3 py-1.5">{translate("Date")}</th>
+                    <th className="px-3 py-1.5">{translate("Description")}</th>
+                    {showType && <th className="px-3 py-1.5">{translate("Type")}</th>}
+                    <th className="px-3 py-1.5 text-right">{translate("Amount")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E1EA]/60 font-medium text-[#1E104B]">
@@ -4391,7 +5175,7 @@ const RecordsView = ({ onSelectTransaction }) => {
                         </td>
                         {showType && (
                           <td className="px-3 py-2.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                            {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
+                            {translate(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
                           </td>
                         )}
                         <td className="px-3 py-2.5 text-right font-black text-xs" style={{ color: txColor }}>
@@ -4439,11 +5223,11 @@ const RecordsView = ({ onSelectTransaction }) => {
       <div className="flex justify-end mb-2.5">
         <PeriodSelector />
       </div>
-      <Section title="Expense" txs={expenses} showType={false} />
-      <Section title="Income" txs={incomes} showType={false} />
-      <Section title="Given (Dr)" txs={lents} showType={false} />
-      <Section title="Received (Cr)" txs={borrows} showType={false} />
-      <Section title="Overall Records" txs={filteredTransactions} showType={true} />
+      <Section title={translate("Expense")} txs={expenses} showType={false} />
+      <Section title={translate("Income")} txs={incomes} showType={false} />
+      <Section title={translate("Given (Dr)")} txs={lents} showType={false} />
+      <Section title={translate("Received (Cr)")} txs={borrows} showType={false} />
+      <Section title={translate("Overall Records")} txs={filteredTransactions} showType={true} />
       <AppBottomBranding />
     </div>
   );
@@ -4527,7 +5311,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
       <div className="bg-white w-full max-w-md rounded-t-3xl p-5 max-h-[90%] overflow-y-auto relative shadow-2xl animate-slide-up hide-scrollbar" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-sm font-extrabold text-[#1E104B] uppercase tracking-wider">Edit Transaction</h2>
+            <h2 className="text-sm font-extrabold text-[#1E104B] uppercase tracking-wider">{translate("Edit Transaction")}</h2>
             <p className="text-[9px] font-mono text-[#8A8596]">ID: {String(tx.entryId || tx.id).slice(0, 8)}...</p>
           </div>
           <div className="flex items-center gap-2">
@@ -4535,7 +5319,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isSubmitting}
-              title="Delete Transaction"
+              title={translate("Delete Transaction")}
               className="w-8 h-8 rounded-full bg-[#D6455D]/10 text-[#D6455D] hover:bg-[#D6455D] hover:text-white transition-all flex items-center justify-center text-xs"
             >
               <i className="fa-solid fa-trash-can"></i>
@@ -4571,7 +5355,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                 onClick={() => setType(item.key)}
                 className={`py-2 rounded-lg transition-all ${getActiveTabClass()}`}
               >
-                {item.label}
+                {translate(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}
               </button>
             );
           })}
@@ -4579,7 +5363,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
         <form onSubmit={handleUpdate} className="space-y-3.5">
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">AMOUNT (₹) *</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("AMOUNT (₹) *")}</label>
             <div className="relative flex items-center">
               <span className="absolute left-4 text-theme-dark/40 font-extrabold text-xl pointer-events-none select-none">₹</span>
               <input
@@ -4593,7 +5377,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               <button
                 type="button"
                 onClick={() => setShowCalculator(true)}
-                title="Open Calculator"
+                title={translate("Open Calculator")}
                 className="absolute right-3.5 text-[#66419C] hover:text-[#523380] active:scale-90 transition-transform p-1 flex items-center justify-center"
               >
                 <i className="fa-solid fa-calculator text-xl"></i>
@@ -4611,7 +5395,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
           <div className="grid grid-cols-12 gap-2.5">
             <div className="col-span-5 space-y-1">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">DATE *</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("DATE *")}</label>
               <AppDatePicker
                 required={true}
                 value={date}
@@ -4622,7 +5406,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
             {(type === 'LENT' || type === 'BORROW') ? (
               <div className="col-span-7 space-y-1">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PROMISE DATE</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PROMISE DATE")}</label>
                 <AppDatePicker
                   value={promiseDate}
                   onChange={setPromiseDate}
@@ -4631,12 +5415,12 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               </div>
             ) : (
               <div className="col-span-7 space-y-1">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">CATEGORY</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("CATEGORY")}</label>
                 <SearchableDropdown
                   value={category}
                   onChange={setCategory}
                   options={categoryOptions}
-                  placeholder="Category..."
+                  placeholder={translate("Category...")}
                 />
               </div>
             )}
@@ -4644,18 +5428,18 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
           {(type === 'LENT' || type === 'BORROW') && (
             <div className="space-y-1">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PERSON NAME *</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PERSON NAME *")}</label>
               <SearchableDropdown
                 value={personName}
                 onChange={setPersonName}
                 options={personOptions}
-                placeholder="Search person..."
+                placeholder={translate("Search person...")}
               />
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">DESCRIPTION</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("DESCRIPTION")}</label>
             <input
               type="text"
               value={note}
@@ -4665,7 +5449,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">REFERENCE / A/C MODE</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("REFERENCE / A/C MODE")}</label>
             <input
               type="text"
               value={refAc}
@@ -4681,7 +5465,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               className="w-3/4 bg-theme-dark hover:brightness-110 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
             >
               {isSubmitting && <i className="fa-solid fa-spinner animate-spin"></i>}
-              <span>{isSubmitting ? 'Saving Changes...' : 'Update Transaction'}</span>
+              <span>{isSubmitting ? translate('Saving Changes...') : translate('Update Transaction')}</span>
             </button>
           </div>
         </form>
@@ -4693,10 +5477,10 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                 <i className={isSubmitting ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
               </div>
               <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-                {isSubmitting ? 'Deleting Entry...' : 'Delete Transaction?'}
+                {isSubmitting ? translate('Delete Entry...') : translate('Delete Transaction?')}
               </h3>
               <p className="text-xs text-gray-500 mt-1 mb-5">
-                {isSubmitting ? 'Please wait while we update your sheet.' : 'This action cannot be undone.'}
+                {isSubmitting ? translate('Please wait while we update your sheet.') : translate('This action cannot be undone.')}
               </p>
               <div className="flex gap-3 w-full">
                 <button
@@ -4705,7 +5489,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                   onClick={() => setShowDeleteConfirm(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
                 >
-                  No
+                  {translate("No")}
                 </button>
                 <button
                   type="button"
@@ -4714,7 +5498,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                   className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-70 cursor-wait"
                 >
                   {isSubmitting ? <i className="fa-solid fa-spinner animate-spin text-xs"></i> : null}
-                  <span>{isSubmitting ? 'Deleting...' : 'Yes, Delete'}</span>
+                  <span>{isSubmitting ? translate('Deleting...') : translate('Yes, Delete')}</span>
                 </button>
               </div>
             </div>
@@ -4834,7 +5618,7 @@ const CalculatorModal = ({ initialValue, onApply, onClose }) => {
           <button type="button" onClick={() => handleDigit('7')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">7</button>
           <button type="button" onClick={() => handleDigit('8')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">8</button>
           <button type="button" onClick={() => handleDigit('9')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">9</button>
-          <button type="button" onClick={handleClear} className="h-11 rounded-xl bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 active:scale-95 text-[#7B2B8C] transition-all flex items-center justify-center font-bold">AC</button>
+          <button type="button" onClick={handleClear} className="h-11 rounded-xl bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 active:scale-95 text-[#7B2B8C] transition-all flex items-center justify-center font-bold">{translate("AC")}</button>
           <button type="button" onClick={() => handleOp('÷')} className={`h-11 rounded-xl active:scale-95 transition-all flex items-center justify-center text-base ${operation === '÷' ? 'bg-[#1E104B] text-white' : 'bg-[#7B2B8C]/10 hover:bg-[#7B2B8C]/20 text-[#7B2B8C]'}`}>÷</button>
 
           <button type="button" onClick={() => handleDigit('4')} className="h-11 rounded-xl bg-[#F4F3F8] hover:bg-[#ECEAF1] active:scale-95 text-[#1E104B] transition-all flex items-center justify-center">4</button>
@@ -4861,13 +5645,13 @@ const CalculatorModal = ({ initialValue, onApply, onClose }) => {
           onClick={handleEnterResult}
           className="flex-1 bg-[#682496] hover:bg-[#571B80] text-white font-black py-3.5 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
         >
-          <span>Enter Result</span>
+          <span>{translate("Enter Result")}</span>
         </button>
 
         <button
           type="button"
           onClick={onClose}
-          title="Close Calculator"
+          title={translate("Close Calculator")}
           className="w-12 h-12 flex-none rounded-full bg-white text-gray-700 hover:text-black hover:bg-gray-100 active:scale-90 flex items-center justify-center shadow-xl border border-black/5 transition-all"
         >
           <i className="fa-solid fa-xmark text-lg"></i>
@@ -4948,7 +5732,7 @@ const InputModal = ({ onClose }) => {
     >
       <div className="bg-white w-full max-w-md rounded-t-3xl p-5 max-h-[85%] overflow-y-auto relative shadow-2xl animate-slide-up hide-scrollbar" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-sm font-extrabold text-theme-dark uppercase tracking-wider">New Record</h2>
+          <h2 className="text-sm font-extrabold text-theme-dark uppercase tracking-wider">{translate("New Record")}</h2>
           <button onClick={onClose} className="w-8 h-8 bg-theme-gray rounded-full text-theme-dark/50 hover:bg-theme-dark hover:text-white active:scale-90 transition-all flex items-center justify-center"><i className="fa-solid fa-xmark"></i></button>
         </div>
 
@@ -4967,14 +5751,14 @@ const InputModal = ({ onClose }) => {
               return 'bg-[#B7791F] text-white shadow-xs';
             };
             return (
-              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{item.label}</button>
+              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{translate(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}</button>
             );
           })}
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">AMOUNT (₹) *</label>
+            <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">{translate("AMOUNT (₹) *")}</label>
             <div className="relative flex items-center">
               <span className="absolute left-4 text-[#8A8596] font-extrabold text-xl pointer-events-none select-none">₹</span>
               <input
@@ -4989,12 +5773,12 @@ const InputModal = ({ onClose }) => {
                     ? 'border-2 border-[#D6455D] bg-red-50/40 text-[#1E104B]'
                     : 'border border-[#E4E1EA] bg-[#F4F3F8] focus:bg-white focus:border-[#7B2B8C] focus:ring-2 focus:ring-[#7B2B8C]/15 text-[#1E104B]'
                 }`}
-                placeholder="0.00"
+                placeholder={translate("0.00")}
               />
               <button
                 type="button"
                 onClick={() => setShowCalculator(true)}
-                title="Open Calculator"
+                title={translate("Open Calculator")}
                 className="absolute right-3.5 text-[#7B2B8C] hover:text-[#5B1E68] active:scale-90 transition-transform p-1 flex items-center justify-center"
               >
                 <i className="fa-solid fa-calculator text-xl"></i>
@@ -5012,7 +5796,7 @@ const InputModal = ({ onClose }) => {
 
           <div className="grid grid-cols-12 gap-2.5">
             <div className="col-span-5 space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">DATE *</label>
+              <label className="block text-[10px] font-extrabold text-[#625E70] uppercase tracking-wider">{translate("DATE *")}</label>
               <AppDatePicker
                 required={true}
                 value={date}
@@ -5027,7 +5811,7 @@ const InputModal = ({ onClose }) => {
 
             {(type === 'LENT' || type === 'BORROW') ? (
               <div className="col-span-7 space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PROMISE DATE</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PROMISE DATE")}</label>
                 <AppDatePicker
                   value={promiseDate}
                   onChange={setPromiseDate}
@@ -5036,13 +5820,13 @@ const InputModal = ({ onClose }) => {
               </div>
             ) : (
               <div className="col-span-7 space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">CATEGORY</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("CATEGORY")}</label>
                 <div className="flex gap-1.5">
                   <SearchableDropdown
                     value={category}
                     onChange={setCategory}
                     options={type === 'INCOME' ? categories.income : categories.expense}
-                    placeholder="Category..."
+                    placeholder={translate("Category...")}
                   />
                   <button type="button" onClick={() => openAddMenu('addCategory', type === 'INCOME' ? 'income' : 'expense')} className="w-10 h-10 flex-none rounded-xl bg-theme-gray border border-theme-dark/20 flex items-center justify-center text-[#66419C] hover:bg-[#66419C] hover:text-white transition-colors">
                     <i className="fa-solid fa-plus text-sm"></i>
@@ -5054,13 +5838,13 @@ const InputModal = ({ onClose }) => {
 
           {(type === 'LENT' || type === 'BORROW') && (
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PERSON NAME *</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PERSON NAME *")}</label>
               <div className={`flex gap-2 rounded-xl ${touched && !isPersonValid ? 'ring-2 ring-[#D6455D]' : ''}`}>
                 <SearchableDropdown
                   value={personName}
                   onChange={setPersonName}
                   options={persons.map(p => p.name)}
-                  placeholder="Type or select person..."
+                  placeholder={translate("Type or select person...")}
                 />
                 <button type="button" onClick={() => openAddMenu('addPerson')} className="w-10 h-10 flex-none rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] flex items-center justify-center text-[#7B2B8C] hover:bg-[#7B2B8C] hover:text-white transition-colors">
                   <i className="fa-solid fa-plus text-sm"></i>
@@ -5070,24 +5854,24 @@ const InputModal = ({ onClose }) => {
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PURPOSE / DESCRIPTION</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("PURPOSE / DESCRIPTION")}</label>
             <input
               type="text"
               value={note}
               onChange={e => setNote(e.target.value)}
               className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white placeholder-theme-dark/30 text-theme-dark"
-              placeholder="e.g. for shopping, to EMI payment.."
+              placeholder={translate("e.g. for shopping, to EMI payment..")}
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">REFERENCE / A/C MODE</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{translate("REFERENCE / A/C MODE")}</label>
             <input
               type="text"
               value={refAc}
               onChange={e => setRefAc(e.target.value)}
               className="w-full font-bold text-xs border border-theme-dark/20 rounded-xl px-3.5 py-3 outline-none focus:border-theme-dark focus:ring-2 focus:ring-theme-dark/15 transition-all bg-theme-gray focus:bg-white placeholder-theme-dark/30 text-theme-dark"
-              placeholder="e.g. PhonePe, NetBanking, Cash..."
+              placeholder={translate("e.g. PhonePe, NetBanking, Cash...")}
             />
           </div>
 
@@ -5104,7 +5888,7 @@ const InputModal = ({ onClose }) => {
               }`}
             >
               {isSubmitting && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
-              <span>{isSubmitting ? 'Saving...' : 'Save Entry'}</span>
+              <span>{isSubmitting ? translate('Saving...') : translate('Save Entry')}</span>
             </button>
           </div>
         </form>
@@ -5165,9 +5949,9 @@ const MainApp = () => {
       <div className="app-shell">
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 p-6">
           <i className="fa-solid fa-triangle-exclamation text-3xl text-red-400"></i>
-          <p className="text-sm font-bold text-theme-dark">Couldn't load your data</p>
+          <p className="text-sm font-bold text-theme-dark">{translate("Couldn't load your data")}</p>
           <p className="text-xs text-theme-dark/60">{loadError}</p>
-          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">Retry</button>
+          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">{translate("Retry")}</button>
         </div>
       </div>
     );
@@ -5212,7 +5996,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('home'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Home"
+                title={translate("Home")}
               >
                 <i className="fa-solid fa-house text-lg"></i>
                 {tab === 'home' && (
@@ -5225,7 +6009,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('people'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Directory"
+                title={translate("Directory")}
               >
                 <i className="fa-solid fa-users text-lg"></i>
                 {tab === 'people' && (
@@ -5238,7 +6022,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('loans'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Loans / EMIs"
+                title={translate("Loans / EMIs")}
               >
                 <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
                 {tab === 'loans' && (
@@ -5251,7 +6035,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('records'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Records"
+                title={translate("Records")}
               >
                 <i className="fa-solid fa-receipt text-lg"></i>
                 {tab === 'records' && (
@@ -5266,7 +6050,7 @@ const MainApp = () => {
 
           <button
             onClick={() => setShowInput(true)}
-            title="Add New Entry"
+            title={translate("Add New Entry")}
             className="notched-fab"
           >
             <span className="relative w-8 h-8 flex items-center justify-center">
@@ -5364,7 +6148,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('home')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title="Home"
+              title={translate("Home")}
             >
               <i className="fa-solid fa-house text-lg"></i>
               {tab === 'home' && (
@@ -5377,7 +6161,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('people')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title="Directory"
+              title={translate("Directory")}
             >
               <i className="fa-solid fa-users text-lg"></i>
               {tab === 'people' && (
@@ -5390,7 +6174,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('loans')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title="Loans / EMIs"
+              title={translate("Loans / EMIs")}
             >
               <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
               {tab === 'loans' && (
@@ -5403,7 +6187,7 @@ const MainApp = () => {
             <button
               onClick={() => setTab('records')}
               className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-              title="Records"
+              title={translate("Records")}
             >
               <i className="fa-solid fa-receipt text-lg"></i>
               {tab === 'records' && (
@@ -5418,7 +6202,7 @@ const MainApp = () => {
 
         <button
           onClick={() => setShowInput(true)}
-          title="Add New Entry"
+          title={translate("Add New Entry")}
           className="notched-fab"
         >
           <span className="relative w-8 h-8 flex items-center justify-center">
@@ -5455,5 +6239,3 @@ initDB().then(() => {
     </ErrorBoundary>
   );
 });
-
-// --- END OF src/main.jsx (PART 4) ---
