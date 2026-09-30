@@ -637,6 +637,45 @@ const UI_TRANSLATIONS = {
   "and associated records.": { "mr": "आणि संबंधित नोंदी.", "hi": "और संबंधित रिकॉर्ड।" },
   "and all associated entries from sheet.": { "mr": "आणि शीटमधील सर्व संबंधित नोंदी.", "hi": "और शीट के सभी संबंधित रिकॉर्ड।" },
   "GIVEN (LENT)": { "mr": "दिलेले (कर्ज दिले)", "hi": "दिया (उधार दिया)" },
+  "Credit": { "mr": "जमा", "hi": "क्रेडिट" },
+  "Debit": { "mr": "नावे", "hi": "डेबिट" },
+  "Qtr": { "mr": "तिमाही", "hi": "तिमाही" },
+  "Create Loan": { "mr": "कर्ज तयार करा", "hi": "लोन बनाएँ" },
+  "Creating...": { "mr": "तयार करत आहे...", "hi": "बनाया जा रहा है..." },
+  "Created": { "mr": "तयार झाले", "hi": "बन गया" },
+  "Update Transaction": { "mr": "व्यवहार अपडेट करा", "hi": "लेन-देन अपडेट करें" },
+  "Saving Changes...": { "mr": "बदल जतन करत आहे...", "hi": "बदल सेव हो रहे हैं..." },
+  "Confirm Closure": { "mr": "कर्ज बंद करण्याची पुष्टी करा", "hi": "लोन बंद करने की पुष्टि करें" },
+  "Closing...": { "mr": "बंद करत आहे...", "hi": "बंद हो रहा है..." },
+  "Closed": { "mr": "बंद केले", "hi": "बंद हुआ" },
+  "Confirm & Save": { "mr": "पुष्टी करून जतन करा", "hi": "पुष्टि करें और सेव करें" },
+  "Saved": { "mr": "जतन झाले", "hi": "सेव हुआ" },
+  "I Paid": { "mr": "मी भरले", "hi": "मैंने भुगतान किया" },
+  "I paid": { "mr": "मी भरले", "hi": "मैंने भुगतान किया" },
+  "Yes, Delete": { "mr": "होय, हटवा", "hi": "हाँ, हटाएँ" },
+  "No, Cancel": { "mr": "नाही, रद्द करा", "hi": "नहीं, रद्द करें" },
+  "Are you sure you want to delete this transaction?": { "mr": "तुम्हाला हा व्यवहार हटवायचा आहे का?", "hi": "क्या आप यह लेन-देन हटाना चाहते हैं?" },
+  "Add New Person": { "mr": "नवीन व्यक्ती जोडा", "hi": "नया व्यक्ति जोड़ें" },
+  "Directory Party Entry": { "mr": "निर्देशिका व्यक्ती नोंद", "hi": "निर्देशिका पार्टी प्रविष्टि" },
+  "Directory Persons": { "mr": "निर्देशिकेतील व्यक्ती", "hi": "निर्देशिका के व्यक्ति" },
+  "All Time": { "mr": "संपूर्ण कालावधी", "hi": "सभी समय" },
+  "Loading fonts & generating PDF...": { "mr": "फॉन्ट लोड करून PDF तयार करत आहे...", "hi": "फ़ॉन्ट लोड करके PDF बनाया जा रहा है..." },
+  "Generating All Persons Ledger Image...": { "mr": "सर्व व्यक्तींच्या लेजरची प्रतिमा तयार करत आहे...", "hi": "सभी व्यक्तियों के लेजर की इमेज बनाई जा रही है..." },
+  "Ledger Ready": { "mr": "लेजर तयार आहे", "hi": "लेजर तैयार है" },
+  "Error: ": { "mr": "त्रुटी: ", "hi": "त्रुटि: " },
+  "Generating PDF failed": { "mr": "PDF तयार करणे अयशस्वी झाले", "hi": "PDF बनाना विफल हुआ" },
+  "Statement image generation failed.": { "mr": "स्टेटमेंट प्रतिमा तयार करणे अयशस्वी झाले.", "hi": "विवरण इमेज बनाना विफल हुआ।" },
+  "PDF shared successfully": { "mr": "PDF यशस्वीरित्या शेअर केली", "hi": "PDF सफलतापूर्वक साझा हुआ" },
+  "PDF downloaded successfully": { "mr": "PDF यशस्वीरित्या डाउनलोड केली", "hi": "PDF सफलतापूर्वक डाउनलोड हुआ" },
+  "EMI Table shared": { "mr": "EMI तक्ता शेअर केला", "hi": "EMI तालिका साझा की गई" },
+  "Overall Statement": { "mr": "एकूण_विवरण", "hi": "समग्र_विवरण" },
+  "EMI Table": { "mr": "EMI_तक्ता", "hi": "EMI_तालिका" },
+  "you will receive": { "mr": "तुम्हाला पैसे मिळतील", "hi": "आपको पैसे प्राप्त होंगे" },
+  "is settled at": { "mr": "पूर्णपणे निकाली निघाले आहे:", "hi": "का निपटान हुआ:" },
+  "on or before date": { "mr": "या तारखेपर्यंत", "hi": "इस तारीख तक" },
+  "Transaction updated": { "mr": "व्यवहार अपडेट केला", "hi": "लेन-देन अपडेट किया गया" },
+  "Failed to create loan": { "mr": "कर्ज तयार करता आले नाही", "hi": "लोन बनाने में विफल" },
+  "Could not read that file": { "mr": "ही फाइल वाचता आली नाही", "hi": "यह फ़ाइल पढ़ी नहीं जा सकी" },
   "Language applied": {
     "mr": "लागू केलेली भाषा",
     "hi": "लागू की गई भाषा"
@@ -889,15 +928,23 @@ const AppProvider = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState('menu');
   // Language preference is device-local and defaults to English on a fresh install.
+  const [languageUpdating, setLanguageUpdating] = useState(false);
   const [language, setLanguageState] = useState(() => {
     try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
   });
   const setLanguage = (nextLanguage) => {
     const supported = ['en', 'mr', 'hi'];
     const next = supported.includes(nextLanguage) ? nextLanguage : 'en';
+    setLanguageUpdating(true);
     setLanguageState(next);
     try { localStorage.setItem('budgetBharat.language', next); } catch (_) {}
+    window.setTimeout(() => setLanguageUpdating(false), 1200);
   };
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dataset.appLanguage = language;
+  }, [language]);
 
   const [toast, setToast] = useState({ show: false, msg: '' });
 
@@ -909,7 +956,7 @@ const AppProvider = ({ children }) => {
   const [googleUser, setGoogleUser] = useState(null);
 
   const showFeedback = (msg) => {
-    setToast({ show: true, msg });
+    setToast({ show: true, msg: t(msg) });
     setTimeout(() => setToast({ show: false, msg: '' }), 3000);
   };
 
@@ -1476,7 +1523,7 @@ const PeriodSelector = () => {
                     : 'text-slate-500 font-semibold hover:text-slate-800'
                 }`}
               >
-                {opt}
+                {t(opt === 'Qtr' ? 'Qtr' : opt)}
               </button>
             );
           })}
@@ -1910,11 +1957,17 @@ const SideMenu = () => {
                 <option value="mr">मराठी (Marathi)</option>
                 <option value="hi">हिन्दी (Hindi)</option>
               </select>
-              <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite"><i className="fa-solid fa-circle-check mr-1"></i>{t('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</p>
+              {languageUpdating ? (
+                <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
+                  <i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}
+                </p>
+              ) : (
+                <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite"><i className="fa-solid fa-circle-check mr-1"></i>{t('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</p>
+              )}
             </div>
             <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{t("Record Setup")}</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
-              <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> Manage Persons ({persons.length})</span>
+              <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> {t('Manage Persons')} ({persons.length})</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
             </button>
             <button onClick={() => openSubView('manageCategories')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
@@ -2022,7 +2075,7 @@ const SideMenu = () => {
               <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {t("Back")}</button>
               <button onClick={() => openSubView('addPerson')} className="px-3 py-1.5 rounded-full bg-[#078A87] text-white text-[10px] font-black uppercase"><i className="fa-solid fa-plus mr-1"></i> {t("Add")}</button>
             </div>
-            <h3 className="text-base font-black text-[#1E104B] mb-3">Directory Persons ({persons.length})</h3>
+            <h3 className="text-base font-black text-[#1E104B] mb-3">{t('Directory Persons')} ({persons.length})</h3>
             <div className="space-y-2 flex-1 overflow-y-auto hide-scrollbar">
               {persons.map(p => (
                 <div key={p.id || p.name} className="p-3 bg-[#F4F3F8] rounded-xl border border-[#E4E1EA] flex justify-between items-center">
@@ -2070,10 +2123,10 @@ const SideMenu = () => {
           <div className="flex-1 p-6 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
             <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] mb-3 active:scale-95 self-start hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {t("Back")}</button>
             <h3 className="text-base font-black text-[#1E104B] mb-1">
-              {menuView === 'addPerson' ? 'Add New Person' : menuView === 'editPerson' ? 'Edit Person' : menuView === 'addCategory' ? `Add New ${catType === 'expense' ? 'Expense' : 'Income'} Category` : menuView === 'editCategory' ? 'Edit Category' : 'Admin Setup'}
+              {menuView === 'addPerson' ? t('Add New Person') : menuView === 'editPerson' ? t('Edit Person') : menuView === 'addCategory' ? `${t('Add New')} ${t(catType === 'expense' ? 'Expense' : 'Income')} ${t('Category')}` : menuView === 'editCategory' ? t('Edit Category') : t('Admin Setup')}
             </h3>
             <p className="text-[10px] font-bold text-[#078A87] uppercase tracking-wider mb-4">
-              {menuView === 'addCategory' ? `Target Ledger: ${catType.toUpperCase()}` : menuView === 'addPerson' ? 'Directory Party Entry' : 'Configuration Setup'}
+              {menuView === 'addCategory' ? `${t('Target Ledger')}: ${t(catType === 'expense' ? 'Expense' : 'Income')}` : menuView === 'addPerson' ? t('Directory Party Entry') : t('Configuration Setup')}
             </p>
             {menuView === 'addCategory' && (
               <div className="flex gap-2 mb-4">
@@ -2584,7 +2637,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'RECEIVABLE' ? 'bg-[#078A87] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Credit
+            {t("Credit")}
           </button>
           <button
             type="button"
@@ -2593,7 +2646,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'PAYABLE' ? 'bg-[#D6455D] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Debit
+            {t("Debit")}
           </button>
         </div>
       </div>
@@ -2850,15 +2903,14 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
   const targetDateStr = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 5);
-    const day = d.getDate();
-    const mIdx = d.getMonth();
-    const yy = String(d.getFullYear()).slice(-2);
-    return `${day}-${MONTHS_SHORT[mIdx]}-${yy}`;
-  }, []);
+    const parts = new Intl.DateTimeFormat(LANGUAGE_LOCALES[language] || 'en-IN', { day: 'numeric', month: 'short', year: '2-digit' }).formatToParts(d);
+    const part = type => parts.find(item => item.type === type)?.value || '';
+    return `${part('day')}-${part('month')}-${part('year')}`;
+  }, [language]);
 
   const handleShareImage = async () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
-    const captionText = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    const captionText = `${t('Dear')} ${person.name}, ${t(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${t('on or before date')} ${targetDateStr}.`;
 
     if (txs.length > 10) {
       showFeedback('Loading fonts & generating PDF...');
@@ -2872,7 +2924,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
         const element = statementSlipRef.current || document.getElementById('whatsapp-share-slip');
         if (!element) throw new Error('Statement DOM node not found');
 
-        const fileName = `${person.name.replace(/\s+/g, '_')}_Overall Statement.pdf`;
+        const fileName = `${person.name.replace(/\s+/g, '_')}_${t('Overall Statement')}.pdf`;
         const opt = {
           margin: [8, 8, 10, 8],
           filename: fileName,
@@ -2965,7 +3017,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
   const handleWhatsAppShare = () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
-    const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    const textMsg = `${t('Dear')} ${person.name}, ${t(actionWord)} ${formatMoney(Math.abs(person.remaining))} ${t('on or before date')} ${targetDateStr}.`;
     let phone = String(person.phone || '').replace(/\D/g, '');
     if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
     if (phone.length === 10) phone = '91' + phone;
@@ -3767,7 +3819,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
 
       const safePerson = String(currentLoan.person || 'User').replace(/\s+/g, '_');
       const safeLoan = String(currentLoan.loanName || 'Loan').replace(/\s+/g, '_');
-      const fileName = `${safePerson}_${safeLoan}_EMI_Table.pdf`;
+      const fileName = `${safePerson}_${safeLoan}_${t('EMI Table')}.pdf`;
 
       if (currentLoan.schedule.length > 12) {
         const opt = {
@@ -4431,11 +4483,7 @@ return (
                   {createStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
                   {createStatus === 'success' && <i className="fa-solid fa-check"></i>}
                   <span>
-                    {createStatus === 'loading'
-                      ? 'Creating...'
-                      : createStatus === 'success'
-                      ? 'Created'
-                      : 'Create Loan'}
+                    {createStatus === 'loading' ? t('Creating...') : createStatus === 'success' ? t('Created') : t('Create Loan')}
                   </span>
                 </button>
               </div>
@@ -4663,10 +4711,10 @@ return (
                     {foreclosingStatus === 'success' && <i className="fa-solid fa-check text-xs"></i>}
                     <span>
                       {foreclosingStatus === 'loading'
-                        ? 'Closing...'
+                        ? t('Closing...')
                         : foreclosingStatus === 'success'
-                        ? 'Closed'
-                        : 'Confirm Closure'}
+                        ? t('Closed')
+                        : t('Confirm Closure')}
                     </span>
                   </button>
                 </div>
@@ -4818,7 +4866,7 @@ return (
                 {payStatus === 'loading' && <i className="fa-solid fa-spinner animate-spin"></i>}
                 {payStatus === 'success' && <i className="fa-solid fa-check"></i>}
                 <span>
-                  {payStatus === 'loading' ? 'Saving...' : payStatus === 'success' ? 'Saved' : 'Confirm & Save'}
+                  {payStatus === 'loading' ? t('Saving...') : payStatus === 'success' ? t('Saved') : t('Confirm & Save')}
                 </span>
               </button>
             </div>
@@ -5345,7 +5393,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               className="w-3/4 bg-theme-dark hover:brightness-110 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 uppercase text-xs tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:active:scale-100"
             >
               {isSubmitting && <i className="fa-solid fa-spinner animate-spin"></i>}
-              <span>{isSubmitting ? 'Saving Changes...' : 'Update Transaction'}</span>
+              <span>{isSubmitting ? t('Saving Changes...') : t('Update Transaction')}</span>
             </button>
           </div>
         </form>
@@ -5378,7 +5426,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                   className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-70 cursor-wait"
                 >
                   {isSubmitting ? <i className="fa-solid fa-spinner animate-spin text-xs"></i> : null}
-                  <span>{isSubmitting ? 'Deleting...' : 'Yes, Delete'}</span>
+                  <span>{isSubmitting ? t('Deleting...') : t('Yes, Delete')}</span>
                 </button>
               </div>
             </div>
