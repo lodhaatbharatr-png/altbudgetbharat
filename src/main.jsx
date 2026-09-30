@@ -225,6 +225,10 @@ const UI_TRANSLATIONS = {
     "mr": "भाषा निवडा",
     "hi": "भाषा चुनें"
   },
+  "Confirm": {
+    "mr": "पुष्टी करा",
+    "hi": "पुष्टि करें"
+  },
   "Record Setup": {
     "mr": "नोंद सेटअप",
     "hi": "रिकॉर्ड सेटअप"
@@ -968,6 +972,9 @@ const AppProvider = ({ children }) => {
   const [menuView, setMenuView] = useState('menu');
   // Language preference is device-local and defaults to English on a fresh install.
   const [languageUpdating, setLanguageUpdating] = useState(false);
+  const [pendingLanguage, setPendingLanguage] = useState(() => {
+    try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+  });
   const [language, setLanguageState] = useState(() => {
     try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
   });
@@ -1987,27 +1994,25 @@ const SideMenu = () => {
 
         {menuView === 'menu' && (
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
-            <div className="px-6 pb-3 mb-3 border-b border-[#E4E1EA]">
-              <label htmlFor="budget-bharat-language" className="block text-[10px] font-bold text-[#8A8596] uppercase tracking-widest mb-2">
-                <i className="fa-solid fa-language mr-2 text-[#7B2B8C]"></i>{translate("Choose Language")}
-              </label>
-              <select
-                id="budget-bharat-language"
-                value={language}
-                onChange={e => setLanguage(e.target.value)}
-                className="w-full rounded-xl border border-[#E4E1EA] bg-white px-3 py-2.5 text-sm font-bold text-[#1E104B] outline-none focus:border-[#7B2B8C]"
+            <div className="px-6 pb-2 mb-2 border-b border-[#E4E1EA]">
+              <button
+                type="button"
+                onClick={() => { setPendingLanguage(language); setMenuView('languageSettings'); }}
+                className="w-full text-left py-2.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between rounded-lg"
+                aria-label={translate("Choose Language")}
               >
-                <option value="en">English</option>
-                <option value="mr">मराठी (Marathi)</option>
-                <option value="hi">हिन्दी (Hindi)</option>
-              </select>
-              {languageUpdating ? (
-                <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
-                  <i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}
-                </p>
-              ) : (
-                <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite"><i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</p>
-              )}
+                <span className="flex items-center gap-3 min-w-0">
+                  <i className="fa-solid fa-language w-7 text-[#7B2B8C]"></i>
+                  <span className="min-w-0">
+                    <span className="block">{translate("Choose Language")}</span>
+                    <span className="block mt-0.5 text-[11px] font-medium text-[#8A8596]">{LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</span>
+                  </span>
+                </span>
+                <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
+              </button>
+              <p className="px-10 mt-0.5 text-[10px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
+                <i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}
+              </p>
             </div>
             <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Record Setup")}</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
@@ -2050,10 +2055,10 @@ const SideMenu = () => {
               </button>
             )}
 
-            <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] mt-2">
+            <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]">
               <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> {translate("Export Backup File")}
             </button>
-            <label className="w-full flex items-center px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] cursor-pointer">
+            <label className="w-full flex items-center px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] cursor-pointer">
               <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> {translate("Restore from Backup")}
               <input
                 type="file"
@@ -2110,6 +2115,53 @@ const SideMenu = () => {
             </div>
 
             <SideMenuBranding />
+          </div>
+        )}
+
+        {menuView === 'languageSettings' && (
+          <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
+            <div className="flex justify-between items-center mb-5">
+              <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]">
+                <i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}
+              </button>
+            </div>
+            <h3 className="text-base font-black text-[#1E104B] mb-1">{translate("Choose Language")}</h3>
+            <p className="text-xs text-[#8A8596] mb-4">{language === 'mr' ? 'अॅपसाठी तुमची भाषा निवडा.' : language === 'hi' ? 'ऐप के लिए अपनी भाषा चुनें।' : 'Select the language for the app.'}</p>
+            <div className="space-y-2">
+              {[
+                { value: 'en', label: 'English', detail: 'English' },
+                { value: 'mr', label: 'मराठी', detail: 'Marathi' },
+                { value: 'hi', label: 'हिन्दी', detail: 'Hindi' }
+              ].map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPendingLanguage(option.value)}
+                  className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${pendingLanguage === option.value ? 'border-[#7B2B8C] bg-[#F8F1FA]' : 'border-[#E4E1EA] bg-[#F4F3F8]'}`}
+                  aria-pressed={pendingLanguage === option.value}
+                >
+                  <span>
+                    <span className="block text-sm font-bold text-[#1E104B]">{option.label}</span>
+                    <span className="block text-[10px] text-[#8A8596]">{option.detail}</span>
+                  </span>
+                  <i className={`fa-solid ${pendingLanguage === option.value ? 'fa-circle-check text-[#7B2B8C]' : 'fa-circle text-[#C7C3D0]'}`}></i>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={languageUpdating}
+              onClick={() => { setLanguage(pendingLanguage); setMenuView('menu'); }}
+              className="w-full mt-5 rounded-xl bg-[#21104F] px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+            >
+              {languageUpdating ? (pendingLanguage === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : pendingLanguage === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...') : translate("Confirm")}
+            </button>
+            {!languageUpdating && (
+              <p className="mt-3 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
+                <i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}
+              </p>
+            )}
+            <div className="mt-auto pt-8"><SideMenuBranding /></div>
           </div>
         )}
 
