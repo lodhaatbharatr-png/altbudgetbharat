@@ -278,7 +278,7 @@ const waitForPaint = () => new Promise(resolve => {
   requestAnimationFrame(() => requestAnimationFrame(resolve));
 });
 
-const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin }) => {
+const createPaymentReminderImage = async ({ personName, amount, dueDate, loanName, emiNo, admin, reminderType = 'emi', balanceDirection = 'receivable' }) => {
   const width = 900, height = 650;
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -338,7 +338,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#625E70';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText('Payment reminder for', centerX, 145);
+  ctx.fillText(reminderType === 'ledger' ? 'Outstanding balance' : 'Payment reminder for', centerX, 145);
 
   roundRect(205, 172, 490, 86, 22);
   ctx.fillStyle = '#F1EAF4';
@@ -349,11 +349,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(`Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
+  ctx.fillText(reminderType === 'ledger' ? (balanceDirection === 'receivable' ? 'You will receive' : 'You will pay') : `Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
-  ctx.fillText(`${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
+  ctx.fillText(reminderType === 'ledger' ? `On or before ${formatDisplayDate(dueDate)}` : `${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
   // Footer is deliberately outside any background container.
   const footerTop = separatorY + 24;
@@ -2291,6 +2291,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
   const { transactions, loans, showFeedback, admin, deletePerson, uploadBackupToCloud, syncStatus, loadError } = useContext(AppContext);
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [isSharingStatement, setIsSharingStatement] = useState(false);
+  const [showLedgerShareOptions, setShowLedgerShareOptions] = useState(false);
   const [showDeletePersonConfirm, setShowDeletePersonConfirm] = useState(false);
   const [isDeletingPerson, setIsDeletingPerson] = useState(false);
   const [isLoanDropdownOpen, setIsLoanDropdownOpen] = useState(false);
@@ -2447,6 +2448,37 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
     }
   };
 
+  const handleShareLedgerReminder = async () => {
+    setShowLedgerShareOptions(false);
+    if (!person || !person.remaining) {
+      showFeedback('This person has no outstanding balance to remind about.');
+      return;
+    }
+    const balanceDirection = person.remaining > 0 ? 'receivable' : 'payable';
+    const actionWord = balanceDirection === 'receivable' ? 'you will pay' : 'you will receive';
+    const captionText = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    setIsSharingStatement(true);
+    showFeedback('Generating balance reminder...');
+    try {
+      const file = await createPaymentReminderImage({ personName: person.name, amount: Math.abs(person.remaining), dueDate: targetDateStr, admin, reminderType: 'ledger', balanceDirection });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Budget Bharat Balance Reminder', text: captionText });
+        showFeedback('Reminder ready to share');
+      } else {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        showFeedback('Reminder image saved; share it in WhatsApp');
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.error('Ledger balance reminder error:', err);
+      showFeedback('Reminder failed: ' + (err && err.message ? err.message : 'image generation failed'));
+    } finally {
+      setIsSharingStatement(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
     const actionWord = person.remaining > 0 ? 'you will pay' : person.remaining < 0 ? 'you will receive' : 'is settled at';
     const textMsg = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
@@ -2462,6 +2494,15 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
 
   return (
     <React.Fragment>
+      {showLedgerShareOptions && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3"><h2 className="text-base font-extrabold text-[#1E104B]">Share Person Ledger</h2><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share transaction statement</span><span className="block text-xs text-slate-500 mt-1">Existing full statement image or PDF</span></button>
+            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share balance reminder</span><span className="block text-xs text-slate-500 mt-1">Reminder image with balance-sensitive caption</span></button>
+          </div>
+        </div>
+      )}
       <div className="flex-none grad-dark px-3.5 py-3 text-white flex items-center justify-between shadow-md z-30">
         <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-2">
           <button onClick={onBack} title="Exit to Directory" className="w-8 h-8 flex-none flex items-center justify-center hover:bg-white/10 rounded-full transition-colors active:scale-95">
@@ -2573,8 +2614,8 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                 <i className="fa-solid fa-phone text-xs"></i>
               </button>
               <button
-                onClick={handleShareImage}
-                title="Share Statement Image"
+                onClick={() => setShowLedgerShareOptions(true)}
+                title="Share Statement or Reminder"
                 className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
               >
                 <i className="fa-solid fa-share-nodes text-xs"></i>
@@ -2911,6 +2952,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
   const [paymentModal, setPaymentModal] = useState({ open: false, row: null, who: 'ME', paymentId: '' });
   const loanSlipRef = useRef(null);
   const [isExportingSlip, setIsExportingSlip] = useState(false);
+  const [showEmiShareOptions, setShowEmiShareOptions] = useState(false);
   const [isLoanDropdownOpen, setIsLoanDropdownOpen] = useState(false);
   const loanDropdownRef = useRef(null);
 
@@ -3189,13 +3231,27 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     }
   };
 
-  const handleSendWhatsAppReminder = async () => {
+  const handleSendWhatsAppReminder = () => {
     if (!currentLoan) return;
-    const nextPending = currentLoan.schedule.find(s => !s.paid);
-    if (!nextPending) {
-      showFeedback('All EMIs for this loan are cleared!');
+    const nextPending = (currentLoan.schedule || []).find(s => !s.paid && String(s.paid).toLowerCase() !== 'true');
+    if (!nextPending) { showFeedback('All EMIs for this loan are cleared!'); return; }
+    const borrower = borrowerPersonObj || (persons || []).find(p => String(p.name || '').trim().replace(/\s+/g, ' ').toLowerCase() === String(currentLoan.person || '').trim().replace(/\s+/g, ' ').toLowerCase());
+    let phone = String(borrower && borrower.phone || '').replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = phone.replace(/^0+/, '');
+    if (phone.length === 10) phone = '91' + phone;
+    if (!phone || !/^91[6-9]\d{9}$/.test(phone)) {
+      showFeedback(borrower && borrower.phone ? 'Please check this person’s saved phone number (use a valid Indian mobile number).' : 'No phone number saved for this person. Add a phone number in Person Ledger first.');
       return;
     }
+    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareEmiReminder = async () => {
+    setShowEmiShareOptions(false);
+    if (!currentLoan) return;
+    const nextPending = (currentLoan.schedule || []).find(s => !s.paid && String(s.paid).toLowerCase() !== 'true');
+    if (!nextPending) { showFeedback('All EMIs for this loan are cleared!'); return; }
     const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
     try {
       const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
@@ -3203,8 +3259,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
         await navigator.share({ files: [file], title: 'Budget Bharat Payment Reminder', text: textMsg });
         showFeedback('Reminder ready to share');
       } else {
-        const url = URL.createObjectURL(file);
-        const link = document.createElement('a'); link.href = url; link.download = file.name;
+        const url = URL.createObjectURL(file); const link = document.createElement('a'); link.href = url; link.download = file.name;
         document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
         showFeedback('Reminder image saved; share it in WhatsApp');
       }
@@ -3686,13 +3741,22 @@ return (
     </div>
 
     <div className="app-content px-4 mt-2 pb-32 space-y-3">
+      {showEmiShareOptions && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEmiShareOptions(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3"><h2 className="text-base font-extrabold text-[#1E104B]">Share EMI</h2><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share EMI table</span><span className="block text-xs text-slate-500 mt-1">Existing EMI table image or PDF</span></button>
+            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share EMI reminder</span><span className="block text-xs text-slate-500 mt-1">Reminder image with message caption</span></button>
+          </div>
+        </div>
+      )}
       {!isCreatingLoan && currentLoan && (
         <div className="flex items-center justify-between gap-2 py-1 px-1">
           <div className="flex items-center gap-2 flex-none">
             <button
-              onClick={handleShareLoanSchedule}
+              onClick={() => setShowEmiShareOptions(true)}
               disabled={isExportingSlip}
-              title="Share Schedule (Image / PDF)"
+              title="Share EMI Table or Reminder"
               className="w-9 h-9 rounded-full bg-[#078A87]/15 text-[#078A87] hover:bg-[#078A87] hover:text-white active:bg-[#078A87] active:text-white flex items-center justify-center transition-all border border-[#078A87]/25 shadow-xs"
             >
               <i className={`fa-solid ${isExportingSlip ? 'fa-spinner animate-spin' : 'fa-share-nodes'} text-xs`}></i>
