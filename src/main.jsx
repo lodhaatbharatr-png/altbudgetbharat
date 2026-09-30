@@ -2120,45 +2120,26 @@ const SideMenu = () => {
             </div>
             <h3 className="text-base font-black text-[#1E104B] mb-1">{translate("Choose Language")}</h3>
             <p className="text-xs text-[#8A8596] mb-4">{language === 'mr' ? 'अॅपसाठी तुमची भाषा निवडा.' : language === 'hi' ? 'ऐप के लिए अपनी भाषा चुनें।' : 'Select the language for the app.'}</p>
-            <div className="space-y-2">
-              {[
-                { value: 'en', label: 'English', detail: 'English' },
-                { value: 'mr', label: 'मराठी', detail: 'Marathi' },
-                { value: 'hi', label: 'हिन्दी', detail: 'Hindi' }
-              ].map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setPendingLanguage(option.value)}
-                  className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${pendingLanguage === option.value ? 'border-[#7B2B8C] bg-[#F8F1FA]' : 'border-[#E4E1EA] bg-[#F4F3F8]'}`}
-                  aria-pressed={pendingLanguage === option.value}
-                >
-                  <span>
-                    <span className="block text-sm font-bold text-[#1E104B]">{option.label}</span>
-                    <span className="block text-[10px] text-[#8A8596]">{option.detail}</span>
-                  </span>
-                  <i className={`fa-solid ${pendingLanguage === option.value ? 'fa-circle-check text-[#7B2B8C]' : 'fa-circle text-[#C7C3D0]'}`}></i>
-                </button>
-              ))}
+            <div className="relative">
+              <i className="fa-solid fa-language absolute left-4 top-1/2 -translate-y-1/2 w-5 text-[#078A87] pointer-events-none"></i>
+              <select value={pendingLanguage} onChange={(e) => setPendingLanguage(e.target.value)} aria-label={translate("Choose Language")} className="w-full appearance-none rounded-xl bg-[#F4F3F8] border border-[#E4E1EA] pl-11 pr-10 py-3 text-xs font-black text-[#1E104B] focus:outline-none focus:border-[#7B2B8C]">
+                <option value="en">English</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+              </select>
+              <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-[#8A8596] pointer-events-none"></i>
             </div>
-            <button
-              type="button"
-              disabled={languageUpdating}
-              onClick={() => { setLanguage(pendingLanguage); setMenuView('menu'); }}
-              className="w-full mt-5 rounded-xl bg-[#21104F] px-4 py-3 text-sm font-black text-white disabled:opacity-60"
-            >
-              {languageUpdating ? (pendingLanguage === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : pendingLanguage === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...') : translate("Confirm")}
+            <button type="button" disabled={languageUpdating || pendingLanguage === language} onClick={() => { setLanguage(pendingLanguage); setMenuView('menu'); }} className="w-full mt-4 rounded-xl bg-[#21104F] px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+              {languageUpdating ? (language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...') : translate("Confirm")}
             </button>
-            {!languageUpdating && (
-              <p className="mt-3 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
-                <i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}
-              </p>
-            )}
+            <p className="mt-3 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
+              {languageUpdating ? <><i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}</> : <><i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</>}
+            </p>
             <div className="mt-auto pt-8"><SideMenuBranding /></div>
           </div>
         )}
 
-        {menuView === 'managePersons' && (
+                {menuView === 'managePersons' && (
           <div className="flex-1 p-5 flex flex-col h-full overflow-y-auto hide-scrollbar bg-white">
             <div className="flex justify-between items-center mb-4">
               <button onClick={() => setMenuView('menu')} className="text-xs font-bold text-[#625E70] hover:text-[#1E104B]"><i className="fa-solid fa-arrow-left mr-1.5"></i> {translate("Back")}</button>
