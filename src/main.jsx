@@ -2011,7 +2011,7 @@ const SideMenu = () => {
                 <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
               </button>
               <p className="px-10 mt-0.5 text-[10px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
-                <i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}
+                {languageUpdating ? <><i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}</> : <><i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</>}
               </p>
             </div>
             <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Record Setup")}</div>
