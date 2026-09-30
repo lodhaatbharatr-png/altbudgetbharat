@@ -1395,7 +1395,7 @@ const AppProvider = ({ children }) => {
       transactions, filteredTransactions, persons, loans, categories, admin, loading, loadError, syncStatus,
       searchQuery, setSearchQuery,
       isMenuOpen, setIsMenuOpen, menuView, setMenuView,
-      language, setLanguage,
+      language, setLanguage, languageUpdating,
       filterPeriod, setFilterPeriod, customFrom, setCustomFrom, customTo, setCustomTo,
       directoryFilter, setDirectoryFilter,
       googleUser, handleGoogleLogin, handleGoogleLogout,
@@ -1840,7 +1840,7 @@ const SideMenuBranding = () => (
 const SideMenu = () => {
   const {
     isMenuOpen, setIsMenuOpen, menuView, setMenuView,
-    language, setLanguage,
+    language, setLanguage, languageUpdating,
     persons, categories, admin,
     addPerson, updatePerson, deletePerson,
     addCategory, updateCategory, deleteCategory,
