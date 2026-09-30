@@ -691,6 +691,15 @@ const UI_TRANSLATIONS = {
   "Save failed: ": { "mr": "जतन अयशस्वी: ", "hi": "सेव विफल: " },
   "Transaction deleted": { "mr": "व्यवहार हटवला", "hi": "लेन-देन हटाया गया" },
   "Failed to save payment": { "mr": "पेमेंट जतन करता आले नाही", "hi": "भुगतान सेव नहीं हुआ" },
+  "Delete failed: ": { "mr": "हटवणे अयशस्वी: ", "hi": "हटाने में विफल: " },
+  "Restore failed: ": { "mr": "पुनर्संचयित करणे अयशस्वी: ", "hi": "पुनर्स्थापना विफल: " },
+  "Sync failed: ": { "mr": "सिंक अयशस्वी: ", "hi": "सिंक विफल: " },
+  "Person Added to Directory": { "mr": "व्यक्ती निर्देशिकेत जोडली", "hi": "व्यक्ति निर्देशिका में जोड़ा गया" },
+  "Delete failed": { "mr": "हटवणे अयशस्वी", "hi": "हटाने में विफल" },
+  "Expense entry saved": { "mr": "खर्चाची नोंद जतन झाली", "hi": "व्यय रिकॉर्ड सेव हुआ" },
+  "Income entry saved": { "mr": "उत्पन्नाची नोंद जतन झाली", "hi": "आय रिकॉर्ड सेव हुआ" },
+  "Received entry saved": { "mr": "मिळाल्याची नोंद जतन झाली", "hi": "प्राप्ति रिकॉर्ड सेव हुआ" },
+  "Given entry saved": { "mr": "दिल्याची नोंद जतन झाली", "hi": "दिया गया रिकॉर्ड सेव हुआ" },
   "Language applied": {
     "mr": "लागू केलेली भाषा",
     "hi": "लागू की गई भाषा"
@@ -1607,7 +1616,7 @@ const TransactionTable = ({ transactions, maxRows = 6, showViewAll = true, onSel
                     )}
                   </td>
                   <td className="px-3 py-3.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                    {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
+                    {t(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
                   </td>
                   <td className="px-3 py-3.5 text-right font-black text-xs" style={{ color: txColor }}>
                     {isPos ? '+' : '-'}{formatTableNum(t.amount)}
@@ -5124,7 +5133,7 @@ const RecordsView = ({ onSelectTransaction }) => {
                         </td>
                         {showType && (
                           <td className="px-3 py-2.5 font-extrabold text-[#8A8596] uppercase text-[9px] tracking-wider">
-                            {t.type === 'LENT' ? 'GIVEN' : t.type === 'BORROW' ? 'RECEIVED' : t.type}
+                            {t(t.type === 'LENT' ? 'Given' : t.type === 'BORROW' ? 'Received' : t.type === 'EXPENSE' ? 'Expense' : 'Income')}
                           </td>
                         )}
                         <td className="px-3 py-2.5 text-right font-black text-xs" style={{ color: txColor }}>
@@ -5304,7 +5313,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
                 onClick={() => setType(item.key)}
                 className={`py-2 rounded-lg transition-all ${getActiveTabClass()}`}
               >
-                {item.label}
+                {t(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}
               </button>
             );
           })}
@@ -5700,7 +5709,7 @@ const InputModal = ({ onClose }) => {
               return 'bg-[#B7791F] text-white shadow-xs';
             };
             return (
-              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{item.label}</button>
+              <button key={item.key} type="button" onClick={() => setType(item.key)} className={`py-2.5 rounded-lg transition-all ${getActiveTabClass()}`}>{t(item.label === 'GIVEN' ? 'Given' : item.label === 'RECEIVED' ? 'Received' : item.label === 'EXPENSE' ? 'Expense' : 'Income')}</button>
             );
           })}
         </div>
