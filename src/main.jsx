@@ -149,12 +149,23 @@ const parseDate = (dStr) => {
   if (!dStr) return new Date(0);
   if (dStr instanceof Date) return dStr;
   const s = String(dStr).trim();
-  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+
+  // Parse ISO dates first; otherwise YYYY-MM-DD is mistaken for DD-MM-YYYY.
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T|\s)/);
+  if (iso) {
+    const parsedIso = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    return isNaN(parsedIso.getTime()) ? new Date(0) : parsedIso;
+  }
+
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:$|T|\s)/);
   if (m) {
     const day = parseInt(m[1], 10);
     const month = parseInt(m[2], 10) - 1;
     const year = m[3].length === 2 ? parseInt('20' + m[3], 10) : parseInt(m[3], 10);
-    return new Date(year, month, day);
+    const parsedParts = new Date(year, month, day);
+    return parsedParts.getFullYear() === year && parsedParts.getMonth() === month && parsedParts.getDate() === day
+      ? parsedParts
+      : new Date(0);
   }
   const parsed = new Date(s);
   return isNaN(parsed.getTime()) ? new Date(0) : parsed;
@@ -700,6 +711,10 @@ const UI_TRANSLATIONS = {
   "Income entry saved": { "mr": "उत्पन्नाची नोंद जतन झाली", "hi": "आय रिकॉर्ड सेव हुआ" },
   "Received entry saved": { "mr": "मिळाल्याची नोंद जतन झाली", "hi": "प्राप्ति रिकॉर्ड सेव हुआ" },
   "Given entry saved": { "mr": "दिल्याची नोंद जतन झाली", "hi": "दिया गया रिकॉर्ड सेव हुआ" },
+  "Loans": { "mr": "कर्जे", "hi": "लोन" },
+  "No Loans": { "mr": "कर्जे नाहीत", "hi": "कोई लोन नहीं" },
+  "Showing ": { "mr": "दाखवत आहे ", "hi": "दिखा रहे हैं " },
+  " of ": { "mr": " पैकी ", "hi": " में से " },
   "Language applied": {
     "mr": "लागू केलेली भाषा",
     "hi": "लागू की गई भाषा"
@@ -2237,7 +2252,7 @@ const SideMenu = () => {
               <div className="pt-4 flex justify-center">
                 <button type="submit" disabled={isSubmitting} className="w-2/3 min-w-[160px] bg-[#1E104B] hover:bg-[#2A186B] text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-all uppercase text-xs flex items-center justify-center gap-2">
                   {isSubmitting ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-check"></i>}
-                  <span>{isSubmitting ? 'Saving...' : (menuView === 'addPerson' || menuView === 'addCategory') ? 'Save' : 'Save Changes'}</span>
+                  <span>{isSubmitting ? translate('Saving...') : translate((menuView === 'addPerson' || menuView === 'addCategory') ? 'Save' : 'Save Changes')}</span>
                 </button>
               </div>
               <SideMenuBranding />
@@ -2324,10 +2339,10 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
   const kpi = useMemo(() => {
     let e = 0, i = 0, dr = 0, cr = 0;
     filteredTransactions.forEach(t => {
-      if (t.type === 'EXPENSE') e += t.amount;
-      else if (t.type === 'INCOME') i += t.amount;
-      else if (t.type === 'LENT') dr += t.amount;
-      else if (t.type === 'BORROW') cr += t.amount;
+      if (t.type === 'EXPENSE') e += Number(t.amount) || 0;
+      else if (t.type === 'INCOME') i += Number(t.amount) || 0;
+      else if (t.type === 'LENT') dr += Number(t.amount) || 0;
+      else if (t.type === 'BORROW') cr += Number(t.amount) || 0;
     });
     return { e, i, dr, cr };
   }, [filteredTransactions]);
@@ -2337,8 +2352,8 @@ const HomeView = ({ onSelectPerson, onSelectTransaction, onNavigateTab }) => {
     let totalExp = 0;
     filteredTransactions.filter(t => t.type === 'EXPENSE').forEach(t => {
       const key = t.category || '(Uncategorized)';
-      map[key] = (map[key] || 0) + t.amount;
-      totalExp += t.amount;
+      map[key] = (map[key] || 0) + (Number(t.amount) || 0);
+      totalExp += Number(t.amount) || 0;
     });
     return Object.keys(map).map(k => ({ name: k, val: map[k], pct: totalExp ? (map[k] / totalExp) * 100 : 0 })).sort((a, b) => b.val - a.val);
   }, [filteredTransactions]);
@@ -3091,7 +3106,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                 style={{ height: '22px' }}
               >
                 <span className="px-2.5 py-0.5 leading-none tracking-wide whitespace-nowrap">
-                  {personActiveLoans.length > 0 ? `${personActiveLoans.length} Loans` : 'No Loans'}
+                  {personActiveLoans.length > 0 ? `${formatTableNum(personActiveLoans.length)} ${translate('Loans')}` : translate('No Loans')}
                 </span>
                 {personActiveLoans.length > 0 && (
                   <span className="flex items-center justify-center border-l border-white/25 px-2 h-full bg-white/10 rounded-r-lg">
@@ -3103,7 +3118,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
               {isLoanDropdownOpen && personActiveLoans.length > 0 && (
                 <div className="absolute top-full left-0 mt-1.5 w-52 bg-[#241457] border border-[#7B2B8C]/40 rounded-xl shadow-2xl py-1 z-50 animate-slide-up">
                   <div className="px-3 py-1.5 text-[9px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10">
-                    Active Loans ({personActiveLoans.length})
+                    {translate('Active Loans')} ({formatTableNum(personActiveLoans.length)})
                   </div>
                   <div className="max-h-48 overflow-y-auto hide-scrollbar divide-y divide-white/5">
                     {personActiveLoans.map((l) => {
@@ -4223,7 +4238,7 @@ return (
                   style={{ height: '22px' }}
                 >
                   <span className="px-2.5 py-0.5 leading-none tracking-wide whitespace-nowrap">
-                    {borrowerActiveLoans.length > 0 ? `${borrowerActiveLoans.length} Loans` : 'No Loans'}
+                    {borrowerActiveLoans.length > 0 ? `${formatTableNum(borrowerActiveLoans.length)} ${translate('Loans')}` : translate('No Loans')}
                   </span>
                   {borrowerActiveLoans.length > 0 && (
                     <span className="flex items-center justify-center border-l border-white/25 px-2 h-full bg-white/10 rounded-r-lg">
@@ -4235,7 +4250,7 @@ return (
                 {isLoanDropdownOpen && borrowerActiveLoans.length > 0 && (
                   <div className="absolute top-full left-0 mt-1.5 w-56 bg-[#241457] border border-[#7B2B8C]/40 rounded-xl shadow-2xl py-1 z-50 animate-slide-up">
                     <div className="px-3 py-1.5 text-[9px] font-bold text-white/60 uppercase tracking-wider border-b border-white/10">
-                      Active Loans ({borrowerActiveLoans.length})
+                      {translate('Active Loans')} ({formatTableNum(borrowerActiveLoans.length)})
                     </div>
                     <div className="max-h-48 overflow-y-auto hide-scrollbar divide-y divide-white/5">
                       {borrowerActiveLoans.map((l) => {
