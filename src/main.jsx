@@ -189,30 +189,31 @@ const toInputDate_ = (dStr) => {
   return '';
 };
 
+const getSelectedLanguage = () => {
+  try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+};
+
 const formatDisplayDate = (dStr) => {
   if (!dStr) return '-';
-  let day, monthIdx, yy;
+  let date;
   if (dStr instanceof Date) {
-    day = dStr.getDate();
-    monthIdx = dStr.getMonth();
-    yy = String(dStr.getFullYear()).slice(-2);
+    date = new Date(dStr.getFullYear(), dStr.getMonth(), dStr.getDate());
   } else {
     const s = String(dStr).trim();
     const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     if (m) {
-      day = parseInt(m[1], 10);
-      monthIdx = parseInt(m[2], 10) - 1;
-      yy = m[3].length === 4 ? m[3].slice(-2) : m[3];
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10) - 1;
+      const year = m[3].length === 2 ? parseInt('20' + m[3], 10) : parseInt(m[3], 10);
+      date = new Date(year, month, day);
     } else {
-      const d = new Date(s);
-      if (isNaN(d.getTime())) return dStr;
-      day = d.getDate();
-      monthIdx = d.getMonth();
-      yy = String(d.getFullYear()).slice(-2);
+      date = new Date(s);
+      if (isNaN(date.getTime())) return dStr;
     }
   }
-  if (isNaN(day) || monthIdx < 0 || monthIdx > 11) return dStr;
-  return `${day}-${MONTHS_SHORT[monthIdx]}-${yy}`;
+  if (isNaN(date.getTime())) return dStr;
+  const locale = ({ en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' })[getSelectedLanguage()] || 'en-IN';
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
 };
 
 const gasRun = async (fnName, ...args) => {
@@ -433,6 +434,16 @@ const AppProvider = ({ children }) => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState('menu');
+  // Language preference is device-local and defaults to English on a fresh install.
+  const [language, setLanguageState] = useState(() => {
+    try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+  });
+  const setLanguage = (nextLanguage) => {
+    const supported = ['en', 'mr', 'hi'];
+    const next = supported.includes(nextLanguage) ? nextLanguage : 'en';
+    setLanguageState(next);
+    try { localStorage.setItem('budgetBharat.language', next); } catch (_) {}
+  };
 
   const [toast, setToast] = useState({ show: false, msg: '' });
 
@@ -854,6 +865,7 @@ const AppProvider = ({ children }) => {
       transactions, filteredTransactions, persons, loans, categories, admin, loading, loadError, syncStatus,
       searchQuery, setSearchQuery,
       isMenuOpen, setIsMenuOpen, menuView, setMenuView,
+      language, setLanguage,
       filterPeriod, setFilterPeriod, customFrom, setCustomFrom, customTo, setCustomTo,
       directoryFilter, setDirectoryFilter,
       googleUser, handleGoogleLogin, handleGoogleLogout,
@@ -1298,6 +1310,7 @@ const SideMenuBranding = () => (
 const SideMenu = () => {
   const {
     isMenuOpen, setIsMenuOpen, menuView, setMenuView,
+    language, setLanguage,
     persons, categories, admin,
     addPerson, updatePerson, deletePerson,
     addCategory, updateCategory, deleteCategory,
@@ -1429,6 +1442,21 @@ const SideMenu = () => {
 
         {menuView === 'menu' && (
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
+            <div className="px-6 pb-3 mb-3 border-b border-[#E4E1EA]">
+              <label htmlFor="budget-bharat-language" className="block text-[10px] font-bold text-[#8A8596] uppercase tracking-widest mb-2">
+                <i className="fa-solid fa-language mr-2 text-[#7B2B8C]"></i>Choose Language
+              </label>
+              <select
+                id="budget-bharat-language"
+                value={language}
+                onChange={e => setLanguage(e.target.value)}
+                className="w-full rounded-xl border border-[#E4E1EA] bg-white px-3 py-2.5 text-sm font-bold text-[#1E104B] outline-none focus:border-[#7B2B8C]"
+              >
+                <option value="en">English</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+              </select>
+            </div>
             <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Record Setup</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
               <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> Manage Persons ({persons.length})</span>
