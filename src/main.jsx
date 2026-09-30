@@ -1888,6 +1888,7 @@ const SideMenu = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [personToDelete, setPersonToDelete] = useState(null);
   const [catToDelete, setCatToDelete] = useState(null);
+  const [pendingLanguage, setPendingLanguage] = useState(language);
   const [exportGroup, setExportGroup] = useState('');
 
   if (!isMenuOpen) return null;
