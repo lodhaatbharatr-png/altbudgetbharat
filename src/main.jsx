@@ -306,10 +306,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.fill();
   ctx.restore();
 
-  // Ticket cut-outs at the footer separator.
+  // Ticket cut-outs at the footer separator. Use the slip's outer
+  // background color so the semicircles never render black/transparent.
   const separatorY = 414;
   ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = '#F4F3F8';
   ctx.beginPath();
   ctx.arc(ticketX, separatorY, 24, -Math.PI / 2, Math.PI / 2);
   ctx.fill();
@@ -2496,10 +2497,10 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
     <React.Fragment>
       {showLedgerShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3"><h2 className="text-base font-extrabold text-[#1E104B]">Share Person Ledger</h2><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
-            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share transaction statement</span><span className="block text-xs text-slate-500 mt-1">Existing full statement image or PDF</span></button>
-            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share balance reminder</span><span className="block text-xs text-slate-500 mt-1">Reminder image with balance-sensitive caption</span></button>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2"><h2 className="text-base font-extrabold text-[#1E104B]">Share Person Ledger</h2><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share transaction statement</span></button>
+            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="block font-bold text-sm text-[#1E104B]">Share balance reminder</span></button>
           </div>
         </div>
       )}
