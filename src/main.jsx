@@ -76,7 +76,7 @@ const AppBottomBranding = () => {
         className="h-[31px] object-contain mb-1.5 drop-shadow-sm"
       />
       <p className="text-[10px] font-bold text-[#625E70] tracking-wide mb-2.5">
-        Developed by - Bharat Rasve © 2026
+        {t("Developed by - Bharat Rasve © 2026")}
       </p>
       <div className="flex items-center justify-center gap-2">
         <button
@@ -569,6 +569,70 @@ const UI_TRANSLATIONS = {
   "Share EMI table": { "mr": "EMI तक्ता शेअर करा", "hi": "EMI तालिका साझा करें" },
   "Share EMI reminder": { "mr": "EMI आठवण शेअर करा", "hi": "EMI रिमाइंडर साझा करें" },
   "Language applied: English": { "mr": "लागू केलेली भाषा: मराठी", "hi": "लागू की गई भाषा: हिन्दी" },
+  "Results for": { "mr": "यासाठी परिणाम", "hi": "परिणाम" },
+  "matches": { "mr": "जुळण्या", "hi": "मिलान" },
+  "People": { "mr": "व्यक्ती", "hi": "लोग" },
+  "Borrower Paid": { "mr": "कर्जदाराने भरले", "hi": "उधारकर्ता ने भुगतान किया" },
+  "Auto-logs a": { "mr": "आपोआप नोंदवते", "hi": "स्वतः दर्ज करता है" },
+  "entry of": { "mr": "इतकी नोंद", "hi": "की प्रविष्टि" },
+  "in": { "mr": "मध्ये", "hi": "में" },
+  "Marks installment cleared by borrower. Ledger balance remains unchanged.": { "mr": "कर्जदाराने हप्ता भरल्याची नोंद करते. खाते शिल्लक बदलत नाही.", "hi": "उधारकर्ता द्वारा किस्त चुकाने का रिकॉर्ड करता है। खाते का बैलेंस नहीं बदलता।" },
+  "Cancel": { "mr": "रद्द करा", "hi": "रद्द करें" },
+  "Save": { "mr": "जतन करा", "hi": "सेव करें" },
+  "Save Changes": { "mr": "बदल जतन करा", "hi": "बदलाव सेव करें" },
+  "Update": { "mr": "अपडेट करा", "hi": "अपडेट करें" },
+  "Edit": { "mr": "संपादित करा", "hi": "संपादित करें" },
+  "Delete Person?": { "mr": "व्यक्ती हटवायची?", "hi": "व्यक्ति हटाएँ?" },
+  "Deleting Person...": { "mr": "व्यक्ती हटवत आहे...", "hi": "व्यक्ति हटाई जा रही है..." },
+  "Delete Loan?": { "mr": "कर्ज हटवायचे?", "hi": "लोन हटाएँ?" },
+  "Deleting Loan...": { "mr": "कर्ज हटवत आहे...", "hi": "लोन हटाया जा रहा है..." },
+  "Delete Transaction?": { "mr": "व्यवहार हटवायचा?", "hi": "लेन-देन हटाएँ?" },
+  "Deleting...": { "mr": "हटवत आहे...", "hi": "हटाया जा रहा है..." },
+  "Loading...": { "mr": "लोड होत आहे...", "hi": "लोड हो रहा है..." },
+  "Preparing export...": { "mr": "निर्यात तयार करत आहे...", "hi": "निर्यात तैयार हो रहा है..." },
+  "Preparing full backup...": { "mr": "पूर्ण बॅकअप तयार करत आहे...", "hi": "पूरा बैकअप तैयार हो रहा है..." },
+  "Exported ": { "mr": "निर्यात केले: ", "hi": "निर्यात किया: " },
+  "Export canceled": { "mr": "निर्यात रद्द केले", "hi": "निर्यात रद्द किया गया" },
+  "Export failed: ": { "mr": "निर्यात अयशस्वी: ", "hi": "निर्यात विफल: " },
+  "Export Backup File": { "mr": "बॅकअप फाइल निर्यात करा", "hi": "बैकअप फ़ाइल निर्यात करें" },
+  "Restore from Backup": { "mr": "बॅकअपमधून पुनर्संचयित करा", "hi": "बैकअप से पुनर्स्थापित करें" },
+  "Sign in with Google": { "mr": "Google सह साइन इन करा", "hi": "Google से साइन इन करें" },
+  "No transactions found": { "mr": "कोणतेही व्यवहार आढळले नाहीत", "hi": "कोई लेन-देन नहीं मिला" },
+  "No persons found": { "mr": "कोणतीही व्यक्ती आढळली नाही", "hi": "कोई व्यक्ति नहीं मिली" },
+  "No categories found": { "mr": "कोणत्याही श्रेण्या आढळल्या नाहीत", "hi": "कोई श्रेणी नहीं मिली" },
+  "Please enter a name.": { "mr": "कृपया नाव प्रविष्ट करा.", "hi": "कृपया नाम दर्ज करें।" },
+  "Name is required": { "mr": "नाव आवश्यक आहे", "hi": "नाम आवश्यक है" },
+  "Phone is invalid": { "mr": "फोन क्रमांक अवैध आहे", "hi": "फ़ोन नंबर अमान्य है" },
+  "Required": { "mr": "आवश्यक", "hi": "आवश्यक" },
+  "Choose a category": { "mr": "श्रेणी निवडा", "hi": "श्रेणी चुनें" },
+  "Borrower": { "mr": "कर्जदार", "hi": "उधारकर्ता" },
+  "Loan": { "mr": "कर्ज", "hi": "लोन" },
+  "Payment": { "mr": "पेमेंट", "hi": "भुगतान" },
+  "Paid": { "mr": "भरले", "hi": "भुगतान किया" },
+  "Pending": { "mr": "प्रलंबित", "hi": "लंबित" },
+  "Cleared": { "mr": "पूर्ण", "hi": "चुकाया गया" },
+  "Open": { "mr": "उघडा", "hi": "खोलें" },
+  "Close": { "mr": "बंद करा", "hi": "बंद करें" },
+  "Share": { "mr": "शेअर करा", "hi": "साझा करें" },
+  "Statement": { "mr": "स्टेटमेंट", "hi": "विवरण" },
+  "Reminder": { "mr": "आठवण", "hi": "रिमाइंडर" },
+  "Download": { "mr": "डाउनलोड करा", "hi": "डाउनलोड करें" },
+  "Export": { "mr": "निर्यात", "hi": "निर्यात" },
+  "Import": { "mr": "आयात", "hi": "आयात" },
+  "Search": { "mr": "शोधा", "hi": "खोजें" },
+  "Filter": { "mr": "फिल्टर", "hi": "फ़िल्टर" },
+  "All": { "mr": "सर्व", "hi": "सभी" },
+  "Today": { "mr": "आज", "hi": "आज" },
+  "Week": { "mr": "आठवडा", "hi": "सप्ताह" },
+  "Month": { "mr": "महिना", "hi": "महीना" },
+  "Year": { "mr": "वर्ष", "hi": "वर्ष" },
+  "Custom": { "mr": "सानुकूल", "hi": "कस्टम" },
+  "Given (Lent)": { "mr": "दिलेले (कर्ज दिले)", "hi": "दिया (उधार दिया)" },
+  "you will pay": { "mr": "तुम्ही पैसे द्याल", "hi": "आप भुगतान करेंगे" },
+  "Receivable": { "mr": "येणे बाकी", "hi": "प्राप्य" },
+  "BAL (RECEIVABLE)": { "mr": "शिल्लक (येणे बाकी)", "hi": "शेष (प्राप्य)" },
+  "and all associated transactions? This cannot be undone.": { "mr": "आणि सर्व संबंधित व्यवहार? ही कृती पूर्ववत करता येणार नाही.", "hi": "और सभी संबंधित लेन-देन? यह कार्रवाई पूर्ववत नहीं की जा सकती।" },
+  "Developed by - Bharat Rasve © 2026": { "mr": "निर्मिती - Bharat Rasve © 2026", "hi": "निर्माता - Bharat Rasve © 2026" },
   "Language applied": {
     "mr": "लागू केलेली भाषा",
     "hi": "लागू की गई भाषा"
@@ -1606,7 +1670,7 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
   return (
     <div className="px-4 mt-4 pb-8 space-y-5">
       <div className="flex justify-between items-center px-1">
-        <span className="text-xs text-theme-dark/60 font-bold">Results for "<span className="text-theme-dark">{searchQuery}</span>"</span>
+        <span className="text-xs text-theme-dark/60 font-bold">{t("Results for")} "<span className="text-theme-dark">{searchQuery}</span>"</span>
         <span className="text-[10px] font-bold text-theme-dark/50">{matchedPersons.length + matchedTransactions.length} matches</span>
       </div>
 
@@ -1619,7 +1683,7 @@ const SearchView = ({ onSelectPerson, onSelectTransaction }) => {
         <>
           {matchedPersons.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">People ({matchedPersons.length})</h3>
+              <h3 className="text-[10px] font-bold text-[#625E70] uppercase tracking-wider mb-2 px-1">{t("People")} ({matchedPersons.length})</h3>
               <div className="space-y-2">
                 {matchedPersons.map(p => {
                   let dr = 0, cr = 0;
@@ -1688,7 +1752,7 @@ const SideMenuBranding = () => (
       alt="Budget Bharat"
       className="h-6 object-contain mb-1.5"
     />
-    <p className="text-[9px] font-bold text-[#8A8596]">Developed by - Bharat Rasve © 2026</p>
+    <p className="text-[9px] font-bold text-[#8A8596]">{t("Developed by - Bharat Rasve © 2026")}</p>
   </div>
 );
 // --- START OF src/main.jsx (PART 3) ---
@@ -1881,15 +1945,15 @@ const SideMenu = () => {
               </>
             ) : (
               <button onClick={handleGoogleLogin} className="w-full text-left px-6 py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B]">
-                <i className="fa-brands fa-google w-7 text-[#7B2B8C]"></i> Sign in with Google
+                <i className="fa-brands fa-google w-7 text-[#7B2B8C]"></i> {t("Sign in with Google")}
               </button>
             )}
 
             <button onClick={() => handleAction(() => exportFullBackupCsv())} className="w-full text-left px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] mt-2">
-              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> Export Backup File
+              <i className="fa-solid fa-database w-7 text-[#7B2B8C]"></i> {t("Export Backup File")}
             </button>
             <label className="w-full flex items-center px-6 py-2.5 hover:bg-white transition-colors text-xs font-bold text-[#1E104B] cursor-pointer">
-              <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> Restore from Backup
+              <i className="fa-solid fa-file-import w-7 text-[#078A87]"></i> {t("Restore from Backup")}
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -2115,7 +2179,7 @@ const SideMenu = () => {
                 onClick={() => setPersonToDelete(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -2148,7 +2212,7 @@ const SideMenu = () => {
                 onClick={() => setCatToDelete(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -2507,7 +2571,7 @@ const PersonsView = ({ onSelectPerson }) => {
               directoryFilter === 'ALL' ? 'bg-white text-[#1E104B] shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            All
+            {t("All")}
           </button>
           <button
             type="button"
@@ -2913,7 +2977,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
       {showLedgerShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={t("Close")}>×</button></div>
             <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share transaction statement")}</span></button>
             <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share balance reminder")}</span></button>
           </div>
@@ -3159,10 +3223,10 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                   <i className={isDeletingPerson ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
                 </div>
                 <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-                  {isDeletingPerson ? 'Deleting Person...' : 'Delete Person?'}
+                  {isDeletingPerson ? t('Deleting Person...') : t('Delete Person?')}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 mb-5">
-                  {isDeletingPerson ? `Removing ${person.name} and all associated entries from sheet.` : <>{t("Delete")} <strong>{person.name}</strong> and all associated transactions? This cannot be undone.</>}
+                  {isDeletingPerson ? `${t('Removing')} ${person.name} ${t('and all associated entries from sheet.')}` : <>{t("Delete")} <strong>{person.name}</strong> {t("and all associated transactions? This cannot be undone.")}</>}
                 </p>
                 <div className="flex gap-3 w-full">
                   <button
@@ -3171,7 +3235,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                     onClick={() => setShowDeletePersonConfirm(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -4160,7 +4224,7 @@ return (
       {showEmiShareOptions && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEmiShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
+            <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label={t("Close")}>×</button></div>
             <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share EMI table")}</span></button>
             <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share EMI reminder")}</span></button>
           </div>
@@ -4347,7 +4411,7 @@ return (
                   onClick={() => setIsCreatingLoan(false)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-xs uppercase"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -4519,7 +4583,7 @@ return (
                     onClick={() => setForeclosureModalOpen(false)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -4615,7 +4679,7 @@ return (
               <i className={isDeletingLoan ? "fa-solid fa-spinner animate-spin" : "fa-solid fa-triangle-exclamation"}></i>
             </div>
             <h3 className="text-sm font-black text-theme-dark uppercase tracking-wide">
-              {isDeletingLoan ? 'Deleting Loan...' : 'Delete Loan?'}
+              {isDeletingLoan ? t('Deleting Loan...') : t('Delete Loan?')}
             </h3>
             <p className="text-xs text-gray-500 mt-1 mb-5">
               {isDeletingLoan ? `Deleting "${currentLoan.loanName}" and all associated schedule records...` : <>{t("Are you sure you want to delete")} <strong>"{currentLoan.loanName}"</strong>{t("? This action cannot be undone.")}</>}
@@ -4627,7 +4691,7 @@ return (
                 onClick={() => setShowDeleteLoanConfirm(false)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs uppercase transition-all disabled:opacity-50"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -4699,18 +4763,18 @@ return (
                     paymentModal.who === 'PERSON' ? 'bg-[#078A87] text-white shadow-xs' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  Borrower Paid
+                  {t("Borrower Paid")}
                 </button>
               </div>
               {paymentModal.who === 'ME' ? (
                 <p className="text-[9px] text-[#078A87] font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  Auto-logs a <strong>GIVEN (LENT)</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
+                  {t("Auto-logs a")} <strong>GIVEN (LENT)</strong> entry of {formatMoney(paymentModal.row.emiAmount)} in {currentLoan.person}'s ledger.
                 </p>
               ) : (
                 <p className="text-[9px] text-gray-500 font-semibold mt-1">
                   <i className="fa-solid fa-circle-info mr-1"></i>
-                  Marks installment cleared by borrower. Ledger balance remains unchanged.
+                  {t("Marks installment cleared by borrower. Ledger balance remains unchanged.")}
                 </p>
               )}
             </div>
@@ -4733,7 +4797,7 @@ return (
                 onClick={() => setPaymentModal({ open: false, row: null, who: 'ME', paymentId: '' })}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs uppercase disabled:opacity-50"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -5700,7 +5764,7 @@ const InputModal = ({ onClose }) => {
               }`}
             >
               {isSubmitting && <i className="fa-solid fa-spinner animate-spin text-xs"></i>}
-              <span>{isSubmitting ? 'Saving...' : 'Save Entry'}</span>
+              <span>{isSubmitting ? t('Saving...') : t('Save Entry')}</span>
             </button>
           </div>
         </form>
