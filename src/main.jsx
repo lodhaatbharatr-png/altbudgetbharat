@@ -1,5 +1,3 @@
-// --- START OF src/main.jsx (PART 1) ---
-
 import React, { useState, useEffect, useMemo, useRef, createContext, useContext } from 'react';
 import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -52,7 +50,7 @@ class ErrorBoundary extends React.Component {
             {String((this.state.error && this.state.error.message) || this.state.error || 'Unknown error')}
           </p>
           <button onClick={this.handleReset} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-all">
-            Try Again
+            {t("Try Again")}
           </button>
         </div>
       );
@@ -140,8 +138,8 @@ const AppBottomBranding = () => {
   );
 };
 
-const formatMoney = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(val || 0);
-const formatTableNum = (val) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(val || 0));
+const formatMoney = (val) => new Intl.NumberFormat(({ en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' })[getSelectedLanguage()] || 'en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(val || 0);
+const formatTableNum = (val) => new Intl.NumberFormat(({ en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' })[getSelectedLanguage()] || 'en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(val || 0));
 const toProperCase = (str) => {
   if (!str) return '';
   return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
@@ -191,6 +189,223 @@ const toInputDate_ = (dStr) => {
 
 const getSelectedLanguage = () => {
   try { return localStorage.getItem('budgetBharat.language') || 'en'; } catch (_) { return 'en'; }
+};
+
+const LANGUAGE_LOCALES = { en: 'en-IN', mr: 'mr-IN', hi: 'hi-IN' };
+const LANGUAGE_NAMES = { en: 'English', mr: 'मराठी', hi: 'हिन्दी' };
+const UI_TRANSLATIONS = {
+  "Home": {
+    "mr": "मुख्यपृष्ठ",
+    "hi": "होम"
+  },
+  "Directory": {
+    "mr": "व्यक्ती",
+    "hi": "निर्देशिका"
+  },
+  "Loans / EMIs": {
+    "mr": "कर्ज / EMI",
+    "hi": "लोन / EMI"
+  },
+  "Records": {
+    "mr": "नोंदी",
+    "hi": "रिकॉर्ड"
+  },
+  "Choose Language": {
+    "mr": "भाषा निवडा",
+    "hi": "भाषा चुनें"
+  },
+  "Record Setup": {
+    "mr": "नोंद सेटअप",
+    "hi": "रिकॉर्ड सेटअप"
+  },
+  "Manage Persons": {
+    "mr": "व्यक्ती व्यवस्थापित करा",
+    "hi": "व्यक्तियों का प्रबंधन"
+  },
+  "Add New Entry": {
+    "mr": "नवीन नोंद जोडा",
+    "hi": "नई एंट्री जोड़ें"
+  },
+  "Save Entry": {
+    "mr": "नोंद जतन करा",
+    "hi": "एंट्री सेव करें"
+  },
+  "Saving...": {
+    "mr": "जतन करत आहे...",
+    "hi": "सेव हो रहा है..."
+  },
+  "PERSON NAME *": {
+    "mr": "व्यक्तीचे नाव *",
+    "hi": "व्यक्ति का नाम *"
+  },
+  "PURPOSE / DESCRIPTION": {
+    "mr": "कारण / वर्णन",
+    "hi": "उद्देश्य / विवरण"
+  },
+  "REFERENCE / A/C MODE": {
+    "mr": "संदर्भ / पेमेंट पद्धत",
+    "hi": "संदर्भ / भुगतान तरीका"
+  },
+  "CATEGORY": {
+    "mr": "श्रेणी",
+    "hi": "श्रेणी"
+  },
+  "PROMISE DATE": {
+    "mr": "वचनाची तारीख",
+    "hi": "वादा की तारीख"
+  },
+  "Share transaction statement": {
+    "mr": "व्यवहार विवरण शेअर करा",
+    "hi": "लेन-देन विवरण साझा करें"
+  },
+  "Share balance reminder": {
+    "mr": "शिल्लक रकमेची आठवण शेअर करा",
+    "hi": "बकाया राशि का रिमाइंडर साझा करें"
+  },
+  "Share EMI table": {
+    "mr": "EMI तक्ता शेअर करा",
+    "hi": "EMI तालिका साझा करें"
+  },
+  "Share EMI reminder": {
+    "mr": "EMI आठवण शेअर करा",
+    "hi": "EMI रिमाइंडर साझा करें"
+  },
+  "Outstanding balance": {
+    "mr": "बाकी रक्कम",
+    "hi": "बकाया राशि"
+  },
+  "Payment reminder for": {
+    "mr": "या पेमेंटची आठवण",
+    "hi": "इस भुगतान के लिए रिमाइंडर"
+  },
+  "You will pay": {
+    "mr": "तुम्ही पैसे द्याल",
+    "hi": "आप भुगतान करेंगे"
+  },
+  "You will receive": {
+    "mr": "तुम्हाला पैसे मिळतील",
+    "hi": "आपको भुगतान मिलेगा"
+  },
+  "On or before": {
+    "mr": "या तारखेपर्यंत",
+    "hi": "इस तारीख तक"
+  },
+  "Due on": {
+    "mr": "देय तारीख",
+    "hi": "देय तिथि"
+  },
+  "Sent by": {
+    "mr": "पाठवणारे",
+    "hi": "भेजने वाले"
+  },
+  "Using": {
+    "mr": "वापरत आहे",
+    "hi": "उपयोग कर रहे हैं"
+  },
+  "Your Personal Finance App": {
+    "mr": "तुमचे वैयक्तिक आर्थिक ॲप",
+    "hi": "आपका व्यक्तिगत वित्त ऐप"
+  },
+  "Developed by - Bharat Rasve": {
+    "mr": "निर्मिती - Bharat Rasve",
+    "hi": "निर्माता - Bharat Rasve"
+  },
+  "Loan updated": {
+    "mr": "कर्ज अपडेट केले",
+    "hi": "लोन अपडेट हुआ"
+  },
+  "Loan deleted": {
+    "mr": "कर्ज हटवले",
+    "hi": "लोन हटाया गया"
+  },
+  "Data synced locally": {
+    "mr": "डेटा स्थानिकरीत्या सिंक झाला",
+    "hi": "डेटा स्थानीय रूप से सिंक हुआ"
+  },
+  "Couldn't load your data": {
+    "mr": "तुमचा डेटा लोड होऊ शकला नाही",
+    "hi": "आपका डेटा लोड नहीं हो सका"
+  },
+  "Retry": {
+    "mr": "पुन्हा प्रयत्न करा",
+    "hi": "पुनः प्रयास करें"
+  },
+  "Try Again": {
+    "mr": "पुन्हा प्रयत्न करा",
+    "hi": "फिर से प्रयास करें"
+  },
+  "All EMIs for this loan are cleared!": {
+    "mr": "या कर्जाचे सर्व EMI पूर्ण झाले!",
+    "hi": "इस लोन की सभी EMI पूरी हो गई हैं!"
+  },
+  "Reminder ready to share": {
+    "mr": "आठवण शेअर करण्यासाठी तयार आहे",
+    "hi": "रिमाइंडर साझा करने के लिए तैयार है"
+  },
+  "Reminder image saved; share it in WhatsApp": {
+    "mr": "आठवणीची प्रतिमा जतन झाली; WhatsApp वर शेअर करा",
+    "hi": "रिमाइंडर इमेज सेव हुई; WhatsApp पर साझा करें"
+  },
+  "Hello": {
+    "mr": "नमस्कार",
+    "hi": "नमस्ते"
+  },
+  "there": {
+    "mr": "",
+    "hi": ""
+  },
+  "Loan EMI": {
+    "mr": "कर्ज EMI",
+    "hi": "लोन EMI"
+  },
+  "Dear": {
+    "mr": "प्रिय",
+    "hi": "प्रिय"
+  },
+  "on or before": {
+    "mr": "या तारखेपर्यंत",
+    "hi": "इस तारीख तक"
+  },
+  "Budget Bharat Balance Reminder": {
+    "mr": "Budget Bharat शिल्लक रकमेची आठवण",
+    "hi": "Budget Bharat बकाया राशि रिमाइंडर"
+  },
+  "Budget Bharat Payment Reminder": {
+    "mr": "Budget Bharat पेमेंट आठवण",
+    "hi": "Budget Bharat भुगतान रिमाइंडर"
+  },
+  "your": {
+    "mr": "तुमचा",
+    "hi": "आपकी"
+  },
+  "EMI": {
+    "mr": "EMI",
+    "hi": "EMI"
+  },
+  "with amount": {
+    "mr": "रक्कम",
+    "hi": "राशि"
+  },
+  "is due on": {
+    "mr": "देय तारीख",
+    "hi": "की देय तिथि"
+  },
+  "Please pay": {
+    "mr": "कृपया पैसे भरा",
+    "hi": "कृपया भुगतान करें"
+  },
+  "I am reminding you to pay": {
+    "mr": "तुम्हाला पैसे भरण्याची आठवण करून देत आहे",
+    "hi": "आपको भुगतान की याद दिला रहा हूँ"
+  },
+  "Language applied": {
+    "mr": "लागू केलेली भाषा",
+    "hi": "लागू की गई भाषा"
+  }
+};
+const t = (key) => {
+  const language = getSelectedLanguage();
+  return language === 'en' ? key : ((UI_TRANSLATIONS[key] && UI_TRANSLATIONS[key][language]) || key);
 };
 
 const formatDisplayDate = (dStr) => {
@@ -336,11 +551,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 34px sans-serif';
-  ctx.fillText(`Hello ${personName || 'there'}!`, centerX, 100);
+  ctx.fillText(`${t('Hello')} ${personName || t('there')}!`, centerX, 100);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? 'Outstanding balance' : 'Payment reminder for', centerX, 145);
+  ctx.fillText(reminderType === 'ledger' ? t('Outstanding balance') : t('Payment reminder for'), centerX, 145);
 
   roundRect(205, 172, 490, 86, 22);
   ctx.fillStyle = '#F1EAF4';
@@ -351,11 +566,11 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '800 25px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? (balanceDirection === 'receivable' ? 'You will pay' : 'You will receive') : `Due on ${formatDisplayDate(dueDate)}`, centerX, 291);
+  ctx.fillText(reminderType === 'ledger' ? t(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive') : `${t('Due on')} ${formatDisplayDate(dueDate)}`, centerX, 291);
 
   ctx.fillStyle = '#625E70';
   ctx.font = '700 23px sans-serif';
-  ctx.fillText(reminderType === 'ledger' ? `On or before ${formatDisplayDate(dueDate)}` : `${loanName || 'Loan EMI'}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
+  ctx.fillText(reminderType === 'ledger' ? `${t('On or before')} ${formatDisplayDate(dueDate)}` : `${loanName || t('Loan EMI')}${emiNo ? `  •  EMI #${emiNo}` : ''}`, centerX, 329);
 
   // Footer is deliberately outside any background container.
   const footerTop = separatorY + 24;
@@ -373,7 +588,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.textAlign = 'left';
   ctx.fillStyle = '#8A8596';
   ctx.font = '800 16px sans-serif';
-  ctx.fillText('Sent by', 70, footerTop + 24);
+  ctx.fillText(t('Sent by'), 70, footerTop + 24);
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 22px sans-serif';
   ctx.fillText(admin?.name || 'BHARAT RASVE', 70, footerTop + 54);
@@ -385,7 +600,7 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
   ctx.textAlign = 'center';
   ctx.fillStyle = '#8A8596';
   ctx.font = '800 15px sans-serif';
-  ctx.fillText('Using', brandingCenterX, footerTop + 18);
+  ctx.fillText(t('Using'), brandingCenterX, footerTop + 18);
 
   const logoSrc = Array.isArray(APP_LOGO_COLORED) ? APP_LOGO_COLORED.join('') : APP_LOGO_COLORED;
   if (logoSrc) {
@@ -407,10 +622,10 @@ const createPaymentReminderImage = async ({ personName, amount, dueDate, loanNam
 
   ctx.fillStyle = '#1E104B';
   ctx.font = '900 17px sans-serif';
-  ctx.fillText('Your Personal Finance App', brandingCenterX, footerTop + 88);
+  ctx.fillText(t('Your Personal Finance App'), brandingCenterX, footerTop + 88);
   ctx.fillStyle = '#625E70';
   ctx.font = '700 15px sans-serif';
-  ctx.fillText('Developed by - Bharat Rasve', brandingCenterX, footerTop + 112);
+  ctx.fillText(t('Developed by - Bharat Rasve'), brandingCenterX, footerTop + 112);
 
   const blob = await new Promise((resolve, reject) => {
     canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Unable to create reminder image.')), 'image/jpeg', 0.92);
@@ -1444,7 +1659,7 @@ const SideMenu = () => {
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
             <div className="px-6 pb-3 mb-3 border-b border-[#E4E1EA]">
               <label htmlFor="budget-bharat-language" className="block text-[10px] font-bold text-[#8A8596] uppercase tracking-widest mb-2">
-                <i className="fa-solid fa-language mr-2 text-[#7B2B8C]"></i>Choose Language
+                <i className="fa-solid fa-language mr-2 text-[#7B2B8C]"></i>{t("Choose Language")}
               </label>
               <select
                 id="budget-bharat-language"
@@ -1456,8 +1671,9 @@ const SideMenu = () => {
                 <option value="mr">मराठी (Marathi)</option>
                 <option value="hi">हिन्दी (Hindi)</option>
               </select>
+              <p className="mt-2 text-[11px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite"><i className="fa-solid fa-circle-check mr-1"></i>{t('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</p>
             </div>
-            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">Record Setup</div>
+            <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{t("Record Setup")}</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
               <span><i className="fa-solid fa-users w-7 text-[#7B2B8C]"></i> Manage Persons ({persons.length})</span>
               <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
@@ -2280,7 +2496,7 @@ const PersonsView = ({ onSelectPerson }) => {
               <div className="flex flex-col justify-center text-left leading-tight">
                 <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
                 <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
                 <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
               </div>
 
@@ -2484,14 +2700,14 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
       return;
     }
     const balanceDirection = person.remaining > 0 ? 'receivable' : 'payable';
-    const actionWord = balanceDirection === 'receivable' ? 'you will pay' : 'you will receive';
-    const captionText = `Dear ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} on or before date ${targetDateStr}.`;
+    const actionWord = t(balanceDirection === 'receivable' ? 'You will pay' : 'You will receive').toLowerCase();
+    const captionText = `${t('Dear')} ${person.name}, ${actionWord} ${formatMoney(Math.abs(person.remaining))} ${t('on or before')} ${formatDisplayDate(targetDateStr)}.`;
     setIsSharingStatement(true);
     showFeedback('Generating balance reminder...');
     try {
       const file = await createPaymentReminderImage({ personName: person.name, amount: Math.abs(person.remaining), dueDate: targetDateStr, admin, reminderType: 'ledger', balanceDirection });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Budget Bharat Balance Reminder', text: captionText });
+        await navigator.share({ files: [file], title: t('Budget Bharat Balance Reminder'), text: captionText });
         showFeedback('Reminder ready to share');
       } else {
         const url = URL.createObjectURL(file);
@@ -2527,8 +2743,8 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowLedgerShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowLedgerShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
-            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">Share transaction statement</span></button>
-            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">Share balance reminder</span></button>
+            <button type="button" onClick={() => { setShowLedgerShareOptions(false); handleShareImage(); }} disabled={isSharingStatement} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share transaction statement")}</span></button>
+            <button type="button" onClick={handleShareLedgerReminder} disabled={isSharingStatement || !person.remaining} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share balance reminder")}</span></button>
           </div>
         </div>
       )}
@@ -2915,7 +3131,7 @@ const LedgerView = ({ person, onBack, onSelectPerson, allPersons, onSelectTransa
                   <div className="flex flex-col justify-center text-left leading-tight">
                     <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
                     <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
                     <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
                   </div>
 
@@ -3272,7 +3488,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
       showFeedback(borrower && borrower.phone ? 'Please check this person’s saved phone number (use a valid Indian mobile number).' : 'No phone number saved for this person. Add a phone number in Person Ledger first.');
       return;
     }
-    const textMsg = `Hello ${currentLoan.person}, your ${currentLoan.loanName} EMI #${nextPending.emiNo} with amount ${formatMoney(nextPending.emiAmount)} is due on ${nextPending.date} please pay.`;
+    const textMsg = `${t('Hello')} ${currentLoan.person}, ${t('your')} ${currentLoan.loanName} ${t('EMI')} #${nextPending.emiNo} ${t('with amount')} ${formatMoney(nextPending.emiAmount)} ${t('is due on')} ${formatDisplayDate(nextPending.date)}. ${t('Please pay')}.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -3285,7 +3501,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
     try {
       const file = await createPaymentReminderImage({ personName: currentLoan.person, amount: nextPending.emiAmount, dueDate: nextPending.date, loanName: currentLoan.loanName, emiNo: nextPending.emiNo, admin });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Budget Bharat Payment Reminder', text: textMsg });
+        await navigator.share({ files: [file], title: t('Budget Bharat Payment Reminder'), text: textMsg });
         showFeedback('Reminder ready to share');
       } else {
         const url = URL.createObjectURL(file); const link = document.createElement('a'); link.href = url; link.download = file.name;
@@ -3598,7 +3814,7 @@ const LoanManagerView = ({ onSelectPerson, initialPersonFilter = null, initialLo
               <div className="flex flex-col justify-center text-left leading-tight">
                 <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
                 <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
                 <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
               </div>
 
@@ -3774,8 +3990,8 @@ return (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEmiShareOptions(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-end mb-1"><button type="button" onClick={() => setShowEmiShareOptions(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-600" aria-label="Close">×</button></div>
-            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">Share EMI table</span></button>
-            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">Share EMI reminder</span></button>
+            <button type="button" onClick={() => { setShowEmiShareOptions(false); handleShareLoanSchedule(); }} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 mb-2 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#078A87]/10 text-[#078A87] flex items-center justify-center"><i className="fa-solid fa-file-lines"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share EMI table")}</span></button>
+            <button type="button" onClick={handleShareEmiReminder} disabled={isExportingSlip} className="w-full flex items-center gap-3 text-left p-3 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><span className="w-9 h-9 flex-none rounded-lg bg-[#7B2B8C]/10 text-[#7B2B8C] flex items-center justify-center"><i className="fa-solid fa-bell"></i></span><span className="font-bold text-sm text-[#1E104B]">{t("Share EMI reminder")}</span></button>
           </div>
         </div>
       )}
@@ -4501,7 +4717,7 @@ return (
                   <div className="flex flex-col justify-center text-left leading-tight">
                     <span className="text-[9px] font-black text-[#1E104B] uppercase tracking-wider mb-0.5">STATEMENT BY -</span>
                     <span className="font-extrabold text-[11px] text-[#1E104B]">Budget Bharat-Personal finance App</span>
-                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">Developed by - Bharat Rasve</span>
+                    <span className="text-[10px] font-medium text-[#625E70] mt-0.5">{t("Developed by - Bharat Rasve")}</span>
                     <span className="text-[10px] font-medium text-[#625E70]">Mo.No: 7218838122</span>
                   </div>
 
@@ -4831,7 +5047,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
             {(type === 'LENT' || type === 'BORROW') ? (
               <div className="col-span-7 space-y-1">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PROMISE DATE</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PROMISE DATE")}</label>
                 <AppDatePicker
                   value={promiseDate}
                   onChange={setPromiseDate}
@@ -4840,7 +5056,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
               </div>
             ) : (
               <div className="col-span-7 space-y-1">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">CATEGORY</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("CATEGORY")}</label>
                 <SearchableDropdown
                   value={category}
                   onChange={setCategory}
@@ -4853,7 +5069,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
 
           {(type === 'LENT' || type === 'BORROW') && (
             <div className="space-y-1">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PERSON NAME *</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PERSON NAME *")}</label>
               <SearchableDropdown
                 value={personName}
                 onChange={setPersonName}
@@ -4874,7 +5090,7 @@ const TransactionDetailModal = ({ tx, onClose }) => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">REFERENCE / A/C MODE</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("REFERENCE / A/C MODE")}</label>
             <input
               type="text"
               value={refAc}
@@ -5236,7 +5452,7 @@ const InputModal = ({ onClose }) => {
 
             {(type === 'LENT' || type === 'BORROW') ? (
               <div className="col-span-7 space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PROMISE DATE</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PROMISE DATE")}</label>
                 <AppDatePicker
                   value={promiseDate}
                   onChange={setPromiseDate}
@@ -5245,7 +5461,7 @@ const InputModal = ({ onClose }) => {
               </div>
             ) : (
               <div className="col-span-7 space-y-1.5">
-                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">CATEGORY</label>
+                <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("CATEGORY")}</label>
                 <div className="flex gap-1.5">
                   <SearchableDropdown
                     value={category}
@@ -5263,7 +5479,7 @@ const InputModal = ({ onClose }) => {
 
           {(type === 'LENT' || type === 'BORROW') && (
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PERSON NAME *</label>
+              <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PERSON NAME *")}</label>
               <div className={`flex gap-2 rounded-xl ${touched && !isPersonValid ? 'ring-2 ring-[#D6455D]' : ''}`}>
                 <SearchableDropdown
                   value={personName}
@@ -5279,7 +5495,7 @@ const InputModal = ({ onClose }) => {
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">PURPOSE / DESCRIPTION</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("PURPOSE / DESCRIPTION")}</label>
             <input
               type="text"
               value={note}
@@ -5290,7 +5506,7 @@ const InputModal = ({ onClose }) => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">REFERENCE / A/C MODE</label>
+            <label className="block text-[10px] font-extrabold text-theme-dark/60 uppercase tracking-wider">{t("REFERENCE / A/C MODE")}</label>
             <input
               type="text"
               value={refAc}
@@ -5374,9 +5590,9 @@ const MainApp = () => {
       <div className="app-shell">
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 p-6">
           <i className="fa-solid fa-triangle-exclamation text-3xl text-red-400"></i>
-          <p className="text-sm font-bold text-theme-dark">Couldn't load your data</p>
+          <p className="text-sm font-bold text-theme-dark">{t("Couldn't load your data")}</p>
           <p className="text-xs text-theme-dark/60">{loadError}</p>
-          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">Retry</button>
+          <button onClick={() => refresh(true, true)} className="px-4 py-2 bg-theme-dark text-white rounded-xl text-xs font-bold shadow-md">{t("Retry")}</button>
         </div>
       </div>
     );
@@ -5421,7 +5637,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('home'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'home' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Home"
+                title={t("Home")}
               >
                 <i className="fa-solid fa-house text-lg"></i>
                 {tab === 'home' && (
@@ -5434,7 +5650,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('people'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'people' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Directory"
+                title={t("Directory")}
               >
                 <i className="fa-solid fa-users text-lg"></i>
                 {tab === 'people' && (
@@ -5447,7 +5663,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('loans'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'loans' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Loans / EMIs"
+                title={t("Loans / EMIs")}
               >
                 <i className="fa-solid fa-hand-holding-dollar text-lg"></i>
                 {tab === 'loans' && (
@@ -5460,7 +5676,7 @@ const MainApp = () => {
               <button
                 onClick={() => { setSelectedPerson(null); setTab('records'); }}
                 className={`p-2 transition-all flex flex-col items-center active:scale-90 ${tab === 'records' ? 'text-[#07C0BE]' : 'text-white/50 hover:text-white'}`}
-                title="Records"
+                title={t("Records")}
               >
                 <i className="fa-solid fa-receipt text-lg"></i>
                 {tab === 'records' && (
@@ -5475,7 +5691,7 @@ const MainApp = () => {
 
           <button
             onClick={() => setShowInput(true)}
-            title="Add New Entry"
+            title={t("Add New Entry")}
             className="notched-fab"
           >
             <span className="relative w-8 h-8 flex items-center justify-center">
@@ -5664,5 +5880,3 @@ initDB().then(() => {
     </ErrorBoundary>
   );
 });
-
-// --- END OF src/main.jsx (PART 4) ---
