@@ -225,6 +225,10 @@ const UI_TRANSLATIONS = {
     "mr": "भाषा निवडा",
     "hi": "भाषा चुनें"
   },
+  "Languages": {
+    "mr": "भाषा",
+    "hi": "भाषाएँ"
+  },
   "Confirm": {
     "mr": "पुष्टी करा",
     "hi": "पुष्टि करें"
@@ -1995,24 +1999,13 @@ const SideMenu = () => {
         {menuView === 'menu' && (
           <div className="flex-1 overflow-y-auto py-4 hide-scrollbar">
             <div className="px-6 pb-2 mb-2 border-b border-[#E4E1EA]">
-              <button
-                type="button"
-                onClick={() => { setPendingLanguage(language); setMenuView('languageSettings'); }}
-                className="w-full text-left py-2.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between rounded-lg"
-                aria-label={translate("Choose Language")}
-              >
+              <button type="button" onClick={() => { setPendingLanguage(language); setMenuView('languageSettings'); }} className="w-full text-left py-3 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between rounded-lg" aria-label={translate("Languages")}>
                 <span className="flex items-center gap-3 min-w-0">
                   <i className="fa-solid fa-language w-7 text-[#7B2B8C]"></i>
-                  <span className="min-w-0">
-                    <span className="block">{translate("Choose Language")}</span>
-                    <span className="block mt-0.5 text-[11px] font-medium text-[#8A8596]">{LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</span>
-                  </span>
+                  <span className="truncate">{translate("Languages")}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</span>
                 </span>
                 <i className="fa-solid fa-chevron-right text-xs text-[#8A8596]"></i>
               </button>
-              <p className="px-10 mt-0.5 text-[10px] font-semibold text-[#7B2B8C]" role="status" aria-live="polite">
-                {languageUpdating ? <><i className="fa-solid fa-spinner animate-spin mr-1"></i>{language === 'mr' ? 'भाषा अपडेट करत आहोत. कृपया प्रतीक्षा करा.' : language === 'hi' ? 'भाषा अपडेट हो रही है। कृपया प्रतीक्षा करें।' : 'Updating language, please wait...'}</> : <><i className="fa-solid fa-circle-check mr-1"></i>{translate('Language applied')}: {LANGUAGE_NAMES[language] || LANGUAGE_NAMES.en}</>}
-              </p>
             </div>
             <div className="px-6 mb-2 text-[10px] font-bold text-[#8A8596] uppercase tracking-widest">{translate("Record Setup")}</div>
             <button onClick={() => openSubView('managePersons')} className="w-full text-left px-6 py-3.5 hover:bg-white transition-colors text-sm font-bold text-[#1E104B] flex items-center justify-between">
