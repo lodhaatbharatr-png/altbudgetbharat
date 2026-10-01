@@ -6,9 +6,11 @@ on:
       - main
       - fix/native-exports-backup-sync-ci
       - feature/search-contact-picker
+      - fix/android-launcher-splash-background
   pull_request:
     branches:
       - main
+      - feature/search-contact-picker
   workflow_dispatch:
     inputs:
       build_branch:
@@ -84,6 +86,22 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Prepare branded splash images for the web build
+        run: |
+          # The uploaded brand kit is the source of truth for launcher layers.
+          # Refresh the compatibility paths used by the existing build steps so
+          # the native splash and adaptive launcher always use the same artwork.
+          if [ -f brand-kit/source/ic_launcher_foreground_1024.png ] && [ -f brand-kit/source/ic_launcher_background_1024.png ]; then
+            cp brand-kit/source/ic_launcher_foreground_1024.png assets/ic_launcher_foreground.png
+            cp brand-kit/source/ic_launcher_background_1024.png assets/ic_launcher_background.png
+            echo "Using the canonical 1024px launcher layers from brand-kit/source."
+          else
+            echo "Brand-kit launcher layers not found; using the existing assets/ launcher layers."
+          fi
+          mkdir -p public/assets
+          cp assets/ic_launcher_foreground.png public/assets/ic_launcher_foreground.png
+          cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
+
       - name: Build Web Assets (Vite)
         run: npm run build
 
@@ -105,43 +123,18 @@ jobs:
       - name: Sync Capacitor Android project
         run: npx cap sync android
 
-      - name: Remove duplicate Capacitor launch splash
-        run: |
-          STYLE="android/app/src/main/res/values/styles.xml"
-          if [ ! -f "$STYLE" ]; then
-            echo "Generated Android styles.xml not found at $STYLE"
-            exit 1
-          fi
-          python3 - "$STYLE" <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          p = Path(sys.argv[1])
-          s = p.read_text(encoding='utf-8')
-          old = s
-          s = re.sub(
-              r'(<style\s+name="AppTheme\.NoActionBarLaunch"\s+)parent="Theme\.SplashScreen"',
-              r'\1parent="AppTheme.NoActionBar"',
-              s,
-              count=1,
-          )
-          s = re.sub(
-              r'\n\s*<item\s+name="android:background">@drawable/splash</item>',
-              '',
-              s,
-              count=1,
-          )
-          if s == old:
-              print('Launch splash theme already normalized or not present.')
-          else:
-              p.write_text(s, encoding='utf-8')
-              print('Removed Capacitor launch splash overlay; Android OS splash may still briefly appear on Android 12+.')
-          PY
-
       - name: Generate Android launcher icon
         run: |
-          if [ -f assets/icon.png ]; then
+          if [ -f assets/ic_launcher_foreground.png ] && [ -f assets/ic_launcher_background.png ]; then
+            echo "Preparing Claude's foreground/background assets for Capacitor Assets."
+            cp assets/ic_launcher_foreground.png assets/icon-foreground.png
+            cp assets/ic_launcher_background.png assets/icon-background.png
+            npx @capacitor/assets generate --android
+          elif [ -f assets/icon-foreground.png ] && [ -f assets/icon-background.png ]; then
+            echo "Generating adaptive launcher icon from separate foreground/background assets."
+            npx @capacitor/assets generate --android
+          elif [ -f assets/icon.png ]; then
+            echo "Separate adaptive icon layers are not present yet; using the existing combined icon."
             npx @capacitor/assets generate --android
           elif [ -f assets/icon.PNG ]; then
             cp assets/icon.PNG assets/icon.png
@@ -152,6 +145,130 @@ jobs:
 
       - name: Sync generated Android assets
         run: npx cap sync android
+
+      - name: Configure branded native Android splash and window background
+        run: |
+          python3 -m venv /tmp/budget-bharat-image-tools
+          /tmp/budget-bharat-image-tools/bin/pip install --quiet Pillow
+          /tmp/budget-bharat-image-tools/bin/python <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import re
+          import shutil
+
+          root = Path("android/app/src/main/res")
+          color_name = "budget_bharat_window_background"
+          # Android's system splash background is a solid color; use the existing
+          # Budget Bharat Velvet Orchid brand color, then transition to the full gradient HTML splash.
+          color_xml = f'<color name="{color_name}">#7B2B8C</color>'
+
+          values = root / "values"
+          values.mkdir(parents=True, exist_ok=True)
+          colors = values / "colors.xml"
+          if colors.exists():
+              content = colors.read_text(encoding="utf-8")
+              pattern = rf'<color\s+name="{color_name}">.*?</color>'
+              if re.search(pattern, content):
+                  content = re.sub(pattern, color_xml, content, count=1)
+              else:
+                  content = content.replace("</resources>", f"    {color_xml}\n</resources>")
+          else:
+              content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    ' + color_xml + '\n</resources>\n'
+          colors.write_text(content, encoding="utf-8")
+
+          # Keep the Android 12 system splash visually quiet: the HTML splash is
+          # the only branded logo screen. Android requires a system splash on
+          # modern Android, so use a fully transparent icon and a matching brand
+          # background rather than showing a cropped/duplicated monogram.
+          splash_drawable_dir = root / "drawable-nodpi"
+          splash_drawable_dir.mkdir(parents=True, exist_ok=True)
+          transparent_icon = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+          transparent_icon.save(splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png")
+
+          # Reference the PNG drawable directly. This is the most compatible
+          # resource form for Android 12's windowSplashScreenAnimatedIcon.
+
+          def set_item(body, name, value):
+              pattern = rf'<item\s+name="{re.escape(name)}">.*?</item>'
+              replacement = f'<item name="{name}">{value}</item>'
+              if re.search(pattern, body, flags=re.S):
+                  return re.sub(pattern, replacement, body, count=1, flags=re.S)
+              return body.rstrip() + f'\n        {replacement}\n      '
+
+          launch_style_found = False
+          for style_file in root.glob("values*/styles.xml"):
+              content = style_file.read_text(encoding="utf-8")
+              for style_name in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
+                  match = re.search(
+                      rf'(<style\s+name="{re.escape(style_name)}"[^>]*>)(.*?)(</style>)',
+                      content,
+                      flags=re.S,
+                  )
+                  if not match:
+                      continue
+                  opening, body, closing = match.groups()
+
+                  if style_name == "AppTheme.NoActionBarLaunch":
+                      launch_style_found = True
+                      # Keep Android's required system splash, but remove the old
+                      # Capacitor splash drawable and specify the transparent glyph.
+                      opening = re.sub(r'\s+parent="[^"]+"', ' parent="Theme.SplashScreen"', opening, count=1)
+                      body = re.sub(r'<item\s+name="android:background">.*?</item>', '', body, count=1, flags=re.S)
+                      body = set_item(body, "windowSplashScreenBackground", f"@color/{color_name}")
+                      body = set_item(body, "windowSplashScreenAnimatedIcon", "@drawable/budget_bharat_splash_icon_bitmap")
+                      body = set_item(body, "postSplashScreenTheme", "@style/AppTheme.NoActionBar")
+                  else:
+                      body = set_item(body, "android:windowBackground", f"@color/{color_name}")
+                      body = set_item(body, "android:colorBackground", f"@color/{color_name}")
+
+                  content = content[:match.start()] + opening + body + closing + content[match.end():]
+              style_file.write_text(content, encoding="utf-8")
+
+          if not launch_style_found:
+              raise SystemExit(
+                  "Could not find AppTheme.NoActionBarLaunch in generated Android styles; "
+                  "refusing to build an APK with a background-only native splash."
+              )
+
+          configured_styles = [
+              p.read_text(encoding="utf-8")
+              for p in root.glob("values*/styles.xml")
+          ]
+          if not any(
+              'name="windowSplashScreenAnimatedIcon"' in styles
+              and "@drawable/budget_bharat_splash_icon_bitmap" in styles
+              for styles in configured_styles
+          ):
+              raise SystemExit(
+                  "Native splash icon reference was not written to Android styles; "
+                  "refusing to build a background-only splash."
+              )
+
+          splash_bitmap = splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png"
+          if not splash_bitmap.is_file():
+              raise SystemExit("Native splash PNG drawable was not generated.")
+
+          # Capacitor's generated MainActivity must install AndroidX SplashScreen
+          # before super.onCreate so postSplashScreenTheme is applied correctly.
+          main_activity = Path("android/app/src/main/java/com/bharatrasve/budgetbharat/MainActivity.java")
+          main_activity.parent.mkdir(parents=True, exist_ok=True)
+          main_activity.write_text(
+              "package com.bharatrasve.budgetbharat;\n\n"
+              "import android.os.Bundle;\n"
+              "import androidx.core.splashscreen.SplashScreen;\n"
+              "import com.getcapacitor.BridgeActivity;\n\n"
+              "public class MainActivity extends BridgeActivity {\n"
+              "    @Override\n"
+              "    public void onCreate(Bundle savedInstanceState) {\n"
+              "        SplashScreen.installSplashScreen(this);\n"
+              "        super.onCreate(savedInstanceState);\n"
+              "    }\n"
+              "}\n",
+              encoding="utf-8",
+          )
+
+          print("Verified transparent native splash icon, matching #7B2B8C native/window background, AndroidX splash installation, and the full-gradient HTML splash.")
+          PY
 
       - name: Build Android Debug APK
         run: |
