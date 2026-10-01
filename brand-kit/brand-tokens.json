@@ -1,0 +1,27 @@
+{
+  "colors": {
+    "logo-plum": "#7A1179",
+    "logo-coral": "#EE4568",
+    "ultraviolet": "#5B18FE",
+    "velvet-orchid": "#7B2B8C",
+    "bubblegum-pink": "#F45777",
+    "coral-rose": "#F43F5E",
+    "midnight-violet": "#1E104B",
+    "ink": "#170B26",
+    "stone": "#6B6478",
+    "mist": "#F6F3FA",
+    "white": "#FFFFFF"
+  },
+  "gradients": {
+    "brand": "linear-gradient(45deg,#5B18FE 0%,#7B2B8C 50%,#F45777 100%)",
+    "logo": "linear-gradient(90deg,#7A1179,#EE4568)"
+  },
+  "font": {
+    "family": "Poppins",
+    "weights": [
+      400,
+      500,
+      700
+    ]
+  }
+}
