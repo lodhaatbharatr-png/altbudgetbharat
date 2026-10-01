@@ -176,40 +176,14 @@ jobs:
               content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    ' + color_xml + '\n</resources>\n'
           colors.write_text(content, encoding="utf-8")
 
-          # Use the transparent white monogram for the native splash instead of
-          # the adaptive launcher icon (which includes its gradient background).
-          foreground = Path("assets/ic_launcher_foreground.png")
-          if not foreground.exists():
-              raise SystemExit(f"Missing required foreground icon: {foreground}")
+          # Keep the Android 12 system splash visually quiet: the HTML splash is
+          # the only branded logo screen. Android requires a system splash on
+          # modern Android, so use a fully transparent icon and a matching brand
+          # background rather than showing a cropped/duplicated monogram.
           splash_drawable_dir = root / "drawable-nodpi"
           splash_drawable_dir.mkdir(parents=True, exist_ok=True)
-
-          # Android's system splash can crop artwork that fills too much of its
-          # icon viewport. Normalize the visible (non-transparent) monogram into
-          # a centered 60% canvas safe area, preserving aspect ratio and alpha.
-          # This is splash-only; the adaptive launcher foreground remains unchanged.
-          with Image.open(foreground) as source_image:
-              source_image = source_image.convert("RGBA")
-              alpha = source_image.getchannel("A")
-              bounds = alpha.getbbox()
-              if bounds is None:
-                  raise SystemExit("Foreground splash icon contains no visible pixels.")
-              symbol = source_image.crop(bounds)
-              canvas_size = 1024
-              target_size = round(canvas_size * 0.60)
-              scale = min(target_size / symbol.width, target_size / symbol.height)
-              resized_size = (
-                  max(1, round(symbol.width * scale)),
-                  max(1, round(symbol.height * scale)),
-              )
-              symbol = symbol.resize(resized_size, Image.Resampling.LANCZOS)
-              padded = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
-              position = (
-                  (canvas_size - symbol.width) // 2,
-                  (canvas_size - symbol.height) // 2,
-              )
-              padded.alpha_composite(symbol, dest=position)
-              padded.save(splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png")
+          transparent_icon = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+          transparent_icon.save(splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png")
 
           # Reference the PNG drawable directly. This is the most compatible
           # resource form for Android 12's windowSplashScreenAnimatedIcon.
@@ -293,7 +267,7 @@ jobs:
               encoding="utf-8",
           )
 
-          print("Verified native splash PNG drawable, AndroidX splash installation, and #7B2B8C background; the HTML splash uses the full brand gradient.")
+          print("Verified transparent native splash icon, matching #7B2B8C native/window background, AndroidX splash installation, and the full-gradient HTML splash.")
           PY
 
       - name: Build Android Debug APK
