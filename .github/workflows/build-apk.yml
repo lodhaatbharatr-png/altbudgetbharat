@@ -6,6 +6,7 @@ on:
       - main
       - fix/native-exports-backup-sync-ci
       - feature/search-contact-picker
+      - fix/android-launcher-splash-background
   pull_request:
     branches:
       - main
@@ -141,7 +142,11 @@ jobs:
 
       - name: Generate Android launcher icon
         run: |
-          if [ -f assets/icon.png ]; then
+          if [ -f assets/icon-foreground.png ] && [ -f assets/icon-background.png ]; then
+            echo "Generating adaptive launcher icon from separate foreground/background assets."
+            npx @capacitor/assets generate --android
+          elif [ -f assets/icon.png ]; then
+            echo "Separate adaptive icon layers are not present yet; using the existing combined icon."
             npx @capacitor/assets generate --android
           elif [ -f assets/icon.PNG ]; then
             cp assets/icon.PNG assets/icon.png
@@ -152,6 +157,64 @@ jobs:
 
       - name: Sync generated Android assets
         run: npx cap sync android
+
+      - name: Set native Android startup/window background
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("android/app/src/main/res")
+          values = root / "values"
+          values.mkdir(parents=True, exist_ok=True)
+          colors = values / "colors.xml"
+          color_name = "budget_bharat_window_background"
+          color_xml = '<color name="budget_bharat_window_background">#1E104B</color>'
+
+          if colors.exists():
+              content = colors.read_text(encoding="utf-8")
+              pattern = rf'<color\\s+name="{color_name}">.*?</color>'
+              if re.search(pattern, content):
+                  content = re.sub(pattern, color_xml, content, count=1)
+              else:
+                  content = content.replace("</resources>", f"    {color_xml}\\n</resources>")
+          else:
+              content = '<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n    ' + color_xml + '\\n</resources>\\n'
+          colors.write_text(content, encoding="utf-8")
+
+          # Keep the native window dark while Android is starting or the WebView
+          # is being recreated. The app's actual React root remains light.
+          for style_file in root.glob("values*/styles.xml"):
+              content = style_file.read_text(encoding="utf-8")
+              for style_name in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
+                  match = re.search(
+                      rf'(<style\\s+name="{re.escape(style_name)}"[^>]*>)(.*?)(</style>)',
+                      content,
+                      flags=re.S,
+                  )
+                  if not match:
+                      continue
+                  opening, body, closing = match.groups()
+                  for item_name in ("android:windowBackground", "android:colorBackground"):
+                      item = rf'<item\\s+name="{item_name}">.*?</item>'
+                      body = re.sub(item, "", body, count=1)
+                  body = body.rstrip() + (
+                      '\\n        <item name="android:windowBackground">@color/budget_bharat_window_background</item>'
+                      '\\n        <item name="android:colorBackground">@color/budget_bharat_window_background</item>\\n      '
+                  )
+                  content = content[:match.start()] + opening + body + closing + content[match.end():]
+
+              # Android 12+ uses this attribute when a SplashScreen theme is present.
+              if "values-v31" in str(style_file.parent) and "windowSplashScreenBackground" in content:
+                  content = re.sub(
+                      r'<item\\s+name="windowSplashScreenBackground">.*?</item>',
+                      '<item name="windowSplashScreenBackground">@color/budget_bharat_window_background</item>',
+                      content,
+                      count=1,
+                  )
+              style_file.write_text(content, encoding="utf-8")
+          print("Configured #1E104B as the native Android window/startup background.")
+          PY
 
       - name: Build Android Debug APK
         run: |
