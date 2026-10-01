@@ -88,6 +88,16 @@ jobs:
 
       - name: Prepare branded splash images for the web build
         run: |
+          # The uploaded brand kit is the source of truth for launcher layers.
+          # Refresh the compatibility paths used by the existing build steps so
+          # the native splash and adaptive launcher always use the same artwork.
+          if [ -f brand-kit/source/ic_launcher_foreground_1024.png ] && [ -f brand-kit/source/ic_launcher_background_1024.png ]; then
+            cp brand-kit/source/ic_launcher_foreground_1024.png assets/ic_launcher_foreground.png
+            cp brand-kit/source/ic_launcher_background_1024.png assets/ic_launcher_background.png
+            echo "Using the canonical 1024px launcher layers from brand-kit/source."
+          else
+            echo "Brand-kit launcher layers not found; using the existing assets/ launcher layers."
+          fi
           mkdir -p public/assets
           cp assets/ic_launcher_foreground.png public/assets/ic_launcher_foreground.png
           cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
