@@ -173,13 +173,13 @@ jobs:
 
           if colors.exists():
               content = colors.read_text(encoding="utf-8")
-              pattern = rf'<color\\s+name="{color_name}">.*?</color>'
+              pattern = rf'<color\s+name="{color_name}">.*?</color>'
               if re.search(pattern, content):
                   content = re.sub(pattern, color_xml, content, count=1)
               else:
-                  content = content.replace("</resources>", f"    {color_xml}\\n</resources>")
+                  content = content.replace("</resources>", f"    {color_xml}\n</resources>")
           else:
-              content = '<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n    ' + color_xml + '\\n</resources>\\n'
+              content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    ' + color_xml + '\n</resources>\n'
           colors.write_text(content, encoding="utf-8")
 
           # Keep the native window dark while Android is starting or the WebView
@@ -188,7 +188,7 @@ jobs:
               content = style_file.read_text(encoding="utf-8")
               for style_name in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
                   match = re.search(
-                      rf'(<style\\s+name="{re.escape(style_name)}"[^>]*>)(.*?)(</style>)',
+                      rf'(<style\s+name="{re.escape(style_name)}"[^>]*>)(.*?)(</style>)',
                       content,
                       flags=re.S,
                   )
@@ -196,18 +196,18 @@ jobs:
                       continue
                   opening, body, closing = match.groups()
                   for item_name in ("android:windowBackground", "android:colorBackground"):
-                      item = rf'<item\\s+name="{item_name}">.*?</item>'
+                      item = rf'<item\s+name="{item_name}">.*?</item>'
                       body = re.sub(item, "", body, count=1)
                   body = body.rstrip() + (
-                      '\\n        <item name="android:windowBackground">@color/budget_bharat_window_background</item>'
-                      '\\n        <item name="android:colorBackground">@color/budget_bharat_window_background</item>\\n      '
+                      '\n        <item name="android:windowBackground">@color/budget_bharat_window_background</item>'
+                      '\n        <item name="android:colorBackground">@color/budget_bharat_window_background</item>\n      '
                   )
                   content = content[:match.start()] + opening + body + closing + content[match.end():]
 
               # Android 12+ uses this attribute when a SplashScreen theme is present.
               if "values-v31" in str(style_file.parent) and "windowSplashScreenBackground" in content:
                   content = re.sub(
-                      r'<item\\s+name="windowSplashScreenBackground">.*?</item>',
+                      r'<item\s+name="windowSplashScreenBackground">.*?</item>',
                       '<item name="windowSplashScreenBackground">@color/budget_bharat_window_background</item>',
                       content,
                       count=1,
