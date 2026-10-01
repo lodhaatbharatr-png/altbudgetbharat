@@ -211,17 +211,8 @@ jobs:
               padded.alpha_composite(symbol, dest=position)
               padded.save(splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png")
 
-          # Use an XML bitmap wrapper for the SplashScreen API. The padded PNG
-          # keeps the full monogram inside Android's splash icon viewport.
-          splash_drawable_xml_dir = root / "drawable"
-          splash_drawable_xml_dir.mkdir(parents=True, exist_ok=True)
-          (splash_drawable_xml_dir / "budget_bharat_splash_icon.xml").write_text(
-              '<?xml version="1.0" encoding="utf-8"?>\n'
-              '<bitmap xmlns:android="http://schemas.android.com/apk/res/android"\n'
-              '    android:src="@drawable/budget_bharat_splash_icon_bitmap"\n'
-              '    android:gravity="center" />\n',
-              encoding="utf-8",
-          )
+          # Reference the PNG drawable directly. This is the most compatible
+          # resource form for Android 12's windowSplashScreenAnimatedIcon.
 
           def set_item(body, name, value):
               pattern = rf'<item\s+name="{re.escape(name)}">.*?</item>'
@@ -250,7 +241,7 @@ jobs:
                       opening = re.sub(r'\s+parent="[^"]+"', ' parent="Theme.SplashScreen"', opening, count=1)
                       body = re.sub(r'<item\s+name="android:background">.*?</item>', '', body, count=1, flags=re.S)
                       body = set_item(body, "windowSplashScreenBackground", f"@color/{color_name}")
-                      body = set_item(body, "windowSplashScreenAnimatedIcon", "@drawable/budget_bharat_splash_icon")
+                      body = set_item(body, "windowSplashScreenAnimatedIcon", "@drawable/budget_bharat_splash_icon_bitmap")
                       body = set_item(body, "postSplashScreenTheme", "@style/AppTheme.NoActionBar")
                   else:
                       body = set_item(body, "android:windowBackground", f"@color/{color_name}")
@@ -271,7 +262,7 @@ jobs:
           ]
           if not any(
               'name="windowSplashScreenAnimatedIcon"' in styles
-              and "@drawable/budget_bharat_splash_icon" in styles
+              and "@drawable/budget_bharat_splash_icon_bitmap" in styles
               for styles in configured_styles
           ):
               raise SystemExit(
@@ -279,10 +270,30 @@ jobs:
                   "refusing to build a background-only splash."
               )
 
-          if not (splash_drawable_xml_dir / "budget_bharat_splash_icon.xml").is_file():
-              raise SystemExit("Native splash bitmap wrapper was not generated.")
+          splash_bitmap = splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png"
+          if not splash_bitmap.is_file():
+              raise SystemExit("Native splash PNG drawable was not generated.")
 
-          print("Verified native splash icon drawable and #7B2B8C background; the HTML splash uses the full brand gradient.")
+          # Capacitor's generated MainActivity must install AndroidX SplashScreen
+          # before super.onCreate so postSplashScreenTheme is applied correctly.
+          main_activity = Path("android/app/src/main/java/com/bharatrasve/budgetbharat/MainActivity.java")
+          main_activity.parent.mkdir(parents=True, exist_ok=True)
+          main_activity.write_text(
+              "package com.bharatrasve.budgetbharat;\n\n"
+              "import android.os.Bundle;\n"
+              "import androidx.core.splashscreen.SplashScreen;\n"
+              "import com.getcapacitor.BridgeActivity;\n\n"
+              "public class MainActivity extends BridgeActivity {\n"
+              "    @Override\n"
+              "    public void onCreate(Bundle savedInstanceState) {\n"
+              "        SplashScreen.installSplashScreen(this);\n"
+              "        super.onCreate(savedInstanceState);\n"
+              "    }\n"
+              "}\n",
+              encoding="utf-8",
+          )
+
+          print("Verified native splash PNG drawable, AndroidX splash installation, and #7B2B8C background; the HTML splash uses the full brand gradient.")
           PY
 
       - name: Build Android Debug APK
