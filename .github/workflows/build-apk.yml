@@ -176,10 +176,10 @@ jobs:
           splash_drawable_xml_dir = root / "drawable"
           splash_drawable_xml_dir.mkdir(parents=True, exist_ok=True)
           (splash_drawable_xml_dir / "budget_bharat_splash_icon.xml").write_text(
-              '<?xml version="1.0" encoding="utf-8"?>\\n'
-              '<bitmap xmlns:android="http://schemas.android.com/apk/res/android"\\n'
-              '    android:src="@drawable/budget_bharat_splash_icon_bitmap"\\n'
-              '    android:gravity="center" />\\n',
+              '<?xml version="1.0" encoding="utf-8"?>\n'
+              '<bitmap xmlns:android="http://schemas.android.com/apk/res/android"\n'
+              '    android:src="@drawable/budget_bharat_splash_icon_bitmap"\n'
+              '    android:gravity="center" />\n',
               encoding="utf-8",
           )
 
