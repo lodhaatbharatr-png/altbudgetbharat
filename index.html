@@ -53,7 +53,7 @@
   </style>
 </head>
 <body>
-  <div id="root" style="min-height:100vh;background:#F4F3F8;"></div>
+  <div id="root" style="min-height:100vh;background:#7B2B8C;"></div>
 
   <div id="bb-startup-splash-final" aria-label="Budget Bharat loading">
     <img
@@ -67,8 +67,13 @@
     (function () {
       var splash = document.getElementById('bb-startup-splash-final');
       var root = document.getElementById('root');
+      var logo = splash ? splash.querySelector('img') : null;
       var remove = function () {
         if (!splash || !root || !root.firstElementChild) return;
+        // Keep the branded overlay until its local logo has loaded, and keep
+        // the WebView's initial blank frame on the same color as native splash.
+        if (logo && !logo.complete) return;
+        root.style.background = '#F4F3F8';
         splash.style.opacity = '0';
         setTimeout(function () {
           if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
