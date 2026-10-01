@@ -86,6 +86,12 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Prepare branded splash images for the web build
+        run: |
+          mkdir -p public/assets
+          cp assets/ic_launcher_foreground.png public/assets/ic_launcher_foreground.png
+          cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
+
       - name: Build Web Assets (Vite)
         run: npm run build
 
@@ -106,40 +112,6 @@ jobs:
 
       - name: Sync Capacitor Android project
         run: npx cap sync android
-
-      - name: Remove duplicate Capacitor launch splash
-        run: |
-          STYLE="android/app/src/main/res/values/styles.xml"
-          if [ ! -f "$STYLE" ]; then
-            echo "Generated Android styles.xml not found at $STYLE"
-            exit 1
-          fi
-          python3 - "$STYLE" <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          p = Path(sys.argv[1])
-          s = p.read_text(encoding='utf-8')
-          old = s
-          s = re.sub(
-              r'(<style\s+name="AppTheme\.NoActionBarLaunch"\s+)parent="Theme\.SplashScreen"',
-              r'\1parent="AppTheme.NoActionBar"',
-              s,
-              count=1,
-          )
-          s = re.sub(
-              r'\n\s*<item\s+name="android:background">@drawable/splash</item>',
-              '',
-              s,
-              count=1,
-          )
-          if s == old:
-              print('Launch splash theme already normalized or not present.')
-          else:
-              p.write_text(s, encoding='utf-8')
-              print('Removed Capacitor launch splash overlay; Android OS splash may still briefly appear on Android 12+.')
-          PY
 
       - name: Generate Android launcher icon
         run: |
@@ -164,19 +136,22 @@ jobs:
       - name: Sync generated Android assets
         run: npx cap sync android
 
-      - name: Set native Android startup/window background
+      - name: Configure branded native Android splash and window background
         run: |
           python3 <<'PY'
           from pathlib import Path
           import re
+          import shutil
 
           root = Path("android/app/src/main/res")
+          color_name = "budget_bharat_window_background"
+          # Android's system splash background is a solid color; use the existing
+          # Budget Bharat Velvet Orchid brand color, then transition to the full gradient HTML splash.
+          color_xml = f'<color name="{color_name}">#7B2B8C</color>'
+
           values = root / "values"
           values.mkdir(parents=True, exist_ok=True)
           colors = values / "colors.xml"
-          color_name = "budget_bharat_window_background"
-          color_xml = '<color name="budget_bharat_window_background">#1E104B</color>'
-
           if colors.exists():
               content = colors.read_text(encoding="utf-8")
               pattern = rf'<color\s+name="{color_name}">.*?</color>'
@@ -188,8 +163,22 @@ jobs:
               content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    ' + color_xml + '\n</resources>\n'
           colors.write_text(content, encoding="utf-8")
 
-          # Keep the native window dark while Android is starting or the WebView
-          # is being recreated. The app's actual React root remains light.
+          # Use the transparent white monogram for the native splash instead of
+          # the adaptive launcher icon (which includes its gradient background).
+          foreground = Path("assets/ic_launcher_foreground.png")
+          if not foreground.exists():
+              raise SystemExit(f"Missing required foreground icon: {foreground}")
+          splash_drawable_dir = root / "drawable-nodpi"
+          splash_drawable_dir.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile(foreground, splash_drawable_dir / "budget_bharat_splash_icon.png")
+
+          def set_item(body, name, value):
+              pattern = rf'<item\s+name="{re.escape(name)}">.*?</item>'
+              replacement = f'<item name="{name}">{value}</item>'
+              if re.search(pattern, body, flags=re.S):
+                  return re.sub(pattern, replacement, body, count=1, flags=re.S)
+              return body.rstrip() + f'\n        {replacement}\n      '
+
           for style_file in root.glob("values*/styles.xml"):
               content = style_file.read_text(encoding="utf-8")
               for style_name in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
@@ -201,25 +190,23 @@ jobs:
                   if not match:
                       continue
                   opening, body, closing = match.groups()
-                  for item_name in ("android:windowBackground", "android:colorBackground"):
-                      item = rf'<item\s+name="{item_name}">.*?</item>'
-                      body = re.sub(item, "", body, count=1)
-                  body = body.rstrip() + (
-                      '\n        <item name="android:windowBackground">@color/budget_bharat_window_background</item>'
-                      '\n        <item name="android:colorBackground">@color/budget_bharat_window_background</item>\n      '
-                  )
-                  content = content[:match.start()] + opening + body + closing + content[match.end():]
 
-              # Android 12+ uses this attribute when a SplashScreen theme is present.
-              if "values-v31" in str(style_file.parent) and "windowSplashScreenBackground" in content:
-                  content = re.sub(
-                      r'<item\s+name="windowSplashScreenBackground">.*?</item>',
-                      '<item name="windowSplashScreenBackground">@color/budget_bharat_window_background</item>',
-                      content,
-                      count=1,
-                  )
+                  if style_name == "AppTheme.NoActionBarLaunch":
+                      # Keep Android's required system splash, but remove the old
+                      # Capacitor splash drawable and specify the transparent glyph.
+                      opening = re.sub(r'\s+parent="[^"]+"', ' parent="Theme.SplashScreen"', opening, count=1)
+                      body = re.sub(r'<item\s+name="android:background">.*?</item>', '', body, count=1, flags=re.S)
+                      body = set_item(body, "windowSplashScreenBackground", f"@color/{color_name}")
+                      body = set_item(body, "windowSplashScreenAnimatedIcon", "@drawable/budget_bharat_splash_icon")
+                      body = set_item(body, "postSplashScreenTheme", "@style/AppTheme.NoActionBar")
+                  else:
+                      body = set_item(body, "android:windowBackground", f"@color/{color_name}")
+                      body = set_item(body, "android:colorBackground", f"@color/{color_name}")
+
+                  content = content[:match.start()] + opening + body + closing + content[match.end():]
               style_file.write_text(content, encoding="utf-8")
-          print("Configured #1E104B as the native Android window/startup background.")
+
+          print("Configured a white monogram on #7B2B8C for native startup; the HTML splash uses the full brand gradient.")
           PY
 
       - name: Build Android Debug APK
