@@ -10,6 +10,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/search-contact-picker
   workflow_dispatch:
     inputs:
       build_branch:
