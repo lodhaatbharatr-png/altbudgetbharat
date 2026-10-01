@@ -138,8 +138,10 @@ jobs:
 
       - name: Configure branded native Android splash and window background
         run: |
+          python3 -m pip install --quiet Pillow
           python3 <<'PY'
           from pathlib import Path
+          from PIL import Image
           import re
           import shutil
 
@@ -170,9 +172,36 @@ jobs:
               raise SystemExit(f"Missing required foreground icon: {foreground}")
           splash_drawable_dir = root / "drawable-nodpi"
           splash_drawable_dir.mkdir(parents=True, exist_ok=True)
-          # Use an XML bitmap wrapper for the SplashScreen API. This makes the
-          # intended drawable resource explicit instead of relying on PNG lookup.
-          shutil.copyfile(foreground, splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png")
+
+          # Android's system splash can crop artwork that fills too much of its
+          # icon viewport. Normalize the visible (non-transparent) monogram into
+          # a centered 60% canvas safe area, preserving aspect ratio and alpha.
+          # This is splash-only; the adaptive launcher foreground remains unchanged.
+          with Image.open(foreground) as source_image:
+              source_image = source_image.convert("RGBA")
+              alpha = source_image.getchannel("A")
+              bounds = alpha.getbbox()
+              if bounds is None:
+                  raise SystemExit("Foreground splash icon contains no visible pixels.")
+              symbol = source_image.crop(bounds)
+              canvas_size = 1024
+              target_size = round(canvas_size * 0.60)
+              scale = min(target_size / symbol.width, target_size / symbol.height)
+              resized_size = (
+                  max(1, round(symbol.width * scale)),
+                  max(1, round(symbol.height * scale)),
+              )
+              symbol = symbol.resize(resized_size, Image.Resampling.LANCZOS)
+              padded = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+              position = (
+                  (canvas_size - symbol.width) // 2,
+                  (canvas_size - symbol.height) // 2,
+              )
+              padded.alpha_composite(symbol, dest=position)
+              padded.save(splash_drawable_dir / "budget_bharat_splash_icon_bitmap.png")
+
+          # Use an XML bitmap wrapper for the SplashScreen API. The padded PNG
+          # keeps the full monogram inside Android's splash icon viewport.
           splash_drawable_xml_dir = root / "drawable"
           splash_drawable_xml_dir.mkdir(parents=True, exist_ok=True)
           (splash_drawable_xml_dir / "budget_bharat_splash_icon.xml").write_text(
