@@ -143,7 +143,12 @@ jobs:
 
       - name: Generate Android launcher icon
         run: |
-          if [ -f assets/icon-foreground.png ] && [ -f assets/icon-background.png ]; then
+          if [ -f assets/ic_launcher_foreground.png ] && [ -f assets/ic_launcher_background.png ]; then
+            echo "Preparing Claude's foreground/background assets for Capacitor Assets."
+            cp assets/ic_launcher_foreground.png assets/icon-foreground.png
+            cp assets/ic_launcher_background.png assets/icon-background.png
+            npx @capacitor/assets generate --android
+          elif [ -f assets/icon-foreground.png ] && [ -f assets/icon-background.png ]; then
             echo "Generating adaptive launcher icon from separate foreground/background assets."
             npx @capacitor/assets generate --android
           elif [ -f assets/icon.png ]; then
