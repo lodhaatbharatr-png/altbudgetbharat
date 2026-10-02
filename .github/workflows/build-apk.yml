@@ -7,6 +7,7 @@ on:
       - fix/native-exports-backup-sync-ci
       - feature/search-contact-picker
       - fix/android-launcher-splash-background
+      - fix/android-system-bars-full-height
   pull_request:
     branches:
       - main
@@ -102,6 +103,47 @@ jobs:
           cp assets/ic_launcher_foreground.png public/assets/ic_launcher_foreground.png
           cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
 
+      - name: Normalize adaptive launcher background
+        run: |
+          python3 -m venv /tmp/budget-bharat-image-tools
+          /tmp/budget-bharat-image-tools/bin/pip install --quiet Pillow
+          /tmp/budget-bharat-image-tools/bin/python <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+
+          path = Path("assets/ic_launcher_background.png")
+          image = Image.open(path).convert("RGBA")
+          alpha = image.getchannel("A")
+          if alpha.getextrema()[0] < 255:
+              width, height = image.size
+              gradient = Image.new("RGB", (width, height))
+              draw = ImageDraw.Draw(gradient)
+              stops = [
+                  (0.0, (91, 24, 254)),
+                  (0.5, (123, 43, 140)),
+                  (1.0, (244, 87, 119)),
+              ]
+              for x in range(width):
+                  t = x / max(1, width - 1)
+                  for index in range(len(stops) - 1):
+                      if stops[index][0] <= t <= stops[index + 1][0]:
+                          left_t, left = stops[index]
+                          right_t, right = stops[index + 1]
+                          amount = (t - left_t) / (right_t - left_t)
+                          color = tuple(
+                              round(left[c] + (right[c] - left[c]) * amount)
+                              for c in range(3)
+                          )
+                          break
+                  draw.line((x, 0, x, height - 1), fill=color)
+              image = Image.alpha_composite(gradient.convert("RGBA"), image)
+              image.save(path)
+              print("Filled transparent launcher-background pixels with the brand gradient.")
+          else:
+              print("Launcher background is already fully opaque.")
+          PY
+          cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
+
       - name: Build Web Assets (Vite)
         run: npm run build
 
@@ -148,8 +190,6 @@ jobs:
 
       - name: Configure branded native Android splash and window background
         run: |
-          python3 -m venv /tmp/budget-bharat-image-tools
-          /tmp/budget-bharat-image-tools/bin/pip install --quiet Pillow
           /tmp/budget-bharat-image-tools/bin/python <<'PY'
           from pathlib import Path
           from PIL import Image
@@ -175,6 +215,22 @@ jobs:
           else:
               content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    ' + color_xml + '\n</resources>\n'
           colors.write_text(content, encoding="utf-8")
+
+          # System bars are separate native surfaces. Use the brand plum for
+          # the status bar and the app canvas color for the navigation area.
+          system_bar_colors = {
+              "budget_bharat_status_bar": "#7B2B8C",
+              "budget_bharat_navigation_bar": "#F4F3F8",
+          }
+          for system_color_name, system_color_value in system_bar_colors.items():
+              system_color_xml = f'<color name="{system_color_name}">{system_color_value}</color>'
+              current_colors = colors.read_text(encoding="utf-8")
+              system_pattern = rf'<color\s+name="{system_color_name}">.*?</color>'
+              if re.search(system_pattern, current_colors):
+                  current_colors = re.sub(system_pattern, system_color_xml, current_colors, count=1)
+              else:
+                  current_colors = current_colors.replace("</resources>", f"    {system_color_xml}\n</resources>")
+              colors.write_text(current_colors, encoding="utf-8")
 
           # Keep the Android 12 system splash visually quiet: the HTML splash is
           # the only branded logo screen. Android requires a system splash on
@@ -220,6 +276,18 @@ jobs:
                   else:
                       body = set_item(body, "android:windowBackground", f"@color/{color_name}")
                       body = set_item(body, "android:colorBackground", f"@color/{color_name}")
+
+                  # Keep status/navigation bars integrated with the app instead
+                  # of Android's default black/gray surfaces. Status icons stay
+                  # light on plum; navigation icons stay dark on the light canvas.
+                  body = set_item(body, "android:windowDrawsSystemBarBackgrounds", "true")
+                  body = set_item(body, "android:statusBarColor", "@color/budget_bharat_status_bar")
+                  body = set_item(body, "android:windowLightStatusBar", "false")
+                  body = set_item(body, "android:navigationBarColor", "@color/budget_bharat_navigation_bar")
+                  body = set_item(body, "android:navigationBarDividerColor", "@color/budget_bharat_navigation_bar")
+                  body = set_item(body, "android:windowLightNavigationBar", "true")
+                  body = set_item(body, "android:enforceStatusBarContrast", "false")
+                  body = set_item(body, "android:enforceNavigationBarContrast", "false")
 
                   content = content[:match.start()] + opening + body + closing + content[match.end():]
               style_file.write_text(content, encoding="utf-8")
