@@ -103,6 +103,47 @@ jobs:
           cp assets/ic_launcher_foreground.png public/assets/ic_launcher_foreground.png
           cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
 
+      - name: Normalize adaptive launcher background
+        run: |
+          python3 -m venv /tmp/budget-bharat-image-tools
+          /tmp/budget-bharat-image-tools/bin/pip install --quiet Pillow
+          /tmp/budget-bharat-image-tools/bin/python <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+
+          path = Path("assets/ic_launcher_background.png")
+          image = Image.open(path).convert("RGBA")
+          alpha = image.getchannel("A")
+          if alpha.getextrema()[0] < 255:
+              width, height = image.size
+              gradient = Image.new("RGB", (width, height))
+              draw = ImageDraw.Draw(gradient)
+              stops = [
+                  (0.0, (91, 24, 254)),
+                  (0.5, (123, 43, 140)),
+                  (1.0, (244, 87, 119)),
+              ]
+              for x in range(width):
+                  t = x / max(1, width - 1)
+                  for index in range(len(stops) - 1):
+                      if stops[index][0] <= t <= stops[index + 1][0]:
+                          left_t, left = stops[index]
+                          right_t, right = stops[index + 1]
+                          amount = (t - left_t) / (right_t - left_t)
+                          color = tuple(
+                              round(left[c] + (right[c] - left[c]) * amount)
+                              for c in range(3)
+                          )
+                          break
+                  draw.line((x, 0, x, height - 1), fill=color)
+              image = Image.alpha_composite(gradient.convert("RGBA"), image)
+              image.save(path)
+              print("Filled transparent launcher-background pixels with the brand gradient.")
+          else:
+              print("Launcher background is already fully opaque.")
+          PY
+          cp assets/ic_launcher_background.png public/assets/ic_launcher_background.png
+
       - name: Build Web Assets (Vite)
         run: npm run build
 
@@ -149,8 +190,6 @@ jobs:
 
       - name: Configure branded native Android splash and window background
         run: |
-          python3 -m venv /tmp/budget-bharat-image-tools
-          /tmp/budget-bharat-image-tools/bin/pip install --quiet Pillow
           /tmp/budget-bharat-image-tools/bin/python <<'PY'
           from pathlib import Path
           from PIL import Image
