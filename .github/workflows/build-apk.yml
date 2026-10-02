@@ -284,6 +284,7 @@ jobs:
                   body = set_item(body, "android:statusBarColor", "@color/budget_bharat_status_bar")
                   body = set_item(body, "android:windowLightStatusBar", "false")
                   body = set_item(body, "android:navigationBarColor", "@color/budget_bharat_navigation_bar")
+                  body = set_item(body, "android:navigationBarDividerColor", "@color/budget_bharat_navigation_bar")
                   body = set_item(body, "android:windowLightNavigationBar", "true")
                   body = set_item(body, "android:enforceStatusBarContrast", "false")
                   body = set_item(body, "android:enforceNavigationBarContrast", "false")
