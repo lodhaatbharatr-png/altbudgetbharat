@@ -7,6 +7,7 @@ on:
       - fix/native-exports-backup-sync-ci
       - feature/search-contact-picker
       - fix/android-launcher-splash-background
+      - fix/android-system-bars-full-height
   pull_request:
     branches:
       - main
@@ -176,6 +177,22 @@ jobs:
               content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    ' + color_xml + '\n</resources>\n'
           colors.write_text(content, encoding="utf-8")
 
+          # System bars are separate native surfaces. Use the brand plum for
+          # the status bar and the app canvas color for the navigation area.
+          system_bar_colors = {
+              "budget_bharat_status_bar": "#7B2B8C",
+              "budget_bharat_navigation_bar": "#F4F3F8",
+          }
+          for system_color_name, system_color_value in system_bar_colors.items():
+              system_color_xml = f'<color name="{system_color_name}">{system_color_value}</color>'
+              current_colors = colors.read_text(encoding="utf-8")
+              system_pattern = rf'<color\\s+name="{system_color_name}">.*?</color>'
+              if re.search(system_pattern, current_colors):
+                  current_colors = re.sub(system_pattern, system_color_xml, current_colors, count=1)
+              else:
+                  current_colors = current_colors.replace("</resources>", f"    {system_color_xml}\\n</resources>")
+              colors.write_text(current_colors, encoding="utf-8")
+
           # Keep the Android 12 system splash visually quiet: the HTML splash is
           # the only branded logo screen. Android requires a system splash on
           # modern Android, so use a fully transparent icon and a matching brand
@@ -220,6 +237,17 @@ jobs:
                   else:
                       body = set_item(body, "android:windowBackground", f"@color/{color_name}")
                       body = set_item(body, "android:colorBackground", f"@color/{color_name}")
+
+                  # Keep status/navigation bars integrated with the app instead
+                  # of Android's default black/gray surfaces. Status icons stay
+                  # light on plum; navigation icons stay dark on the light canvas.
+                  body = set_item(body, "android:windowDrawsSystemBarBackgrounds", "true")
+                  body = set_item(body, "android:statusBarColor", "@color/budget_bharat_status_bar")
+                  body = set_item(body, "android:windowLightStatusBar", "false")
+                  body = set_item(body, "android:navigationBarColor", "@color/budget_bharat_navigation_bar")
+                  body = set_item(body, "android:windowLightNavigationBar", "true")
+                  body = set_item(body, "android:enforceStatusBarContrast", "false")
+                  body = set_item(body, "android:enforceNavigationBarContrast", "false")
 
                   content = content[:match.start()] + opening + body + closing + content[match.end():]
               style_file.write_text(content, encoding="utf-8")
