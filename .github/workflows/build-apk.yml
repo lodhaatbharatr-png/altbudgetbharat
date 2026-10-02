@@ -186,11 +186,11 @@ jobs:
           for system_color_name, system_color_value in system_bar_colors.items():
               system_color_xml = f'<color name="{system_color_name}">{system_color_value}</color>'
               current_colors = colors.read_text(encoding="utf-8")
-              system_pattern = rf'<color\\s+name="{system_color_name}">.*?</color>'
+              system_pattern = rf'<color\s+name="{system_color_name}">.*?</color>'
               if re.search(system_pattern, current_colors):
                   current_colors = re.sub(system_pattern, system_color_xml, current_colors, count=1)
               else:
-                  current_colors = current_colors.replace("</resources>", f"    {system_color_xml}\\n</resources>")
+                  current_colors = current_colors.replace("</resources>", f"    {system_color_xml}\n</resources>")
               colors.write_text(current_colors, encoding="utf-8")
 
           # Keep the Android 12 system splash visually quiet: the HTML splash is
